@@ -6,10 +6,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
+import android.net.http.SslError;
 import android.os.Build;
 import android.os.Environment;
 import android.view.Gravity;
@@ -19,9 +21,12 @@ import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
 import android.webkit.JsResult;
+import android.webkit.SslErrorHandler;
 import android.webkit.URLUtil;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -33,8 +38,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+
+import org.json.JSONArray;
 
 /** Hosts Jet Note web tools in an isolated WebView with audio discovery and downloads. */
 final class DictionaryController {
@@ -50,6 +59,7 @@ final class DictionaryController {
     private final AudioSaveController audioSaver;
     private final FrameLayout root;
     private final Map<Long, String> activeDownloads = new HashMap<>();
+    private final Set<String> observedAudioUrls = new LinkedHashSet<>();
     private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -92,6 +102,7 @@ final class DictionaryController {
             pageUrl = url;
             pageTitle = title;
             pageLanguage = "en".equalsIgnoreCase(language) ? "en" : "zh";
+            observedAudioUrls.clear();
             openOnUiThread();
         });
     }
@@ -206,6 +217,7 @@ final class DictionaryController {
         loadStateTitle=null;
         loadStateCode=null;
         loadSpinner=null;
+        observedAudioUrls.clear();
     }
 
     boolean handles(int code){return audioSaver.handles(code);}
@@ -244,6 +256,14 @@ final class DictionaryController {
         titleParams.leftMargin = dp(8);
         titleParams.rightMargin = dp(8);
         bar.addView(title, titleParams);
+
+        TextView refresh = createToolbarButton("↻", 0xff287a9f, true);
+        refresh.setTextSize(22);
+        refresh.setContentDescription("en".equals(pageLanguage) ? "Refresh current page" : "刷新当前网页");
+        refresh.setOnClickListener(v -> reloadCurrentPage());
+        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(dp(42), dp(36));
+        refreshParams.rightMargin = dp(20);
+        bar.addView(refresh, refreshParams);
 
         TextView get = createToolbarButton("en".equals(pageLanguage) ? "Get Audio" : "获取音频", 0xff168a45, true);
         get.setTextSize(14);
@@ -375,6 +395,13 @@ final class DictionaryController {
         if (dictionaryWebView != null) dictionaryWebView.setVisibility(View.VISIBLE);
     }
 
+    private void reloadCurrentPage() {
+        if (dictionaryWebView == null) return;
+        observedAudioUrls.clear();
+        showLoadingState();
+        dictionaryWebView.reload();
+    }
+
     private void toggleFloatingGet(){
         if(overlay==null)return;
         if(floatingGet!=null){overlay.removeView(floatingGet);floatingGet=null;return;}
@@ -390,8 +417,31 @@ final class DictionaryController {
         if (dictionaryWebView == null) return;
         try(java.io.InputStream input=activity.getAssets().open("js/dictionary-get.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
             byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);
-            dictionaryWebView.evaluateJavascript(new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8),null);
+            String script = "window.JET_NOTE_UI_LANGUAGE='" + pageLanguage + "';\n"
+                    + "window.JET_NOTE_NATIVE_AUDIO_URLS=" + new JSONArray(observedAudioUrls).toString() + ";\n"
+                    + new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
+            dictionaryWebView.evaluateJavascript(script,null);
         }catch(java.io.IOException e){showDownloadStatus("无法加载 Get 脚本",false);}
+    }
+
+    private void injectAudioObserver() {
+        if (dictionaryWebView == null) return;
+        String script = "(() => {"
+                + "if (window.__jetNoteAudioObserverInstalled) return;"
+                + "window.__jetNoteAudioObserverInstalled = true;"
+                + "const audio = new Set(Array.isArray(window.JET_NOTE_CAPTURED_AUDIO_URLS) ? window.JET_NOTE_CAPTURED_AUDIO_URLS : []);"
+                + "const candidates = new Set(Array.isArray(window.JET_NOTE_CAPTURED_CANDIDATE_URLS) ? window.JET_NOTE_CAPTURED_CANDIDATE_URLS : []);"
+                + "const audioHint = /(?:\\.(?:mp3|m4a|aac|wav|ogg|opus|flac)(?:[?#]|$)|audio|sound|pronun|speech|voice|tts|\\/media\\/)/i;"
+                + "const normalize = value => { try { const url = new URL(String(value || ''), location.href); return url.protocol === 'https:' ? url.href : null; } catch (_) { return null; } };"
+                + "const persist = () => { window.JET_NOTE_CAPTURED_AUDIO_URLS = [...audio]; window.JET_NOTE_CAPTURED_CANDIDATE_URLS = [...candidates]; };"
+                + "const addCandidate = value => { const url = normalize(value); if (url && audioHint.test(url)) { candidates.add(url); persist(); } };"
+                + "const media = event => { const node = event.target; if (!node || (node.tagName !== 'AUDIO' && node.tagName !== 'VIDEO')) return; const url = normalize(node.currentSrc || node.src); if (url) { audio.add(url); candidates.add(url); persist(); } };"
+                + "document.addEventListener('loadstart', media, true); document.addEventListener('play', media, true);"
+                + "const oldFetch = window.fetch; if (oldFetch) window.fetch = function(input, init) { addCandidate(input && (input.url || input)); return oldFetch.call(this, input, init); };"
+                + "const oldOpen = XMLHttpRequest.prototype.open; XMLHttpRequest.prototype.open = function(method, url) { addCandidate(url); return oldOpen.apply(this, arguments); };"
+                + "try { new PerformanceObserver(list => list.getEntries().forEach(entry => addCandidate(entry.name))).observe({type:'resource', buffered:true}); } catch (_) {}"
+                + "})();";
+        dictionaryWebView.evaluateJavascript(script, null);
     }
 
     private void configure(WebView view) {
@@ -419,6 +469,11 @@ final class DictionaryController {
         });
         view.setWebViewClient(new WebViewClient() {
             @Override
+            public void onLoadResource(WebView webView, String url) {
+                rememberPossibleAudioUrl(url);
+            }
+
+            @Override
             public void onPageStarted(WebView webView, String url, android.graphics.Bitmap favicon) {
                 showLoadingState();
             }
@@ -426,6 +481,7 @@ final class DictionaryController {
             @Override
             public void onPageFinished(WebView webView, String url) {
                 showLoadedPage();
+                injectAudioObserver();
             }
 
             @Override
@@ -447,6 +503,12 @@ final class DictionaryController {
                 if (request != null && request.isForMainFrame()) {
                     showLoadFailure("HTTP ERROR: " + response.getStatusCode());
                 }
+            }
+
+            @Override
+            public void onReceivedSslError(WebView webView, SslErrorHandler handler, SslError error) {
+                showLoadFailure("SSL ERROR: " + error.getPrimaryError());
+                handler.cancel();
             }
 
             @Override
@@ -481,6 +543,17 @@ final class DictionaryController {
         }
         offerDownload(raw, null, null, mimeFromUrl(raw));
         return true;
+    }
+
+    private void rememberPossibleAudioUrl(String rawUrl) {
+        if (rawUrl == null || !rawUrl.startsWith("https://")) return;
+        String normalized = rawUrl.toLowerCase(Locale.ROOT);
+        if (mimeFromUrl(normalized).startsWith("audio/")
+                || normalized.contains("audio") || normalized.contains("sound")
+                || normalized.contains("pronun") || normalized.contains("speech")
+                || normalized.contains("voice") || normalized.contains("/media/")) {
+            if (observedAudioUrls.size() < 80) observedAudioUrls.add(rawUrl);
+        }
     }
 
     private void offerDownload(String url,String userAgent,String disposition,String mime) {

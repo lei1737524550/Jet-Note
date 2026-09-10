@@ -275,7 +275,7 @@ async function exportNativeArchive(){
   archiveStatus(t('exporting'));
   try{
     const state=await EntryStore.read(),payload={
-      appVersion:'2.4',profile:getProfileSnapshot(),posts:[]
+      appVersion:'2.8',profile:getProfileSnapshot(),posts:[]
     };
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
