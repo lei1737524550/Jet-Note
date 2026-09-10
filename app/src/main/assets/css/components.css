@@ -1,0 +1,428 @@
+.crop-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  background: #000;
+}
+
+.crop-screen.open {
+  display: block;
+}
+
+.crop-header {
+  height: 82px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.crop-back {
+  position: absolute;
+  left: 25px;
+  top: 16px;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.crop-back svg {
+  width: 34px;
+  height: 34px;
+}
+
+.crop-body {
+  position: absolute;
+  left: 0;
+  top: 82px;
+  width: 691px;
+  height: 1110px;
+  background: #000;
+  overflow: hidden;
+}
+
+#cropCanvas {
+  position: absolute;
+  left: 30px;
+  top: 150px;
+  width: 631px;
+  height: 690px;
+  display: block;
+  touch-action: none;
+  background: #000;
+}
+
+.crop-hint {
+  position: absolute;
+  left: 0;
+  top: 865px;
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,.72);
+  font-size: 18px;
+}
+
+.crop-footer {
+  position: absolute;
+  left: 0;
+  top: 1050px;
+  bottom: auto;
+  width: 691px;
+  height: 90px;
+  background: #000;
+}
+
+.crop-cancel {
+  position: absolute;
+  left: 32px;
+  bottom: 16px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.crop-done {
+  position: absolute;
+  right: 28px;
+  bottom: 10px;
+  min-width: 90px;
+  height: 58px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 29px;
+  background: #1da8f5;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.post-action-btn:active {
+  background: #f5f5f5;
+}
+
+.post-action-icon {
+  display: block;
+}
+
+.post-action-label {
+  font-weight: 500;
+  color: #222;
+}
+
+.post-action-btn.delete .post-action-label {
+  color: #d93636;
+}
+
+.post-action-btn.delete .post-action-icon {
+  stroke: #d93636;
+}
+
+.compose-image-preview {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 7px;
+}
+
+.post-compose-images {
+  margin-top: 16px;
+}
+
+.compose-image-preview:empty {
+  display: none;
+}
+
+.compose-image-item {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid #dedede;
+  border-radius: 10px;
+  background: #f2f2f2;
+}
+
+.compose-image-item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.compose-image-remove {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,.65);
+  color: #fff;
+  font-size: 19px;
+  line-height: 27px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.post-media-grid {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 9px;
+}
+
+.post-media-grid.one {
+  grid-template-columns: 1fr;
+}
+
+.post-media-grid.two {
+  grid-template-columns: repeat(2,1fr);
+}
+
+.post-media-grid.many {
+  grid-template-columns: repeat(3,1fr);
+}
+
+.post-media-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #eee;
+}
+
+.post-media-grid.one img {
+  max-height: 460px;
+  aspect-ratio: auto;
+  object-fit: contain;
+  background: #f4f4f4;
+}
+
+.post-media-grid.two img {
+  aspect-ratio: 1 / 1;
+}
+
+.post-media-grid.many img {
+  aspect-ratio: 1 / 1;
+}
+
+.post-media-grid img {
+  cursor: zoom-in;
+}
+
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.96);
+  touch-action: manipulation;
+}
+
+.image-viewer.open {
+  display: flex;
+}
+
+.image-viewer img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100dvh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.image-viewer-close {
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  mix-blend-mode: difference;
+}
+
+.image-viewer-close::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 24px;
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: center;
+}
+
+.image-viewer-close::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 24px;
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: #fff;
+  transform-origin: center;
+}
+
+.image-viewer-close::before {
+  transform: rotate(45deg);
+}
+
+.image-viewer-close::after {
+  transform: rotate(-45deg);
+}
+
+.post-compose-images .compose-image-item img {
+  cursor: zoom-in;
+}
+
+.delete-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,.18);
+}
+
+.delete-confirm-backdrop.open {
+  display: flex;
+}
+
+.delete-confirm-btn:active {
+  background: #f5f5f5;
+}
+
+.delete-confirm-btn svg {
+  display: block;
+}
+
+.delete-confirm-btn.delete {
+  color: #d93636;
+}
+
+.delete-confirm-btn.delete svg {
+  stroke: #d93636;
+}
+
+.post-action-panel {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 30020 !important;
+  width: 286px !important;
+  height: auto !important;
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  background: #fff;
+  border: 1px solid rgb(155,155,155);
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+.post-action-panel.open {
+  display: grid !important;
+}
+
+.post-action-btn {
+  min-height: 126px !important;
+  height: 126px !important;
+  border: 1px solid rgb(155,155,155);
+  border-radius: 13px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.post-action-icon {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.post-action-label {
+  font-size: 18px !important;
+  line-height: 1.2;
+}
+
+.delete-confirm-backdrop {
+  z-index: 30010 !important;
+}
+
+.delete-confirm-panel {
+  width: 286px !important;
+  padding: 10px !important;
+  border: 1px solid rgb(155,155,155);
+  border-radius: 15px !important;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+.delete-confirm-message {
+  padding: 10px 8px 12px !important;
+  text-align: center;
+  color: #222;
+  font-size: 16px !important;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.delete-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.delete-confirm-btn {
+  min-height: 126px !important;
+  height: 126px !important;
+  border: 1px solid rgb(155,155,155);
+  border-radius: 13px !important;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #222;
+  font-size: 18px !important;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.delete-confirm-btn svg {
+  width: 32px !important;
+  height: 32px !important;
+}.jet-notice-backdrop{display:none;position:fixed;inset:0;z-index:60000;align-items:center;justify-content:center;padding:20px;background:rgba(20,27,35,.32);backdrop-filter:blur(3px)}
+.jet-notice-backdrop.open{display:flex}.jet-notice{width:min(310px,100%);padding:20px 18px 16px;border:1px solid rgba(70,84,99,.2);border-radius:18px;background:#fff;box-shadow:0 18px 46px rgba(24,32,42,.22);text-align:center}.jet-notice-mark{display:grid;place-items:center;width:34px;height:34px;margin:0 auto 10px;border-radius:50%;background:#eaf4fb;color:#315f98;font-weight:700}.jet-notice h2{margin:0;font-size:18px}.jet-notice p{margin:10px 0 18px;white-space:pre-wrap;overflow-wrap:anywhere;color:#4d545c;line-height:1.5}.jet-notice button{width:100%;min-height:44px;border:0;border-radius:12px;background:#315f98;color:#fff;font-weight:600}
+/* Post menus share one compact shape and are positioned left of the tapped dots. */
+.post-action-panel{position:fixed!important;left:auto!important;top:auto!important;right:auto!important;transform:none!important;z-index:32020!important;width:max-content!important;max-width:calc(100vw - 16px)!important;display:none!important;grid-template-columns:none!important;gap:2px!important;padding:4px!important;border:1px solid #bfc1c4!important;border-radius:11px!important;background:#fff!important;box-shadow:0 5px 18px rgba(21,31,42,.18)!important;pointer-events:auto!important}.post-action-panel.open{display:flex!important}.post-action-btn{width:auto!important;height:36px!important;min-height:36px!important;padding:6px 10px!important;border:0!important;border-radius:8px!important;background:#fff!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:5px!important}.post-action-icon{width:17px!important;height:17px!important}.post-action-label{font-size:14px!important;white-space:nowrap}.more{width:32px!important;height:32px!important;padding:6px!important;top:4px!important}.more svg{width:19px!important;height:19px!important}
+
+.delete-confirm-backdrop.post-menu-confirm{display:none!important;position:fixed!important;inset:0!important;z-index:32030!important;padding:0!important;background:transparent!important;align-items:initial!important;justify-content:initial!important}.delete-confirm-backdrop.post-menu-confirm.open{display:block!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-panel{position:fixed!important;left:auto!important;top:auto!important;right:auto!important;transform:none!important;width:max-content!important;max-width:calc(100vw - 16px)!important;padding:4px!important;border:1px solid #bfc1c4!important;border-radius:11px!important;background:#fff!important;box-shadow:0 5px 18px rgba(21,31,42,.18)!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-message{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-actions{display:flex!important;grid-template-columns:none!important;gap:2px!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn{width:auto!important;height:36px!important;min-height:36px!important;padding:6px 10px!important;border:0!important;border-radius:8px!important;background:#fff!important;display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:center!important;gap:5px!important;color:#222!important;font-size:14px!important;font-weight:400!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn.delete{color:#d93636!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn svg{width:17px!important;height:17px!important}.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn span{white-space:nowrap!important}

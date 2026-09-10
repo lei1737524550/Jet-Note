@@ -1,0 +1,33 @@
+# Gradle / Android build output
+.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+
+# Signing material
+*.jks
+*.keystore
+
+# JavaScript / Python tooling
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Test / coverage artifacts
+playwright-report/
+test-results/
+coverage/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.bak

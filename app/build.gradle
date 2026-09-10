@@ -1,0 +1,27 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.ingeniousidea.space'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ingeniousidea.space"
+        minSdk 23
+        targetSdk 34
+        versionCode 16
+        versionName "2.5"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
