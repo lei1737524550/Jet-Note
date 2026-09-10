@@ -1,34 +1,53 @@
 # Jet Note
 
-Jet Note 是一款 **本地优先（Local-first）** 的 Android 随手记应用，专注于快速记录文字、图片和音频，并提供轻量的词典、句子发音与本地备份能力。
+Jet Note is a **local-first Android note-taking app** designed for fast, lightweight capture of text, images, and audio. Instead of behaving like a traditional document-oriented notebook, Jet Note presents notes as a personal activity feed: open the app, write something, attach media if needed, and publish it to your own local space.
 
-它不是传统的重型笔记软件，更接近一个可以随手打开、立即记录的个人动态空间：写下一段文字，附上一张图片或一段声音，然后让内容保留在自己的设备里。
+## Features
 
-## 功能特色
+- **Post-style notes** — Capture thoughts in a lightweight feed rather than a document hierarchy.
+- **Image attachments** — Select images from the Android system picker and attach them to posts.
+- **Audio attachments** — Attach audio files and play them from compact speaker controls inside a post. Multiple audio attachments are distinguished with numbered indicators.
+- **Fast composer** — Tapping the post composer immediately focuses the text field and opens the keyboard.
+- **Dictionary** — An integrated Merriam-Webster WebView for looking up English words and accessing pronunciation audio.
+- **Sentences** — An integrated Sound of Text WebView for generating and retrieving sentence audio.
+- **Get Audio** — Dictionary and sentence tools can discover available audio resources from their respective pages.
+- **Chinese and English UI** — Core UI text and the Dictionary/Sentence toolbars support both languages.
+- **Custom backgrounds** — Use an image background or the built-in RGB background.
+- **Custom profile** — Change the username and avatar, with avatar cropping and shape options.
+- **Local backup and restore** — Export posts, media, username, and avatar into a portable `.jnote` archive.
+- **Usage and Demo modes** — Two isolated local data spaces make it possible to keep normal data separate from demonstration content.
+- **Local-first storage** — Core note data does not require a Jet Note cloud account or remote backend.
 
-- **说说式随手记**：用接近动态流的方式记录日常内容。
-- **图片附件**：支持从系统选择图片并作为说说附件保存。
-- **音频附件**：支持选择音频文件；发布后以紧凑的扬声器图标展示，多个音频会使用数字下标区分。
-- **快速编辑体验**：点击“分享新鲜事”即可进入编辑状态，并自动聚焦输入框。
-- **词典**：内置 Merriam-Webster WebView，方便查询英文单词与获取发音音频。
-- **句子发音**：内置 Sound of Text WebView，用于生成和获取句子音频。
-- **中英文界面**：应用主要界面以及词典/句子顶部栏支持中文和英文。
-- **背景设置**：支持图片背景和 RGB 背景；默认 RGB 为 `rgb(240, 255, 230)`。
-- **头像设置**：支持圆形与方形头像显示及裁剪。
-- **本地数据备份**：可将说说及附件导出为 `.jnote` 文件，并重新导入恢复。
-- **离线优先**：说说、附件和设置主要保存在本地；词典和句子功能需要网络访问对应网站。
+## Usage Mode and Demo Mode
 
-## `.jnote` 备份格式
+Jet Note provides two operating modes:
 
-Jet Note 使用自定义扩展名：
+- **Usage Mode** — The normal workspace for personal data.
+- **Demo Mode** — A separate workspace intended for demonstrations and development-related use.
+
+The two modes have isolated local storage. Posts, profile information, local settings, post/media databases, and appearance databases are kept separate.
+
+Existing data from versions released before mode separation remains associated with **Usage Mode**.
+
+Demo Mode can be initialized from the bundled archive:
+
+```text
+app/src/main/assets/demo.jnote
+```
+
+The bundled file uses the same `.jnote` archive format as regular Jet Note backups. This makes demo content replaceable without introducing a separate demo-data format.
+
+## `.jnote` Backup Format
+
+Jet Note exports backups with the custom extension:
 
 ```text
 .jnote
 ```
 
-`.jnote` 本质上是一个 ZIP 容器，当前格式版本为 `formatVersion 2`。
+A `.jnote` file is internally a **ZIP container**. The current archive format uses `formatVersion 2`.
 
-典型结构：
+A typical archive looks like this:
 
 ```text
 JetNote_xxx.jnote
@@ -44,56 +63,88 @@ JetNote_xxx.jnote
     └── ...
 ```
 
-其中：
+### Archive contents
 
-- `manifest.json`：描述 Jet Note 备份格式、版本和内容入口。
-- `data/posts.json`：保存说说文本、时间、ID 和附件元数据。
-- `data/profile.json`：保存用户名以及自定义头像数据；使用默认头像时记录默认状态。
-- `media/`：保存图片、音频等附件的原始二进制内容。
-- `checksums.json`：保存 SHA-256，用于检测备份内容是否损坏或被意外修改。
+- `manifest.json` describes the Jet Note archive format, version, and content locations.
+- `data/posts.json` stores post text, timestamps, stable IDs, and attachment metadata.
+- `data/profile.json` stores the username and avatar state.
+- `media/` contains image and audio attachments as binary files.
+- `checksums.json` contains SHA-256 checksums used to detect missing, corrupted, or unexpectedly modified archive content.
 
-媒体附件不会为了备份而重新编码，因此图片和音频不会因为导出/导入本身产生质量损失。
+Media is not re-encoded merely for backup. Images and audio are stored as their media data inside the archive, so the export/import process itself does not intentionally reduce media quality.
 
-> 当前 v2 备份包含说说、附件、用户名和头像。背景、语言、头像形状等其他外观设置仍保存在本地，不随备份导出。
+New exports use `.jnote`. Import logic retains compatibility with the older `.jet-note` extension where supported by the current implementation.
 
-## 数据与隐私
+> Current v2 backups include posts, attachments, username, and avatar. Some appearance and application preferences remain local rather than being part of the backup.
 
-Jet Note 采用本地优先的数据结构：
+## Backup and Restore Flow
 
-- 说说数据主要保存在 IndexedDB。
-- 附件保存在应用私有媒体目录。
-- 背景与外观设置保存在本地设置存储中。
-- 导出备份时，结构化数据与媒体附件会被整理进 `.jnote` 文件。
+During export, Jet Note gathers structured post/profile data, adds referenced media files, calculates integrity information, and writes the result into the `.jnote` ZIP container.
 
-除用户主动使用“词典”或“句子”功能访问第三方网站外，Jet Note 的核心笔记数据不依赖远程服务器。
+During import, the archive is validated before its contents are committed. The implementation checks the archive structure and media integrity and uses staging/commit logic to reduce the chance of leaving a partially restored dataset after a failed import.
 
-## 词典与句子
+The `.jnote` extension is therefore a Jet Note file identity; it does not imply a proprietary compression algorithm. Internally, the project continues to use a versioned ZIP-based container.
 
-Jet Note 提供两个独立 WebView 工具：
+## Data and Privacy
 
-### Dictionary
+Jet Note is designed around local storage:
 
-默认访问：
+- Post data is stored locally using IndexedDB.
+- Attachments are stored in the application's private media storage.
+- Appearance and application preferences are stored locally.
+- Backup files are created only when the user explicitly exports data.
+- Usage Mode and Demo Mode use separate local data spaces.
+
+The core note system does not depend on a Jet Note server.
+
+The **Dictionary** and **Sentences** features are exceptions to the offline-first model because they load third-party websites. Network availability, regional accessibility, and the behavior of those services can affect these features.
+
+## Dictionary
+
+The Dictionary tool opens:
 
 ```text
 https://www.merriam-webster.com/
 ```
 
-用于查询英文词义和发音，并提供 **Get Audio / 获取音频** 功能。
+It provides a dedicated Jet Note toolbar and **Get Audio** action for pronunciation resources.
 
-### Sentences
+## Sentences
 
-默认访问：
+The Sentences tool opens:
 
 ```text
 https://soundoftext.com/
 ```
 
-用于生成句子语音，同样提供 **Get Audio / 获取音频** 功能。
+It is intended for generating sentence speech and retrieving the resulting audio.
 
-两个页面共用统一的 Jet Note 顶部栏、返回逻辑、加载状态和错误显示。网页无法访问时，会显示加载失败状态以及能够获取到的实际错误码。
+Both web tools share Jet Note-style loading and failure states. When navigation fails, the app attempts to display the actual WebView or HTTP error information instead of relying solely on a blank page or the browser's default error UI.
 
-## 项目结构
+## Project Architecture
+
+Jet Note uses a hybrid architecture:
+
+```text
+Android Java layer
+        │
+        ├── WebView host and navigation
+        ├── Android file pickers
+        ├── attachment storage
+        ├── .jnote import/export
+        └── native bridges
+        │
+        ▼
+Local HTML / CSS / JavaScript UI
+        │
+        ├── posts
+        ├── settings
+        ├── attachments
+        ├── localization
+        └── local IndexedDB / storage
+```
+
+Important project locations:
 
 ```text
 JetNote/
@@ -111,6 +162,7 @@ JetNote/
 │       │   └── ...
 │       ├── assets/
 │       │   ├── index.html
+│       │   ├── demo.jnote
 │       │   ├── css/
 │       │   ├── js/
 │       │   ├── icons/
@@ -122,76 +174,77 @@ JetNote/
 └── README.md
 ```
 
-前端界面由本地 HTML / CSS / JavaScript 驱动，Android Java 层负责 WebView、系统文件选择、媒体存储、备份导入导出等原生能力。
+The local web UI is implemented with HTML, CSS, and JavaScript. Android-specific capabilities such as WebView integration, system file selection, media persistence, and archive handling are implemented in Java.
 
-## 技术信息
+## Technical Requirements
 
-| 项目 | 当前配置 |
+| Item | Configuration |
 | --- | --- |
 | Application ID | `com.ingeniousidea.space` |
-| Version | `2.5` |
-| Version Code | `16` |
-| Min SDK | `23` |
-| Target SDK | `34` |
-| Compile SDK | `34` |
-| Java | `17` |
-| Android Gradle Plugin | `8.2.2` |
+| Minimum SDK | 23 |
+| Target SDK | 34 |
+| Compile SDK | 34 |
+| Java | 17 |
+| Android Gradle Plugin | 8.2.2 |
 
-## 构建
+Version information may change as the project evolves; check `app/build.gradle` for the authoritative current version.
 
-项目源码不包含 Gradle Wrapper、`local.properties`、构建缓存或 APK。
+## Building
+
+The repository is intentionally kept free of generated build output and machine-specific configuration.
 
 ### Android Studio
 
-使用 Android Studio 打开项目根目录，并准备：
+Open the project root in Android Studio and make sure the environment provides:
 
 - JDK 17
 - Android SDK 34
-- 与 AGP 8.2.2 兼容的 Gradle
+- A Gradle version compatible with Android Gradle Plugin 8.2.2
 
-然后执行 Debug 构建。
+Then build the Debug variant normally.
 
 ### Termux Studio
 
-如果使用 Termux Android Studio / `studio` 工具，可以进入项目目录后执行：
+When using a Termux Android Studio environment that provides the `studio` command:
 
 ```bash
+cd /path/to/JetNote
 studio build .
 ```
 
-如果需要覆盖安装旧版本 APK，新构建必须使用与旧版本相同的签名；否则 Android 会提示 APK 签名与已安装应用不一致。
+If Android reports that a newly built APK has a signature inconsistent with the installed application, the new APK was signed with a different key. Updating an existing installation requires the same signing identity that was used for the installed APK.
 
-## 开源资源
+## Source Formatting
 
-项目中的扬声器图标来自 **Feather Icons**。
+Project-owned source code is intended to remain readable and maintainable. CSS and JavaScript should use normal formatted, multi-line source rather than intentionally minified production-style formatting unless there is a specific technical reason to do otherwise.
 
-许可证文件：
+## Third-Party Resources
+
+Speaker icons used by the project are derived from **Feather Icons**. Keep the accompanying license file with redistributed copies:
 
 ```text
 app/src/main/assets/icons/FEATHER-LICENSE.txt
 ```
 
-相关资源的许可证应随项目一同保留。
+Merriam-Webster and Sound of Text are third-party web services and are not part of Jet Note itself.
 
-## 当前定位
+## Project Philosophy
 
-Jet Note 的目标不是堆叠大量复杂的笔记管理功能，而是保持：
+Jet Note deliberately focuses on a small set of interactions:
 
-**快速记录、低操作成本、本地保存、附件自然融入内容。**
+**capture quickly, keep friction low, store data locally, and let media feel like part of the note rather than a separate workflow.**
 
-适合用于：
+It is particularly suited to:
 
-- 随手记录想法
-- 英语学习笔记
-- 保存单词或句子相关的声音
-- 图文记录
-- 简短日常备忘
-- 不希望依赖云端账号的个人笔记
+- quick personal notes,
+- English-learning notes,
+- saving pronunciation or sentence audio,
+- image-and-text journaling,
+- short daily records,
+- users who prefer a local-first notebook without a required cloud account.
 
 ## License
 
-当前项目仓库未发现明确的项目级开源许可证文件。若计划公开发布或接受外部贡献，建议补充独立的 `LICENSE` 文件，并明确代码的授权方式。
+No project-level open-source license is currently declared in the repository. Before distributing Jet Note as an open-source project or accepting external contributions, add a `LICENSE` file that clearly states the licensing terms.
 
-### 使用模式与演示模式
-
-设置中可在“使用模式”和“演示模式”之间切换。两种模式使用相互隔离的本地数据空间：说说、用户名、头像、语言和其他基于本地存储的设置分别保存；说说与媒体 IndexedDB、外观 IndexedDB 也使用独立数据库。切换模式后应用会重新加载并打开目标模式的数据空间。旧版本已有数据会继续作为“使用模式”数据读取，演示模式不会读取这些旧数据。
+Third-party resources remain subject to their respective licenses.
