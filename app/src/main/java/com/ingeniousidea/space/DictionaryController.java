@@ -26,6 +26,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -226,9 +227,7 @@ final class DictionaryController {
         bar.setBackgroundColor(0xfff8f9fa);
         bar.setElevation(dp(3));
 
-        TextView back = createToolbarButton("‹", 0xff222222, false);
-        back.setIncludeFontPadding(false);
-        back.setTextSize(30);
+        ImageButton back = createBackButton();
         back.setContentDescription("en".equals(pageLanguage) ? "Back" : "返回");
         back.setOnClickListener(v -> {
             if (dictionaryWebView != null && dictionaryWebView.canGoBack()) dictionaryWebView.goBack();
@@ -254,6 +253,23 @@ final class DictionaryController {
         bar.addView(get, new LinearLayout.LayoutParams(dp(88), dp(36)));
 
         return bar;
+    }
+
+    private ImageButton createBackButton() {
+        ImageButton button = new ImageButton(activity);
+        button.setImageResource(com.ingeniousidea.space.R.drawable.ic_back_chevron);
+        button.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        button.setPadding(0, 0, 0, 0);
+        button.setColorFilter(0xff222222);
+        button.setClickable(true);
+        button.setFocusable(true);
+
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.WHITE);
+        background.setCornerRadius(dp(12));
+        background.setStroke(dp(1), 0xffd6d8dc);
+        button.setBackground(background);
+        return button;
     }
 
     private TextView createToolbarButton(String text, int textColor, boolean outlined) {

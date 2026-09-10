@@ -28,7 +28,7 @@ function renderAttachments(items,editable=false){
   const audio=(items||[]).filter(item=>item.type==='audio');
   const other=(items||[]).filter(item=>item.type!=='audio'&&item.type!=='image');
   if(!audio.length&&!other.length)return '';
-  return '<div class="attachment-strip">'+audio.map((item,index)=>`<div class="audio-token attachment-item" data-media-id="${escapeHTML(item.id)}"><button class="audio-token-play" type="button" aria-label="${escapeHTML(t('audioPlay'))}" title="${escapeHTML(item.originalName||t('audioPlay'))}">${VOLUME_ICON}<sub>${index+1}</sub></button><audio preload="metadata"></audio>${editable?'<button class="audio-token-remove" type="button" aria-label="'+escapeHTML(t('remove'))+'">×</button>':''}</div>`).join('')+other.map(item=>`<span class="attachment-unknown attachment-item" data-media-id="${escapeHTML(item.id)}">${escapeHTML(item.type||'file')}</span>`).join('')+'</div>';
+  return '<div class="attachment-strip">'+audio.map((item,index)=>`<div class="audio-token attachment-item" data-media-id="${escapeHTML(item.id)}"><button class="audio-token-play" type="button" aria-label="${escapeHTML(t('audioPlay'))}" title="${escapeHTML(item.originalName||t('audioPlay'))}">${VOLUME_ICON}<sub>${index+1}</sub></button><audio preload="metadata"></audio>${editable?'<button class="audio-token-remove" type="button" aria-label="'+escapeHTML(t('remove'))+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button>':''}</div>`).join('')+other.map(item=>`<span class="attachment-unknown attachment-item" data-media-id="${escapeHTML(item.id)}">${escapeHTML(item.type||'file')}</span>`).join('')+'</div>';
 }
 function releaseAttachmentUrls(container){
   if(!container)return;
