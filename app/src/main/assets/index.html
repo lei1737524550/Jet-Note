@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f0ffe6">
+<title>ingenious idea</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/attachments.css">
+</head>
+
+<body>
+<div id="stage">
+<div class="phone" id="phone">
+
+  <section class="header"><div class="wave3"></div></section>
+
+  <div class="profile">
+    <img class="avatar" id="mainAvatar" onclick="changeAvatar()"
+         src="images/default-avatar.png" alt="头像">
+    <div class="name" id="mainName" onclick="changeName()">jnoter</div>
+    <button class="settings" onclick="openSettings()" aria-label="设置">
+    <!-- Material-style 标准齿轮 -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#fff" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.31-.08.65-.08.97 0 .31.03.62.07.92l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.39 1.04.71 1.62.95l.36 2.53c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.53c.58-.24 1.12-.56 1.62-.95l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/>
+    </svg>
+  </button>
+  </div>
+  <div class="ghost-line"></div>
+
+  <nav class="tabs">
+    <button class="tab" onclick="openPostComposer()">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="7" y="7" width="34" height="27" rx="7"/>
+        <path d="M16 34l6 6 5-6"/>
+        <circle cx="17" cy="20.5" r="1.6" fill="#111" stroke="none"/>
+        <circle cx="24" cy="20.5" r="1.6" fill="#111" stroke="none"/>
+        <circle cx="31" cy="20.5" r="1.6" fill="#111" stroke="none"/>
+      </svg>
+      <div class="tab-label" data-i18n="posts">说说</div>
+    </button>
+
+
+
+  <button class="tab" onclick="openDictionary()"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><path d="M24 10Q12 4 6 8v31q8-4 18 2 10-6 18-2V8q-7-4-18 2v31"/></svg><div class="tab-label" data-i18n="dictionary">字典</div></button><button class="tab" onclick="openSentences()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v12H9l-5 4V5Z"/><path d="M8 9h8M8 13h5"/></svg><div class="tab-label" data-i18n="sentences">句子</div></button></nav>
+
+  <div class="composer-area">
+    <div class="composer">
+      <button class="composer-main" onclick="openPostComposer()" data-i18n="share" data-i18n-mode="text">分享新鲜事...</button>
+      <button class="composer-photo" onclick="openPostComposerWithAudioPicker()" aria-label="add audio">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 36V13l20-4v23"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="32" r="5"/>
+        </svg>
+      </button>
+      <button class="composer-photo" onclick="openPostComposerWithImagePicker()">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="7" y="7" width="34" height="34" rx="6"/>
+          <circle cx="18" cy="18" r="3.4"/>
+          <path d="M10 35l9-9 7 6 5-5 8 8"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <main class="feed" id="postList"></main>
+
+
+
+
+  <!-- 全屏图片查看器 -->
+  <div class="image-viewer" id="imageViewer" onclick="closeImageViewer(event)">
+    <button class="image-viewer-close"
+            onclick="closeImageViewer(event)"
+            aria-label="close">×</button>
+    <img id="imageViewerImg" src="" alt="">
+  </div>
+
+
+  <input id="postAudioPicker" type="file" accept="audio/*,.mp3" multiple hidden onchange="handleAudioFiles(event,'post')">
+  <input id="archivePicker" type="file" accept=".jnote,.jet-note,application/vnd.jnote+zip,application/vnd.jet-note+zip,application/zip,application/octet-stream" hidden onchange="selectArchive(event)">
+  <!-- 设置面板 -->
+  <section class="settings-screen" id="settingsScreen">
+    <div class="settings-header">
+      <button class="settings-back" onclick="closeSettings()" aria-label="返回">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M30 9L15 24l15 15"/>
+        </svg>
+      </button>
+      <div class="settings-title" data-i18n="settings">设置</div>
+    </div>
+
+    <div class="settings-body">
+      <div class="settings-card backup-card">
+        <div class="settings-row-title" data-i18n="backupTitle">数据备份</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice" onclick="exportArchive()">
+            <span class="settings-choice-main" data-i18n="exportArchive">导出 .jnote</span>
+          </button>
+          <button class="settings-choice settings-action-choice" onclick="chooseArchive()">
+            <span class="settings-choice-main" data-i18n="importArchive">导入 .jnote</span>
+          </button>
+        </div>
+        <p id="archiveStatus" role="status"></p>
+      </div>
+      <div class="settings-card">
+        <div class="settings-row-title" data-i18n="modeSelection">模式选择</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice active" id="usageModeOption" type="button" onclick="setAppMode('usage')">
+            <span class="settings-choice-main" data-i18n="usageMode">使用模式</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="demoModeOption" type="button" onclick="setAppMode('demo')">
+            <span class="settings-choice-main" data-i18n="demoMode">演示模式</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row-title" data-i18n="language">语言</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice" id="langZh" onclick="setLanguage('zh')">
+            <span class="settings-choice-main">中文</span>
+            <span class="settings-choice-sub">Chinese</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+
+          <button class="settings-choice" id="langEn" onclick="setLanguage('en')">
+            <span class="settings-choice-main">English</span>
+            <span class="settings-choice-sub">英文</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row-title" data-i18n="avatarShape">头像形状</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice" id="avatarRoundOption" onclick="setAvatarShape('round')">
+            <span class="shape-preview round" aria-hidden="true"></span>
+            <span class="settings-choice-main" data-i18n="roundAvatar">圆形</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="avatarSquareOption" onclick="setAvatarShape('square')">
+            <span class="shape-preview square" aria-hidden="true"></span>
+            <span class="settings-choice-main" data-i18n="squareAvatar">正方形</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-row-title" data-i18n="backgroundSetting">背景</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice" id="backgroundImageOption" onclick="chooseBackgroundImage()">
+            <span class="settings-choice-main" data-i18n="imageBackground">图片背景</span>
+            <span class="settings-choice-sub" data-i18n="imageBackgroundHint">选择并裁剪图片</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="backgroundRgbOption" onclick="selectRgbBackground()">
+            <span class="settings-choice-main" data-i18n="rgbBackground">RGB 背景</span>
+            <span class="settings-choice-sub" id="backgroundRgbSummary">240, 255, 230</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+        </div>
+        <div class="rgb-editor" id="backgroundRgbEditor">
+          <div class="rgb-fields">
+            <label>R<input id="backgroundR" type="number" inputmode="numeric" min="0" max="255" value="240"></label>
+            <label>G<input id="backgroundG" type="number" inputmode="numeric" min="0" max="255" value="255"></label>
+            <label>B<input id="backgroundB" type="number" inputmode="numeric" min="0" max="255" value="230"></label>
+          </div>
+          <button class="rgb-apply" onclick="saveRgbBackground()" data-i18n="applyColor">应用颜色</button>
+        </div>
+        <p class="appearance-status" id="appearanceStatus" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+
+
+  <!-- 自定义删除确认：替代 WebView 默认 file:// confirm 对话框 -->
+  <div class="delete-confirm-backdrop"
+       id="deleteConfirmBackdrop"
+       onclick="handleDeleteConfirmBackdrop(event)">
+    <div class="delete-confirm-panel" role="dialog" aria-modal="true">
+      <div class="delete-confirm-message" id="deleteConfirmMessage"></div>
+
+      <div class="delete-confirm-actions">
+        <button class="delete-confirm-btn"
+                type="button"
+                onclick="cancelDeleteConfirm()">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#222" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 14l20 20M34 14L14 34"/>
+          </svg>
+          <span data-i18n="cancel">取消</span>
+        </button>
+
+        <button class="delete-confirm-btn delete"
+                type="button"
+                onclick="confirmPendingDelete()">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#d93636" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10 14h28"/>
+            <path d="M18 14V9h12v5"/>
+            <path d="M15 14l2 25h14l2-25"/>
+            <path d="M21 20v13M27 20v13"/>
+          </svg>
+          <span data-i18n="delete">删除</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 说说操作面板 -->
+  <div class="post-action-panel" id="postActionPanel">
+    <button class="post-action-btn" onclick="editActivePost()">
+      <svg class="post-action-icon" viewBox="0 0 48 48" fill="none" stroke="#222" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 35l3-10L31 8l9 9-17 17-12 1z"/>
+        <path d="M28 11l9 9"/>
+        <path d="M14 25l9 9"/>
+      </svg>
+      <span class="post-action-label" data-i18n="edit">编辑</span>
+    </button>
+
+    <button class="post-action-btn delete" onclick="deleteActivePost()">
+      <svg class="post-action-icon" viewBox="0 0 48 48" fill="none" stroke="#d93636" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 14h28"/>
+        <path d="M18 14V9h12v5"/>
+        <path d="M15 14l2 25h14l2-25"/>
+        <path d="M21 20v13M27 20v13"/>
+      </svg>
+      <span class="post-action-label" data-i18n="delete">删除</span>
+    </button>
+  </div>
+
+  <!-- 文本说说编辑器 -->
+  <section class="post-compose-screen" id="postComposeScreen">
+    <div class="post-compose-header">
+      <button class="post-compose-cancel" onclick="closePostComposer()" data-i18n="cancel">取消</button>
+      <div class="post-compose-title" data-i18n="writePost">写说说</div>
+      <button class="post-compose-publish" onclick="publishTextPost()" data-i18n="publish">发表</button>
+    </div>
+
+    <div class="post-compose-body">
+      <div class="post-input-row">
+        <textarea id="postComposerText" maxlength="5000" placeholder="分享新鲜事..." data-i18n-placeholder="share" oninput="updatePostCount()"></textarea>
+        <div class="compose-media-toolbar" aria-label="添加附件">
+          <button class="compose-add-image" type="button" data-add-audio="post" onclick="pickEntryAudio('post')" title="添加音乐">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span data-i18n="addAudio">添加音乐</span>
+          </button>
+          <button class="compose-add-image" type="button" onclick="pickPostImages()" title="添加图片">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span data-i18n="addImage">添加图片</span>
+          </button>
+        </div>
+      </div>
+      <div id="postAudioDraft"></div>
+      <div class="compose-image-preview post-compose-images" id="postImagePreview"></div>
+
+      <div class="post-compose-count"><span id="postCharCount">0</span>/5000</div>
+    </div>
+  </section>
+
+  <input id="postImagePicker"
+         type="file"
+         accept="image/*"
+         multiple
+         style="display:none"
+         onchange="handlePostImages(event)">
+
+  <input id="avatarPicker" type="file" accept="image/*" style="display:none" onchange="handleAvatarFile(event)">
+  <input id="backgroundImagePicker" type="file" accept="image/*" style="display:none" onchange="handleBackgroundImageFile(event)">
+
+  <!-- 头像裁剪界面 -->
+  <section class="crop-screen" id="cropScreen">
+    <div class="crop-header">
+      <button class="crop-back" onclick="closeCrop()" aria-label="返回">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M30 9L15 24l15 15"/>
+        </svg>
+      </button>
+      移动和缩放
+    </div>
+
+    <div class="crop-body">
+      <canvas id="cropCanvas" width="631" height="690"></canvas>
+      <div class="crop-hint" data-i18n="cropHint">拖动图片调整位置，滑动或双指缩放</div>
+      <div class="zoom-row">
+        <svg viewBox="0 0 32 32" fill="none" stroke="white" stroke-width="2.5"><circle cx="14" cy="14" r="9"/><path d="M21 21l7 7M10 14h8"/></svg>
+        <input id="zoomRange" type="range" min="1" max="4" value="1" step="0.01" oninput="setZoom(this.value)">
+        <svg viewBox="0 0 32 32" fill="none" stroke="white" stroke-width="2.5"><circle cx="14" cy="14" r="9"/><path d="M21 21l7 7M10 14h8M14 10v8"/></svg>
+      </div>
+    </div>
+
+    <div class="crop-footer">
+      <button class="crop-cancel" onclick="closeCrop()" data-i18n="cancel">取消</button>
+      <button class="crop-done" onclick="finishCrop()" data-i18n="done">完成</button>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<script src="js/components/notice.js"></script>
+<script src="vendor/fflate.js"></script>
+<script src="vendor/sha256.js"></script>
+<script src="js/core/entries.js"></script>
+<script src="js/features/audio.js"></script>
+<script src="js/core/media-adapter.js"></script>
+<script src="js/core/archive-mapping.js"></script>
+<script src="js/core/archive.js"></script>
+<script src="js/features/transfer.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/dom.js"></script>
+<script src="js/components/menu.js"></script>
+<script src="js/core/viewport.js"></script>
+<script src="js/core/i18n.js"></script>
+<script src="js/features/settings.js"></script>
+<script src="js/components/media.js"></script>
+<script src="js/components/viewer.js"></script>
+<script src="js/components/confirmation.js"></script>
+<script src="js/features/posts.js"></script>
+<script src="js/features/profile.js"></script>
+<script src="js/components/crop.js"></script>
+<script src="js/core/navigation.js"></script>
+<script src="js/features/appearance.js"></script>
+<script src="js/core/bootstrap.js"></script>
+<div id="importPreview" class="import-preview" role="dialog" aria-modal="true">
+  <div class="import-panel"><h3 data-i18n="importArchive">导入备份</h3><p id="importSummary"></p>
+    <label for="importMode" data-i18n="importMode">导入方式</label>
+    <select id="importMode"><option value="merge" data-i18n="merge">合并（优先较新内容）</option><option value="add" data-i18n="addOnly">仅添加不存在的内容</option><option value="replace" data-i18n="replaceAll">覆盖全部说说</option></select>
+    <p data-i18n="replaceWarning">覆盖模式会替换当前全部说说；合并模式保留较新的本地内容。</p>
+    <button onclick="closeImportPreview()" data-i18n="cancel">取消</button><button onclick="confirmArchiveImport()" data-i18n="confirmImport">确认导入</button>
+  </div></div>
+</body>
+</html>

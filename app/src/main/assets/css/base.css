@@ -1,0 +1,256 @@
+:root {
+  color-scheme: light;
+  --ink:#111214;
+  --muted:#999da2;
+  --blue:#315f98;
+  --page-background:rgb(240,255,230);
+  --page-background-image:none;
+  --feed:var(--page-background);
+  --body-size:17px;
+  --body-leading:1.5;
+  --card-radius:14px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+}
+html,body {
+  margin:0;
+  min-height:100%;
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+}
+* {
+  box-sizing:border-box;
+}
+body {
+  background-color:var(--page-background);
+  background-image:var(--page-background-image);
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+button,input,textarea {
+  font:inherit;
+  color:inherit;
+}
+button {
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+button:focus-visible {
+  outline:2px solid #1599e8;
+  outline-offset:2px;
+}
+#stage {
+  width:100%;
+  margin:auto;
+}
+.phone {
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  min-height:100dvh;
+  padding:calc(var(--safe-top) + 14px) var(--safe-right) calc(var(--safe-bottom) + 16px) var(--safe-left);
+}
+.header,.ghost-line,.wave3,.composer-area {
+  display:none;
+}
+.profile {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 10px 8px;
+  padding:12px 48px 12px 14px;
+  min-height:92px;
+  border-radius:22px;
+  background:linear-gradient(#ffffffeb,#eff7fbe6);
+}
+.avatar {
+  display:block;
+  width:70px;
+  height:70px;
+  flex-shrink:0;
+  border-radius:50%;
+  object-fit:cover;
+  cursor:pointer;
+}
+.name {
+  min-width:0;
+  font-size:clamp(19px,5.2vw,26px);
+  font-weight:500;
+  overflow-wrap:anywhere;
+  outline:none;
+}
+.settings {
+  position:absolute;
+  top:9px;
+  right:8px;
+  border:0;
+  border-radius:50%;
+  width:36px;
+  height:36px;
+  padding:8px;
+  background:#a7b0ba66;
+  display:grid;
+  place-items:center;
+}
+.settings svg {
+  width:22px;
+  height:22px;
+}
+.tabs {
+  display:flex;
+  margin:0 10px;
+  border-radius:0;
+  overflow:visible;
+  background:transparent;
+}
+.tab {
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:76px;
+  border:0;
+  background:transparent;
+  padding:10px;
+}
+.tab svg {
+  width:30px;
+  height:30px;
+}
+.tab-label {
+  margin-top:6px;
+  font-size:16px;
+  line-height:1.1;
+}
+.feed {
+  width:100%;
+  padding:0 8px;
+}
+.feed-composer-wrap {
+  margin:0 -2px 8px;
+  padding:8px;
+  border-radius:0 0 18px 18px;
+  background:#ffffffeb;
+}
+.feed-composer {
+  display:flex;
+  align-items:center;
+  min-height:54px;
+  border:1px solid #cfd1d5;
+  border-radius:14px;
+  background:white;
+}
+.feed-composer-main {
+  flex:1;
+  min-width:0;
+  min-height:52px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:10px 14px;
+  color:#9da0a4;
+  font-size:16px;
+}
+.feed-composer-photo {
+  width:48px;
+  height:48px;
+  border:0;
+  background:transparent;
+  padding:10px;
+}
+.feed-composer-photo svg {
+  width:26px;
+  height:26px;
+}
+.post {
+  position:relative;
+  width:100%;
+  margin:0 0 8px;
+  padding:12px 12px 14px;
+  border:1px solid #bfc1c4;
+  border-radius:var(--card-radius);
+  background:white;
+}
+.post-head {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:42px;
+  padding-right:44px;
+}
+.mini-avatar {
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.post-name {
+  color:var(--blue);
+  font-size:16px;
+  font-weight:600;
+  overflow-wrap:anywhere;
+  min-width:0;
+}
+.text-content {
+  position:relative;
+  margin-top:12px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.time {
+  position:relative;
+  margin-top:16px;
+  color:var(--muted);
+  font-size:12px;
+}
+@media(min-width:720px) {
+  .profile,.tabs,.feed {
+    max-width:700px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+/* Keep settings near the top while moving the avatar/name down. The 8px
+   profile bottom padding plus the tab's 10px top padding keeps the avatar
+   bottom about 18px from the feature icon row, safely below the 60px limit. */
+.profile{
+  background:transparent;
+  border-radius:0;
+  padding:36px 44px 8px 4px;
+  min-height:114px;
+  margin-bottom:0
+}
+.tabs{
+  background:transparent;
+  border-radius:0;
+  overflow:visible
+}
+.feed-composer-wrap{
+  background:transparent;
+  border-radius:0
+}
+.settings{
+  background:rgba(255,255,255,.48);
+  color:#48515b
+}
+.settings path{
+  fill:currentColor!important
+}
+:root[data-avatar-shape="round"] .avatar,:root[data-avatar-shape="round"] .mini-avatar{
+  border-radius:50%
+}
+:root[data-avatar-shape="square"] .avatar{
+  border-radius:12px
+}
+:root[data-avatar-shape="square"] .mini-avatar{
+  border-radius:7px
+}

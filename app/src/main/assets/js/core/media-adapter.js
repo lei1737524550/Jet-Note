@@ -1,0 +1,130 @@
+/* Native streaming storage (B) with IndexedDB Blob compatibility (A). */
+const NativeMedia = {
+  available: () => !!window.JetNoteNative?.pickAttachments,
+  url(meta) {
+    return meta?.path && /^media\/[A-Za-z0-9_.-]+$/.test(meta.path) ? 'https://jetnote.local/' + meta.path : '';
+  },
+  isImage(src) {
+    return /^data:image\//i.test(src || '') || /^https:\/\/jetnote\.local\/media\/[A-Za-z0-9_.-]+$/.test(src || '');
+  },
+  async storeBlob(meta, blob) {
+    const path = meta.path || 'media/' + meta.id + '.' + mediaExtension(meta.mimeType);
+    const token = JetNoteNative.beginMedia(path);
+    if (!token) throw Error('Cannot stage media');
+    try {
+      for (let offset=0; offset<blob.size; offset+=147456) {
+        const bytes=new Uint8Array(await blob.slice(offset,offset+147456).arrayBuffer());
+        if (!JetNoteNative.appendMedia(token,bytesToBase64(bytes))) throw Error('Cannot write media');
+      }
+      const result=JSON.parse(JetNoteNative.finishMedia(token,meta.sha256 || ''));
+      if(result.error)throw Error(result.error);
+      return {
+        ...meta,...result,path
+      };
+    } catch(error) {
+      JetNoteNative.cancelMedia(token);
+      throw error;
+    }
+  },
+  async ensure(meta) {
+    if (this.url(meta)) return meta;
+    const stored=await EntryStore.media(meta.id);
+    if (this.url(stored)) return {
+      ...meta,...stored
+    };
+    if (!stored?.blob) throw Error('Missing media: '+(meta.originalName||meta.id));
+    const converted=await this.storeBlob(meta,stored.blob);
+    // Keep the original Blob until the entry transaction is committed; no destructive migration.
+    return converted;
+  },
+  async image(source) {
+    if(source.startsWith('data:image/')) {
+      const match=/^data:(image\/[A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(source);
+      if(!match)throw Error('Invalid stored image');
+      const bytes=base64ToBytes(match[2]),hash=sha256(bytes);
+      return this.storeBlob({
+        id:'image-'+hash,type:'image',mimeType:match[1],originalName:null,sha256:hash,size:bytes.length
+      },new Blob([bytes],{
+        type:match[1]
+      }));
+    }
+    if(!this.isImage(source))throw Error('Image is not stored locally');
+    const path=source.slice('https://jetnote.local/'.length);
+    const result=JSON.parse(JetNoteNative.describeMedia(path));
+    if(result.error)throw Error(result.error);
+    return result;
+  }
+};
+function mediaExtension(mime) {
+  return ({
+    'audio/mpeg':'mp3','audio/wav':'wav','audio/x-wav':'wav','audio/ogg':'ogg','audio/mp4':'m4a','audio/aac':'aac','audio/flac':'flac','image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','video/mp4':'mp4'
+  }
+  [mime]||'bin');
+}
+const nativePickResolvers=new Map();
+window.JetNoteNativeCallbacks={
+  onAttachmentsPicked(id,items){
+    const p=nativePickResolvers.get(id);
+    nativePickResolvers.delete(id);
+    p?.resolve(items);
+  },
+  onAttachmentPickCancelled(id){
+    const p=nativePickResolvers.get(id);
+    nativePickResolvers.delete(id);
+    p?.resolve([]);
+  },
+  onAttachmentPickError(id,message){
+    const p=nativePickResolvers.get(id);
+    nativePickResolvers.delete(id);
+    p?.reject(Error(message));
+  }
+};
+function pickNativeAttachments(type) {
+  return new Promise((resolve,reject)=>{
+    const id=entryUuid(); nativePickResolvers.set(id,{
+      resolve,reject
+    }); try{
+      JetNoteNative.pickAttachments(id,type,true);
+    }catch(e){
+      nativePickResolvers.delete(id); reject(e);
+    }
+  });
+}
+async function pickEntryAudio(kind) {
+  if(!NativeMedia.available()){
+    document.getElementById(kind+'AudioPicker').click();
+    return;
+  }
+  await pickEntryMedia(kind,'audio');
+}
+async function pickEntryMedia(kind,type) {
+  if(entriesBusy||!entriesReady)return;
+  const token=audioLoadToken[kind],button=document.querySelector('[data-add-audio="'+kind+'"]');
+  if(button.disabled)return;
+  button.disabled=true;
+  try {
+    const items=await pickNativeAttachments(type);
+    if(token!==audioLoadToken[kind])return;
+    const remaining=type==='image'?MAX_MEDIA_IMAGES-postDraftImages.length:20-draftAttachments.post.filter(x=>x.type==='audio').length;
+    if(items.length>remaining)alert(t(type==='image'?'imageLimit':'attachmentLimit'));
+    const accepted=items.slice(0,Math.max(0,remaining));
+    for(const meta of accepted){
+      draftAttachments[kind].push(meta);
+      draftMedia[kind].set(meta.id,meta);
+    }
+    if(type==='image'){
+      postDraftImages.push(...accepted.map(x=>NativeMedia.url(x)));
+      renderPostImagePreview();
+    }
+    renderAudioDraft(kind);
+  }catch(error){
+    alert(error.message);
+  }
+  finally{
+    button.disabled=false;
+  }
+}
+function pruneDraftImages(kind,sources){
+  const used=new Set(sources);
+  draftAttachments.post=draftAttachments.post.filter(x=>x.type!=='image'||used.has(NativeMedia.url(x)));
+}
