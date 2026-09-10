@@ -5,7 +5,8 @@
 /* Every full-screen route reserves its own safe content area. */
 .settings-screen,.post-compose-screen,.crop-screen { height:var(--viewport-height,100dvh); padding-left:var(--safe-left); padding-right:var(--safe-right); }
 .settings-header,.post-compose-header { top:var(--safe-top); }
-.settings-body,.post-compose-body { top:calc(var(--safe-top) + 64px); bottom:var(--content-bottom,var(--safe-bottom)); }
+.settings-body { top:calc(var(--safe-top) + 64px); bottom:var(--content-bottom,var(--safe-bottom)); }
+.post-compose-body { top:calc(var(--safe-top) + var(--jet-toolbar-height)); bottom:var(--content-bottom,var(--safe-bottom)); }
 .settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:white; }
 #postComposerText{ font-size:var(--body-size); line-height:var(--body-leading); }
 .image-viewer-close { top:calc(var(--safe-top) + 8px); }

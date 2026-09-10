@@ -75,7 +75,6 @@ final class DictionaryController {
     private WebView dictionaryWebView;
     private View toolbar;
     private TextView downloadStatus;
-    private TextView floatingGet;
     private View loadStatePanel;
     private TextView loadStateTitle;
     private TextView loadStateCode;
@@ -212,7 +211,6 @@ final class DictionaryController {
         toolbar = null;
         downloadStatus = null;
         overlay = null;
-        floatingGet=null;
         loadStatePanel=null;
         loadStateTitle=null;
         loadStateCode=null;
@@ -232,9 +230,7 @@ final class DictionaryController {
     }
 
     private View createToolbar() {
-        LinearLayout bar = new LinearLayout(activity);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
+        FrameLayout bar = new FrameLayout(activity);
         bar.setPadding(dp(8), dp(5), dp(8), dp(5));
         bar.setBackgroundColor(0xfff8f9fa);
         bar.setElevation(dp(3));
@@ -245,32 +241,29 @@ final class DictionaryController {
             if (dictionaryWebView != null && dictionaryWebView.canGoBack()) dictionaryWebView.goBack();
             else close();
         });
-        bar.addView(back, new LinearLayout.LayoutParams(dp(40), dp(36)));
-
         TextView title = new TextView(activity);
         title.setText(pageTitle);
         title.setTextColor(0xff202124);
         title.setTextSize(16);
         title.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, dp(36), 1f);
-        titleParams.leftMargin = dp(8);
-        titleParams.rightMargin = dp(8);
+        // Keep the title at the true toolbar center, regardless of the side button widths.
+        FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(36), Gravity.CENTER);
         bar.addView(title, titleParams);
 
-        TextView refresh = createToolbarButton("↻", 0xff287a9f, true);
-        refresh.setTextSize(22);
-        refresh.setContentDescription("en".equals(pageLanguage) ? "Refresh current page" : "刷新当前网页");
-        refresh.setOnClickListener(v -> reloadCurrentPage());
-        LinearLayout.LayoutParams refreshParams = new LinearLayout.LayoutParams(dp(42), dp(36));
-        refreshParams.rightMargin = dp(20);
-        bar.addView(refresh, refreshParams);
+        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(
+                dp(40), dp(36), Gravity.START | Gravity.CENTER_VERTICAL);
+        bar.addView(back, backParams);
 
         TextView get = createToolbarButton("en".equals(pageLanguage) ? "Get Audio" : "获取音频", 0xff168a45, true);
         get.setTextSize(14);
         get.setContentDescription("en".equals(pageLanguage) ? "Get page audio" : "获取页面音频");
         get.setOnClickListener(v -> runGetScript());
-        get.setOnLongClickListener(v->{toggleFloatingGet();return true;});
-        bar.addView(get, new LinearLayout.LayoutParams(dp(88), dp(36)));
+        // Long press is a compact refresh shortcut; it no longer creates an in-page button.
+        get.setOnLongClickListener(v -> { reloadCurrentPage(); return true; });
+        FrameLayout.LayoutParams getParams = new FrameLayout.LayoutParams(
+                dp(88), dp(36), Gravity.END | Gravity.CENTER_VERTICAL);
+        bar.addView(get, getParams);
 
         return bar;
     }
@@ -400,17 +393,6 @@ final class DictionaryController {
         observedAudioUrls.clear();
         showLoadingState();
         dictionaryWebView.reload();
-    }
-
-    private void toggleFloatingGet(){
-        if(overlay==null)return;
-        if(floatingGet!=null){overlay.removeView(floatingGet);floatingGet=null;return;}
-        floatingGet=createToolbarButton("en".equals(pageLanguage)?"Get Audio":"获取音频",0xff168a45,true);
-        floatingGet.setOnClickListener(v->runGetScript());
-        floatingGet.setOnLongClickListener(v->{toggleFloatingGet();return true;});
-        FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(dp(100),dp(48),Gravity.BOTTOM|Gravity.END);
-        p.rightMargin=dp(16);p.bottomMargin=dp(72);overlay.addView(floatingGet,p);
-        showDownloadStatus("已开启悬浮 Get，长按可关闭",true);
     }
 
     private void runGetScript() {
