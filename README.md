@@ -1,4 +1,6 @@
-# Jet Note   [看不懂洋文点这里](README_ZH.md)
+# Jet Note
+
+English | [中文](README_ZH.md)
 
 Jet Note is a lightweight, local-first note-taking application for
 Android built with a **native Android + WebView** hybrid architecture.

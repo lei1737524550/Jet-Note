@@ -1,4 +1,6 @@
-# Jet Note       [English](README.md)
+# Jet Note
+
+[English](README.md) | 中文
 
 Jet Note 是一款面向 Android 的轻量级本地笔记应用，采用 **原生 Android +
 WebView 前端**
