@@ -325,6 +325,10 @@ button:active {
   font-weight: 600;
 }
 
+.settings-row-title-compact {
+  padding-top: 4px;
+}
+
 .settings-option-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -387,6 +391,18 @@ button:active {
   justify-content: center;
   padding: 11px;
   text-align: center;
+}
+
+.settings-status {
+  min-height: 18px;
+  margin: 0 18px 14px;
+  color: #4e6678;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-status.error {
+  color: #b43b3b;
 }
 
 .shape-preview {

@@ -106,6 +106,38 @@
         </div>
         <p id="archiveStatus" role="status"></p>
       </div>
+      <div class="settings-card web-cache-card">
+        <div class="settings-row-title" data-i18n="webCache">网页缓存</div>
+        <div class="settings-row-subtitle" id="webCacheUsage" data-i18n="webCacheLoading">当前占用：正在读取…</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice" type="button" onclick="clearWebCache()">
+            <span class="settings-choice-main" data-i18n="clearWebCache">清理网页缓存</span>
+          </button>
+          <button class="settings-choice settings-action-choice" type="button" onclick="manageWebCache()">
+            <span class="settings-choice-main" data-i18n="manageWebCache">自动管理</span>
+          </button>
+        </div>
+        <div class="settings-row-title settings-row-title-compact" data-i18n="autoClear">自动清理</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice" id="cacheClearOnCloseOption" type="button" onclick="setWebCacheClosePolicy(true)">
+            <span class="settings-choice-main" data-i18n="clearOnToolClose">关闭工具页时清理</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="cacheKeepOption" type="button" onclick="setWebCacheClosePolicy(false)">
+            <span class="settings-choice-main" data-i18n="keepWebCache">保留缓存</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="cacheLimit50Option" type="button" onclick="setWebCacheLimit(50)">
+            <span class="settings-choice-main" data-i18n="clearOver50">超过 50 MB 清理</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+          <button class="settings-choice" id="cacheLimit200Option" type="button" onclick="setWebCacheLimit(200)">
+            <span class="settings-choice-main" data-i18n="clearOver200">超过 200 MB 清理</span>
+            <span class="settings-choice-check">✓</span>
+          </button>
+        </div>
+        <p id="webCacheStatus" class="settings-status" role="status"></p>
+      </div>
       <div class="settings-card">
         <div class="settings-row-title" data-i18n="modeSelection">模式选择</div>
         <div class="settings-option-grid">

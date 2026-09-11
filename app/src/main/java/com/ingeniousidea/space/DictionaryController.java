@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -38,17 +39,23 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.HashMap;
+import java.io.File;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 /** Hosts Jet Note web tools in an isolated WebView with audio discovery and downloads. */
 final class DictionaryController {
     private static final String DOWNLOAD_SCHEME = "jetnote-download";
     private static final int TOOLBAR_HEIGHT_DP = 50;
+    private static final String CACHE_PREFERENCES = "jet_note_web_cache";
+    private static final String CACHE_CLEAR_ON_CLOSE = "clear_on_tool_close";
+    private static final String CACHE_LIMIT_MB = "limit_mb";
+    private static final int DEFAULT_CACHE_LIMIT_MB = 50;
 
     /*
      * Keeps the original resource-discovery logic, but routes result taps back to native code.
@@ -58,6 +65,7 @@ final class DictionaryController {
     private final Activity activity;
     private final AudioSaveController audioSaver;
     private final FrameLayout root;
+    private final SharedPreferences cachePreferences;
     private final Map<Long, String> activeDownloads = new HashMap<>();
     private final Set<String> observedAudioUrls = new LinkedHashSet<>();
     private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
@@ -92,6 +100,7 @@ final class DictionaryController {
         this.activity = activity;
         this.audioSaver=new AudioSaveController(activity);
         this.root = root;
+        this.cachePreferences = activity.getSharedPreferences(CACHE_PREFERENCES, Context.MODE_PRIVATE);
     }
 
     void open(String url, String title, String language) {
@@ -198,6 +207,7 @@ final class DictionaryController {
 
     void close() {
         if (overlay == null) return;
+        applyCachePolicyOnToolClose();
         root.removeView(overlay);
         if (downloadStatus != null) downloadStatus.removeCallbacks(hideStatusRunnable);
         if (dictionaryWebView != null) {
@@ -216,6 +226,77 @@ final class DictionaryController {
         loadStateCode=null;
         loadSpinner=null;
         observedAudioUrls.clear();
+    }
+
+    /** Returns only disposable WebView cache usage; Jet Note media stays in files/jetnote-media. */
+    String getWebCacheSettings() {
+        try {
+            JSONObject result = new JSONObject();
+            result.put("bytes", webCacheBytes());
+            result.put("clearOnClose", cachePreferences.getBoolean(CACHE_CLEAR_ON_CLOSE, false));
+            result.put("limitMb", cachePreferences.getInt(CACHE_LIMIT_MB, DEFAULT_CACHE_LIMIT_MB));
+            return result.toString();
+        } catch (Exception ignored) {
+            return "{\"bytes\":0,\"clearOnClose\":false,\"limitMb\":50}";
+        }
+    }
+
+    void setWebCacheClosePolicy(boolean clearOnClose) {
+        cachePreferences.edit().putBoolean(CACHE_CLEAR_ON_CLOSE, clearOnClose).apply();
+    }
+
+    void setWebCacheLimitMb(int limitMb) {
+        int safeLimit = limitMb == 200 ? 200 : DEFAULT_CACHE_LIMIT_MB;
+        cachePreferences.edit().putInt(CACHE_LIMIT_MB, safeLimit).apply();
+    }
+
+    /** Clears HTTP/WebView cache only. Cookies, posts, attachments and local backup data are retained. */
+    void clearWebCache() {
+        activity.runOnUiThread(this::clearWebCacheOnUiThread);
+    }
+
+    /** Runs the selected capacity rule immediately and returns whether clearing was requested. */
+    boolean manageWebCacheNow() {
+        long limitBytes = (long) cachePreferences.getInt(CACHE_LIMIT_MB, DEFAULT_CACHE_LIMIT_MB)
+                * 1024L * 1024L;
+        if (webCacheBytes() < limitBytes) return false;
+        clearWebCache();
+        return true;
+    }
+
+    private void applyCachePolicyOnToolClose() {
+        if (cachePreferences.getBoolean(CACHE_CLEAR_ON_CLOSE, false)) {
+            clearWebCacheOnUiThread();
+            return;
+        }
+        manageWebCacheNow();
+    }
+
+    private void clearWebCacheOnUiThread() {
+        WebView target = dictionaryWebView;
+        boolean temporary = false;
+        if (target == null) {
+            target = new WebView(activity);
+            temporary = true;
+        }
+        target.clearCache(true);
+        if (temporary) target.destroy();
+    }
+
+    private long webCacheBytes() {
+        return cacheDirectoryBytes(activity.getCacheDir());
+    }
+
+    private long cacheDirectoryBytes(File file) {
+        if (file == null || !file.exists()) return 0L;
+        String name = file.getName();
+        if (name.startsWith("jetnote-import-") || name.startsWith("media-write-")) return 0L;
+        if (file.isFile()) return file.length();
+        File[] children = file.listFiles();
+        if (children == null) return 0L;
+        long total = 0L;
+        for (File child : children) total += cacheDirectoryBytes(child);
+        return total;
     }
 
     boolean handles(int code){return audioSaver.handles(code);}

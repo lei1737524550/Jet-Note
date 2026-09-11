@@ -27,5 +27,6 @@
 24. 修复圆角图标生成任务的依赖时序：预构建、R 文件生成、资源合并及 Java 编译都会先生成资源，避免 R.drawable 缺少 icon_rounded 或 ic_back_chevron。
 25. 修复图标规则中圆角尺寸的 Groovy 数值类型歧义，所有 JSON 数值在参与 Math 运算前显式转换为整数，兼容 Gradle 9 的 BigDecimal 解析行为。
 26. 修复圆角图标居中绘制坐标的 Groovy 数值类型问题；`drawImage()` 的 X/Y 坐标改用 `intdiv(2)` 生成整数，兼容 Termux/Gradle 环境的 `SunGraphics2D` 参数要求。
+27. 设置页新增“网页缓存”卡片：显示可清理的 WebView 缓存占用，支持手动清理、关闭字典/句子页时清理、保留缓存，以及 50 MB / 200 MB 自动清理阈值。网页缓存操作不会删除说说、日志、图片、音乐或备份数据。
 
-应用版本更新为 3.6（versionCode 27），包名保持不变。备份协议维持 post-only formatVersion 2，旧 formatVersion 1 不再导入。
+应用版本更新为 3.7（versionCode 28），包名保持不变。备份协议维持 post-only formatVersion 2，旧 formatVersion 1 不再导入。

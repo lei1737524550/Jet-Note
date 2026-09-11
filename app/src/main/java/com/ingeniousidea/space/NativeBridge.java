@@ -26,6 +26,11 @@ final class NativeBridge {
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
+    @JavascriptInterface public String getWebCacheSettings(){return dictionary.getWebCacheSettings();}
+    @JavascriptInterface public void setWebCacheClosePolicy(boolean clearOnClose){dictionary.setWebCacheClosePolicy(clearOnClose);}
+    @JavascriptInterface public void setWebCacheLimitMb(int limitMb){dictionary.setWebCacheLimitMb(limitMb);}
+    @JavascriptInterface public void clearWebCache(){dictionary.clearWebCache();}
+    @JavascriptInterface public boolean manageWebCacheNow(){return dictionary.manageWebCacheNow();}
     @JavascriptInterface public String beginMedia(String path){return mediaWriter.begin(path);}
     @JavascriptInterface public boolean appendMedia(String token,String data){return mediaWriter.append(token,data);}
     @JavascriptInterface public String finishMedia(String token,String sha){return mediaWriter.finish(token,sha);}
