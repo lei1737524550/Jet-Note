@@ -1,5 +1,5 @@
 const AVATAR_SHAPE_KEY = 'jet_note_avatar_shape';
-const DEFAULT_BACKGROUND = {mode:'rgb', rgb:{r:255,g:255,b:255}, image:null};
+const DEFAULT_BACKGROUND = {mode:'rgb', rgb:{r:240,g:255,b:230}, image:null};
 
 let currentAvatarShape = AppStorage.getItem(AVATAR_SHAPE_KEY) === 'round' ? 'round' : 'square';
 let currentBackground = structuredClone(DEFAULT_BACKGROUND);

@@ -65,6 +65,15 @@ function renderPosts() {
             <path d="M10 35l9-9 7 6 5-5 8 8"/>
           </svg>
         </button>
+
+        <button class="feed-composer-photo"
+                onclick="openPostComposerWithVideoPicker()"
+                aria-label="add video">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="11" width="25" height="26" rx="5"/>
+            <path d="M32 19l9-5v20l-9-5z"/>
+          </svg>
+        </button>
       </div>
     </div>
   `;
@@ -86,6 +95,7 @@ function renderPosts() {
 
         <div class="text-content">${escapeHTML(post.text || '')}</div>
         ${renderAttachments(post.attachments)}
+        ${renderVideoAttachmentsHTML(post.attachments)}
         ${renderMediaHTML(images, 'post-media-grid', true)}
         <div class="time">${escapeHTML(post.time)}</div>
       </article>
@@ -95,6 +105,7 @@ function renderPosts() {
   releaseAttachmentUrls(list);
   list.innerHTML = composerHTML + postsHTML;
   hydrateAttachments(list);
+  hydrateVideoAttachments(list);
   requestAnimationFrame(fit);
 }
 function syncComposerViewport() {
@@ -148,6 +159,7 @@ function openPostComposer(prefillText = '', postId = null, sourcePost = null) {
 
   initAudioDraft('post', editDraft);
   renderPostImagePreview();
+  renderPostVideoPreview();
 
   screen.classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -178,12 +190,36 @@ function closePostComposer() {
   editingPostId = null;
   postDraftImages = [];
   renderPostImagePreview();
+  renderPostVideoPreview();
   updatePostCount();
 }
 
+function hasDraftVideos() {
+  return draftAttachments.post.some(item => item.type === 'video');
+}
+
 function pickPostImages() {
-  if(NativeMedia.available()){pickEntryMedia('post','image');return;}
+  if (hasDraftVideos()) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+  if (NativeMedia.available()) {
+    pickEntryMedia('post', 'image');
+    return;
+  }
   document.getElementById('postImagePicker').click();
+}
+
+function pickPostVideos() {
+  if (postDraftImages.length > 0) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+  if (NativeMedia.available()) {
+    pickEntryMedia('post', 'video');
+    return;
+  }
+  document.getElementById('postVideoPicker').click();
 }
 
 function openPostComposerWithImagePicker() {
@@ -198,8 +234,18 @@ function openPostComposerWithAudioPicker() {
   setTimeout(() => pickEntryAudio('post'), 60);
 }
 
+function openPostComposerWithVideoPicker() {
+  openPostComposer();
+  setTimeout(() => pickPostVideos(), 60);
+}
+
 async function handlePostImages(event) {
   const picker = event.target;
+  if (hasDraftVideos()) {
+    alert(t('imageVideoExclusive'));
+    picker.value = '';
+    return;
+  }
   const remaining = MAX_MEDIA_IMAGES - postDraftImages.length;
 
   if (remaining <= 0) {
@@ -239,6 +285,78 @@ function renderPostImagePreview() {
               aria-label="remove">×</button>
     </div>
   `).join('');
+}
+
+async function handlePostVideos(event) {
+  const picker = event.target;
+  const files = Array.from(picker.files || []);
+  picker.value = '';
+
+  if (postDraftImages.length > 0) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+
+  const remaining = MAX_MEDIA_IMAGES - draftAttachments.post.filter(item => item.type === 'video').length;
+  if (remaining <= 0) {
+    alert(t('videoLimit'));
+    return;
+  }
+
+  if (files.length > remaining) alert(t('videoLimit'));
+  const selected = files.slice(0, remaining);
+
+  try {
+    for (const file of selected) {
+      if (!file.type.startsWith('video/')) throw Error(t('videoOnly'));
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const meta = {
+        id: entryUuid(),
+        type: 'video',
+        mimeType: file.type || 'video/mp4',
+        originalName: file.name,
+        sourceMimeType: file.type || null,
+        lastModified: file.lastModified,
+        size: bytes.length,
+        sha256: sha256(bytes)
+      };
+      draftMedia.post.set(meta.id, {
+        ...meta,
+        blob: new Blob([bytes], {type: meta.mimeType})
+      });
+      draftAttachments.post.push(meta);
+    }
+    renderPostVideoPreview();
+    renderAudioDraft('post');
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function removePostDraftVideo(id) {
+  draftAttachments.post = draftAttachments.post.filter(item => String(item.id) !== String(id));
+  draftMedia.post.delete(String(id));
+  renderPostVideoPreview();
+  renderAudioDraft('post');
+}
+
+function renderPostVideoPreview() {
+  const box = document.getElementById('postVideoPreview');
+  if (!box) return;
+
+  releaseVideoAttachmentUrls(box);
+  const videos = draftAttachments.post.filter(item => item.type === 'video');
+  box.innerHTML = videos.map(item => `
+    <div class="compose-video-item video-attachment-item native-video-card" data-media-id="${escapeHTML(item.id)}">
+      <img class="video-poster" alt="" draggable="false">
+      <button class="compose-image-remove"
+              type="button"
+              onclick="event.stopPropagation(); removePostDraftVideo('${escapeHTML(item.id)}')"
+              aria-label="${escapeHTML(t('remove'))}">×</button>
+    </div>
+  `).join('');
+
+  hydrateVideoAttachments(box, draftMedia.post);
 }
 
 let activePostActionId = null;
@@ -366,6 +484,11 @@ async function publishTextPost() {
   if(!entriesReady||entriesBusy||document.querySelector('[data-add-audio="post"]').disabled)return;
   const textarea = document.getElementById('postComposerText');
   const content = textarea.value.trim();
+
+  if (postDraftImages.length > 0 && hasDraftVideos()) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
 
   if (!content && postDraftImages.length === 0 && draftAttachments.post.length === 0) {
     alert(t('emptyPost'));

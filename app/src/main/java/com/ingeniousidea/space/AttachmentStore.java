@@ -32,7 +32,7 @@ import java.util.UUID;
  * decoded and re-encoded during normal import/export.
  */
 final class AttachmentStore {
-    static final String MEDIA_URL_PREFIX = "https://jetnote.local/media/";
+    static final String MEDIA_URL_PREFIX = "https://appassets.androidplatform.net/media/";
     private final Context context;
     private final File mediaDir;
 
@@ -51,7 +51,11 @@ final class AttachmentStore {
         if (originalName == null || originalName.trim().isEmpty()) originalName = "attachment";
         if (mimeType == null || mimeType.trim().isEmpty() || "application/octet-stream".equals(mimeType)) mimeType = guessMimeFromName(originalName);
         if(originalName.toLowerCase(Locale.US).endsWith(".mp3"))mimeType="audio/mpeg";
-        if(("audio".equals(requestedType)&&!mimeType.startsWith("audio/"))||("image".equals(requestedType)&&!mimeType.startsWith("image/")))throw new IOException("Selected file has an unsupported media type");
+        if (("audio".equals(requestedType) && !mimeType.startsWith("audio/"))
+                || ("image".equals(requestedType) && !mimeType.startsWith("image/"))
+                || ("video".equals(requestedType) && !mimeType.startsWith("video/"))) {
+            throw new IOException("Selected file has an unsupported media type");
+        }
 
         String type = normalizeType(requestedType, mimeType);
         String extension = safeExtension(originalName, mimeType);
@@ -274,11 +278,9 @@ final class AttachmentStore {
     }
 
     private static String safeExtension(String name, String mime) {
-        int dot = name == null ? -1 : name.lastIndexOf('.');
-        if (dot >= 0 && dot < name.length() - 1) {
-            String ext = name.substring(dot).toLowerCase(Locale.US);
-            if (ext.matches("\\.[a-z0-9]{1,10}")) return ext;
-        }
+        // MIME comes from ContentResolver and is more reliable for playback than
+        // arbitrary display-name suffixes such as .tmp or .bin. Canonicalizing
+        // known media extensions also lets the HTTP response expose the right MIME.
         if ("image/jpeg".equals(mime)) return ".jpg";
         if ("image/png".equals(mime)) return ".png";
         if ("image/webp".equals(mime)) return ".webp";
@@ -286,7 +288,20 @@ final class AttachmentStore {
         if ("audio/mpeg".equals(mime)) return ".mp3";
         if ("audio/ogg".equals(mime)) return ".ogg";
         if ("audio/wav".equals(mime) || "audio/x-wav".equals(mime)) return ".wav";
+        if ("audio/mp4".equals(mime)) return ".m4a";
+        if ("audio/aac".equals(mime)) return ".aac";
+        if ("audio/flac".equals(mime)) return ".flac";
         if ("video/mp4".equals(mime)) return ".mp4";
+        if ("video/webm".equals(mime)) return ".webm";
+        if ("video/quicktime".equals(mime)) return ".mov";
+        if ("video/x-matroska".equals(mime)) return ".mkv";
+        if ("video/3gpp".equals(mime)) return ".3gp";
+
+        int dot = name == null ? -1 : name.lastIndexOf('.');
+        if (dot >= 0 && dot < name.length() - 1) {
+            String ext = name.substring(dot).toLowerCase(Locale.US);
+            if (ext.matches("\\.[a-z0-9]{1,10}")) return ext;
+        }
         return ".bin";
     }
 
@@ -304,6 +319,9 @@ final class AttachmentStore {
         if (lower.endsWith(".flac")) return "audio/flac";
         if (lower.endsWith(".mp4")) return "video/mp4";
         if (lower.endsWith(".webm")) return "video/webm";
+        if (lower.endsWith(".mov")) return "video/quicktime";
+        if (lower.endsWith(".mkv")) return "video/x-matroska";
+        if (lower.endsWith(".3gp") || lower.endsWith(".3gpp")) return "video/3gpp";
         return "application/octet-stream";
     }
 

@@ -190,6 +190,76 @@
 .post-media-grid img {
   cursor: zoom-in;
 }
+.post-video-grid {
+  display:grid;
+  gap:5px;
+  margin-top:16px;
+}
+.post-video-grid.one { grid-template-columns:1fr; }
+.post-video-grid.two { grid-template-columns:repeat(2,1fr); }
+.post-video-grid.many { grid-template-columns:repeat(3,1fr); }
+.video-attachment-item {
+  position:relative;
+  min-width:0;
+  overflow:hidden;
+  border-radius:10px;
+  background:#111;
+}
+.post-video-grid .video-attachment-item { aspect-ratio:16/9; }
+.post-video-grid.two .video-attachment-item,
+.post-video-grid.many .video-attachment-item { aspect-ratio:1/1; }
+.video-attachment-item video {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+.video-expand {
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:34px;
+  height:34px;
+  padding:7px;
+  border:0;
+  border-radius:10px;
+  background:rgba(0,0,0,.58);
+  color:#fff;
+  display:grid;
+  place-items:center;
+}
+.video-expand svg { width:20px; height:20px; }
+.compose-video-item .video-expand { left:8px; right:auto; }
+.video-unavailable {
+  padding:18px;
+  color:#fff;
+  background:#333;
+  font-size:13px;
+}
+.compose-video-preview {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  margin-top:16px;
+}
+.compose-video-preview:empty { display:none; }
+.compose-video-item {
+  position:relative;
+  width:100%;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  border:1px solid #dedede;
+  border-radius:10px;
+  background:#111;
+}
+.compose-video-item video {
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+
 .image-viewer {
   position: fixed;
   inset: 0;
@@ -204,7 +274,8 @@
 .image-viewer.open {
   display: flex;
 }
-.image-viewer img {
+.image-viewer img,
+.image-viewer video {
   display: block;
   max-width: calc(100vw - 24px);
   max-height: calc(100dvh - 24px);
@@ -218,7 +289,17 @@
   -webkit-user-drag: none;
   cursor: zoom-in;
 }
-.image-viewer img.zoomed {
+.image-viewer img,
+.image-viewer video { display:none; }
+.image-viewer img.active,
+.image-viewer video.active { display:block; }
+.image-viewer video {
+  background:#000;
+  /* Keep Android/WebView's native media controls responsive. */
+  touch-action: manipulation;
+}
+.image-viewer img.zoomed,
+.image-viewer video.zoomed {
   cursor: grab;
 }
 .image-viewer-close {
@@ -553,3 +634,146 @@
 .delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn span{
   white-space:nowrap!important
 }
+
+/* V39 — stable video cards. WebView renders only a poster; Android owns playback. */
+.native-video-card {
+  position:relative;
+  background:#111;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.native-video-card .video-poster {
+  position:relative;
+  z-index:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:linear-gradient(145deg,#333,#111);
+}
+.native-video-card.poster-unavailable .video-poster { opacity:0; }
+.video-play {
+  z-index:3;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:58px;
+  height:58px;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.9);
+  display:grid;
+  place-items:center;
+  padding:0;
+  box-shadow:0 2px 12px rgba(0,0,0,.24);
+}
+.video-play-triangle {
+  display:block;
+  width:0;
+  height:0;
+  border-top:10px solid transparent;
+  border-bottom:10px solid transparent;
+  border-left:16px solid #111;
+  margin-left:4px;
+}
+.compose-video-item .video-play {
+  width:44px;
+  height:44px;
+}
+.compose-video-item .video-play-triangle {
+  border-top-width:8px;
+  border-bottom-width:8px;
+  border-left-width:13px;
+}
+
+/* V40 — lazy inline video player. No Chromium native controls are used. */
+.native-video-card .inline-video-player {
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.native-video-card.video-loaded { cursor:default; }
+.video-inline-controls {
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity .14s ease, visibility .14s ease;
+}
+.native-video-card.video-controls-visible .video-inline-controls {
+  opacity:1;
+  visibility:visible;
+}
+.video-inline-toggle {
+  pointer-events:auto;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:58px;
+  height:58px;
+  border:0;
+  border-radius:50%;
+  padding:0;
+  background:rgba(255,255,255,.88);
+  display:grid;
+  place-items:center;
+}
+.video-pause-symbol {
+  width:18px;
+  height:23px;
+  border-left:6px solid #111;
+  border-right:6px solid #111;
+  box-sizing:border-box;
+}
+.video-inline-bottom {
+  pointer-events:auto;
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:7px 9px;
+  border-radius:10px;
+  background:rgba(0,0,0,.5);
+}
+.video-inline-time {
+  flex:0 0 auto;
+  color:#fff;
+  font-size:12px;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+}
+.video-inline-seek {
+  flex:1 1 auto;
+  min-width:0;
+  margin:0;
+  accent-color:#fff;
+}
+.compose-video-item .video-inline-toggle {
+  width:42px;
+  height:42px;
+}
+.compose-video-item .video-inline-bottom {
+  left:6px;
+  right:6px;
+  bottom:5px;
+  gap:5px;
+  padding:4px 5px;
+}
+.compose-video-item .video-inline-time { display:none; }

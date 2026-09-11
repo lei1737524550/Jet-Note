@@ -1,5 +1,5 @@
 
-const DEMO_ARCHIVE_ASSET = 'https://jetnote.local/demo.jnote';
+const DEMO_ARCHIVE_ASSET = 'https://appassets.androidplatform.net/demo.jnote';
 const DEMO_ARCHIVE_SEED_KEY = 'demo_archive_seed_sha256_v2';
 
 async function loadBundledDemoArchiveOnce() {

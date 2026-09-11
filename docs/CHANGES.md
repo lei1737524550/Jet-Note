@@ -1,3 +1,12 @@
+# V41 video interaction/rendering fix
+
+- Tapping the video picture no longer pauses or resumes playback.
+- Picture-area taps only show/hide Jet Note video controls.
+- Only the central play/pause button changes playback state.
+- Seek interaction never propagates to the card.
+- Inline video surface is promoted to a dedicated composited layer and loaded after DOM attachment.
+- Existing lazy loading and configurable concurrent-player limit are preserved.
+
 # Jet Note 2.5 修改记录
 
 1. 图片和音乐入口移到说说输入区右侧，使用一致的图标按钮。
@@ -30,3 +39,10 @@
 27. 设置页新增“网页缓存”卡片：显示可清理的 WebView 缓存占用，支持手动清理、关闭字典/句子页时清理、保留缓存，以及 50 MB / 200 MB 自动清理阈值。网页缓存操作不会删除说说、日志、图片、音乐或备份数据。
 
 应用版本更新为 3.7（versionCode 28），包名保持不变。备份协议维持 post-only formatVersion 2，旧 formatVersion 1 不再导入。
+
+## 3.8 - Stable local video playback
+- Moved the WebView shell from `file:///android_asset/` to the official HTTPS app-assets origin using a dependency-free AssetManager HTTPS-origin handler.
+- Kept byte-range media responses for reliable HTML5 video metadata loading and seeking.
+- New media URLs use `https://appassets.androidplatform.net/media/...` while legacy `https://jetnote.local/media/...` remains readable.
+- Canonicalized known media filename extensions from the ContentResolver MIME type so playback responses expose the correct media MIME more reliably.
+- Original attachment bytes remain unchanged; `.jnote` import/export stays lossless.

@@ -2,10 +2,10 @@
 const NativeMedia = {
   available: () => !!window.JetNoteNative?.pickAttachments,
   url(meta) {
-    return meta?.path && /^media\/[A-Za-z0-9_.-]+$/.test(meta.path) ? 'https://jetnote.local/' + meta.path : '';
+    return meta?.path && /^media\/[A-Za-z0-9_.-]+$/.test(meta.path) ? 'https://appassets.androidplatform.net/' + meta.path : '';
   },
   isImage(src) {
-    return /^data:image\//i.test(src || '') || /^https:\/\/jetnote\.local\/media\/[A-Za-z0-9_.-]+$/.test(src || '');
+    return /^data:image\//i.test(src || '') || /^https:\/\/(?:appassets\.androidplatform\.net|jetnote\.local)\/media\/[A-Za-z0-9_.-]+$/.test(src || '');
   },
   async storeBlob(meta, blob) {
     const path = meta.path || 'media/' + meta.id + '.' + mediaExtension(meta.mimeType);
@@ -49,7 +49,8 @@ const NativeMedia = {
       }));
     }
     if(!this.isImage(source))throw Error('Image is not stored locally');
-    const path=source.slice('https://jetnote.local/'.length);
+    const prefix=source.startsWith('https://appassets.androidplatform.net/')?'https://appassets.androidplatform.net/':'https://jetnote.local/';
+    const path=source.slice(prefix.length);
     const result=JSON.parse(JetNoteNative.describeMedia(path));
     if(result.error)throw Error(result.error);
     return result;
@@ -57,7 +58,7 @@ const NativeMedia = {
 };
 function mediaExtension(mime) {
   return ({
-    'audio/mpeg':'mp3','audio/wav':'wav','audio/x-wav':'wav','audio/ogg':'ogg','audio/mp4':'m4a','audio/aac':'aac','audio/flac':'flac','image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','video/mp4':'mp4'
+    'audio/mpeg':'mp3','audio/wav':'wav','audio/x-wav':'wav','audio/ogg':'ogg','audio/mp4':'m4a','audio/aac':'aac','audio/flac':'flac','image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov','video/x-matroska':'mkv','video/3gpp':'3gp'
   }
   [mime]||'bin');
 }
@@ -97,33 +98,66 @@ async function pickEntryAudio(kind) {
   }
   await pickEntryMedia(kind,'audio');
 }
-async function pickEntryMedia(kind,type) {
-  if(entriesBusy||!entriesReady)return;
-  const token=audioLoadToken[kind],button=document.querySelector('[data-add-audio="'+kind+'"]');
-  if(button.disabled)return;
-  button.disabled=true;
-  try {
-    const items=await pickNativeAttachments(type);
-    if(token!==audioLoadToken[kind])return;
-    const remaining=type==='image'?MAX_MEDIA_IMAGES-postDraftImages.length:20-draftAttachments.post.filter(x=>x.type==='audio').length;
-    if(items.length>remaining)alert(t(type==='image'?'imageLimit':'attachmentLimit'));
-    const accepted=items.slice(0,Math.max(0,remaining));
-    for(const meta of accepted){
-      draftAttachments[kind].push(meta);
-      draftMedia[kind].set(meta.id,meta);
-    }
-    if(type==='image'){
-      postDraftImages.push(...accepted.map(x=>NativeMedia.url(x)));
-      renderPostImagePreview();
-    }
-    renderAudioDraft(kind);
-  }catch(error){
-    alert(error.message);
+async function pickEntryMedia(kind, type) {
+  if (entriesBusy || !entriesReady) return;
+
+  if (type === 'image' && hasDraftVideos()) {
+    alert(t('imageVideoExclusive'));
+    return;
   }
-  finally{
-    button.disabled=false;
+  if (type === 'video' && postDraftImages.length > 0) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+
+  const token = audioLoadToken[kind];
+  const selector = type === 'audio'
+    ? '[data-add-audio="' + kind + '"]'
+    : type === 'video'
+      ? '[data-add-video="' + kind + '"]'
+      : null;
+  const button = selector ? document.querySelector(selector) : null;
+  if (button?.disabled) return;
+  if (button) button.disabled = true;
+
+  try {
+    const items = await pickNativeAttachments(type);
+    if (token !== audioLoadToken[kind]) return;
+
+    let remaining;
+    if (type === 'image') {
+      remaining = MAX_MEDIA_IMAGES - postDraftImages.length;
+    } else if (type === 'video') {
+      remaining = MAX_MEDIA_IMAGES - draftAttachments.post.filter(item => item.type === 'video').length;
+    } else {
+      remaining = 20 - draftAttachments.post.filter(item => item.type === 'audio').length;
+    }
+
+    if (items.length > remaining) {
+      alert(t(type === 'image' ? 'imageLimit' : type === 'video' ? 'videoLimit' : 'attachmentLimit'));
+    }
+
+    const accepted = items.slice(0, Math.max(0, remaining));
+    for (const meta of accepted) {
+      draftAttachments[kind].push(meta);
+      draftMedia[kind].set(meta.id, meta);
+    }
+
+    if (type === 'image') {
+      postDraftImages.push(...accepted.map(item => NativeMedia.url(item)));
+      renderPostImagePreview();
+    } else if (type === 'video') {
+      renderPostVideoPreview();
+    }
+
+    renderAudioDraft(kind);
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    if (button) button.disabled = false;
   }
 }
+
 function pruneDraftImages(kind,sources){
   const used=new Set(sources);
   draftAttachments.post=draftAttachments.post.filter(x=>x.type!=='image'||used.has(NativeMedia.url(x)));

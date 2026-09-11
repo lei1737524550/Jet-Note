@@ -63,6 +63,12 @@
           <path d="M10 35l9-9 7 6 5-5 8 8"/>
         </svg>
       </button>
+      <button class="composer-photo" onclick="openPostComposerWithVideoPicker()" aria-label="add video">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="7" y="11" width="25" height="26" rx="5"/>
+          <path d="M32 19l9-5v20l-9-5z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -71,12 +77,13 @@
 
 
 
-  <!-- 全屏图片查看器 -->
+  <!-- 全屏图片 / 视频查看器 -->
   <div class="image-viewer" id="imageViewer" onclick="closeImageViewer(event)">
     <button class="image-viewer-close"
             onclick="closeImageViewer(event)"
             aria-label="close">×</button>
     <img id="imageViewerImg" src="" alt="">
+    <video id="imageViewerVideo" controls playsinline preload="metadata"></video>
   </div>
 
 
@@ -286,10 +293,14 @@
           <button class="compose-add-image" type="button" onclick="pickPostImages()" title="添加图片">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg><span data-i18n="addImage">添加图片</span>
           </button>
+          <button class="compose-add-image" type="button" data-add-video="post" onclick="pickPostVideos()" title="添加视频">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3z"/></svg><span data-i18n="addVideo">添加视频</span>
+          </button>
         </div>
       </div>
       <div id="postAudioDraft"></div>
       <div class="compose-image-preview post-compose-images" id="postImagePreview"></div>
+      <div class="compose-video-preview post-compose-videos" id="postVideoPreview"></div>
 
       <div class="post-compose-count"><span id="postCharCount">0</span>/5000</div>
     </div>
@@ -301,6 +312,12 @@
          multiple
          style="display:none"
          onchange="handlePostImages(event)">
+  <input id="postVideoPicker"
+         type="file"
+         accept="video/*"
+         multiple
+         style="display:none"
+         onchange="handlePostVideos(event)">
 
   <input id="avatarPicker" type="file" accept="image/*" style="display:none" onchange="handleAvatarFile(event)">
   <input id="backgroundImagePicker" type="file" accept="image/*" style="display:none" onchange="handleBackgroundImageFile(event)">

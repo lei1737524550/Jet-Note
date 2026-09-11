@@ -53,7 +53,7 @@ const ArchiveMapping={
         }
         =stored; attachments.push(meta);
         if(attachment.type==='image'){
-          const source=stored.imageSource||NativeMedia.url(stored); refs.set(attachment.id,source); paths.set('https://jetnote.local/'+attachment.path,source);
+          const source=stored.imageSource||NativeMedia.url(stored); refs.set(attachment.id,source); paths.set('https://appassets.androidplatform.net/'+attachment.path,source); paths.set('https://jetnote.local/'+attachment.path,source);
         }
       }
       const native=object(entry.extra?.jetNoteRecord); let raw=native?structuredClone(entry.extra.jetNoteRecord):{

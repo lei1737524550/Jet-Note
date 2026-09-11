@@ -5,6 +5,7 @@ Jet Note is a **local-first Android note-taking app** designed for fast, lightwe
 ## Features
 
 - **Post-style notes** — Capture thoughts in a lightweight feed rather than a document hierarchy.
+- **Video attachments** — Attach local videos to a post; image and video attachments are mutually exclusive within the same post. Videos can be opened in the media viewer and pinch-zoomed.
 - **Image attachments** — Select images from the Android system picker and attach them to posts.
 - **Audio attachments** — Attach audio files and play them from compact speaker controls inside a post. Multiple audio attachments are distinguished with numbered indicators.
 - **Fast composer** — Tapping the post composer immediately focuses the text field and opens the keyboard.

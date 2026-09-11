@@ -3,6 +3,8 @@ package com.ingeniousidea.space;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,11 +22,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    private static final String LOCAL_PAGE = "file:///android_asset/index.html";
+    private static final String APP_HOST = "appassets.androidplatform.net";
+    private static final String LEGACY_HOST = "jetnote.local";
+    private static final String LOCAL_PAGE = "https://" + APP_HOST + "/assets/index.html";
 
     private FrameLayout root;
     private WebView webView;
@@ -37,6 +42,7 @@ public class MainActivity extends Activity {
     private Uri pendingLaunchImport;
     private boolean frontendIsReady;
     private MediaWriteController mediaWriter;
+    private NativeVideoPlayer nativeVideoPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +50,8 @@ public class MainActivity extends Activity {
 
         root = new FrameLayout(this);
         webView = new WebView(this);
-        webView.setBackgroundColor(Color.rgb(255, 255, 255));
+        webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+        webView.setBackgroundColor(Color.rgb(240, 255, 230));
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -57,7 +64,12 @@ public class MainActivity extends Activity {
         dictionaryController = new DictionaryController(this, root);
         attachmentPicker = new AttachmentPickerController(this, webView, attachmentStore);
         archiveController = new JetNoteArchiveController(this, webView, attachmentStore);
+        nativeVideoPlayer = new NativeVideoPlayer(this, root, attachmentStore);
         pendingLaunchImport = getViewIntentUri(getIntent());
+
+        // Use one HTTPS origin for the packaged app and local media.  Assets are
+        // served directly from AssetManager so the project stays dependency-free;
+        // media uses the byte-range handler below for reliable HTML5 video seek.
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -70,12 +82,14 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        // Local post videos should start reliably after a Jet Note user action.
+        settings.setMediaPlaybackRequiresUserGesture(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settings.setForceDark(WebSettings.FORCE_DARK_OFF);
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
+                new NativeBridge(dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
                 "JetNoteNative");
 
         webView.setWebViewClient(new WebViewClient() {
@@ -87,20 +101,35 @@ public class MainActivity extends Activity {
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                String range=null;for(Map.Entry<String,String> h:request.getRequestHeaders().entrySet())if("Range".equalsIgnoreCase(h.getKey()))range=h.getValue();
-                return mediaResponse(request.getUrl(), range);
+                String range = null;
+                for (Map.Entry<String, String> h : request.getRequestHeaders().entrySet()) {
+                    if ("Range".equalsIgnoreCase(h.getKey())) {
+                        range = h.getValue();
+                        break;
+                    }
+                }
+                WebResourceResponse thumb = videoThumbnailResponse(request.getUrl());
+                if (thumb != null) return thumb;
+                WebResourceResponse media = mediaResponse(request.getUrl(), range, request.getMethod());
+                if (media != null) return media;
+                return assetResponse(request.getUrl());
             }
 
             @SuppressWarnings("deprecation")
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-                return mediaResponse(Uri.parse(url), null);
+                Uri uri = Uri.parse(url);
+                WebResourceResponse thumb = videoThumbnailResponse(uri);
+                if (thumb != null) return thumb;
+                WebResourceResponse media = mediaResponse(uri, null, "GET");
+                if (media != null) return media;
+                return assetResponse(uri);
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (LOCAL_PAGE.equals(uri.toString())) return false;
+                if (isAppAssetUrl(uri)) return false;
                 openExternal(uri);
                 return true;
             }
@@ -109,7 +138,7 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
-                if (LOCAL_PAGE.equals(uri.toString())) return false;
+                if (isAppAssetUrl(uri)) return false;
                 openExternal(uri);
                 return true;
             }
@@ -139,7 +168,78 @@ public class MainActivity extends Activity {
         webView.loadUrl(LOCAL_PAGE);
     }
 
-    private WebResourceResponse mediaResponse(Uri uri, String rangeHeader) {
+    private WebResourceResponse assetResponse(Uri uri) {
+        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme())
+                || !APP_HOST.equalsIgnoreCase(uri.getHost())) return null;
+        String path = uri.getPath();
+        if (path == null || !path.startsWith("/assets/")) return null;
+
+        String assetPath = path.substring("/assets/".length());
+        if (assetPath.isEmpty()) assetPath = "index.html";
+        // Reject traversal and malformed paths before touching AssetManager.
+        if (assetPath.startsWith("/") || assetPath.contains("../") || assetPath.contains("\\")) {
+            return missingMedia();
+        }
+        try {
+            InputStream in = getAssets().open(assetPath);
+            String mime = URLConnection.guessContentTypeFromName(assetPath);
+            if (mime == null) {
+                if (assetPath.endsWith(".js")) mime = "application/javascript";
+                else if (assetPath.endsWith(".css")) mime = "text/css";
+                else if (assetPath.endsWith(".json")) mime = "application/json";
+                else if (assetPath.endsWith(".svg")) mime = "image/svg+xml";
+                else mime = "application/octet-stream";
+            }
+            String encoding = (mime.startsWith("text/") || mime.contains("javascript") || mime.contains("json") || mime.contains("svg"))
+                    ? "UTF-8" : null;
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Cache-Control", "no-cache");
+            headers.put("X-Content-Type-Options", "nosniff");
+            return new WebResourceResponse(mime, encoding, 200, "OK", headers, in);
+        } catch (IOException ignored) {
+            return missingMedia();
+        }
+    }
+
+    private WebResourceResponse videoThumbnailResponse(Uri uri) {
+        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme()) || !APP_HOST.equalsIgnoreCase(uri.getHost())) return null;
+        String path = uri.getPath();
+        if (path == null || !path.matches("/video-thumb/[A-Za-z0-9_.-]+\\.jpg")) return null;
+        String requested = uri.getLastPathSegment();
+        if (requested == null || !requested.endsWith(".jpg")) return null;
+        String fileName = requested.substring(0, requested.length() - 4);
+        if (!AttachmentStore.isSafeFileName(fileName)) return missingMedia();
+        File source;
+        try { source = attachmentStore.fileForWeb(fileName); } catch (IOException e) { return missingMedia(); }
+        File cacheDir = new File(getCacheDir(), "jetnote-video-thumbs");
+        if (!cacheDir.exists()) cacheDir.mkdirs();
+        File cached = new File(cacheDir, fileName + ".jpg");
+        try {
+            if (!cached.isFile() || cached.lastModified() < source.lastModified()) {
+                MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+                Bitmap frame = null;
+                try {
+                    retriever.setDataSource(source.getAbsolutePath());
+                    frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    if (frame == null) frame = retriever.getFrameAtTime(-1);
+                    if (frame == null) return missingMedia();
+                    try (java.io.FileOutputStream out = new java.io.FileOutputStream(cached)) {
+                        frame.compress(Bitmap.CompressFormat.JPEG, 82, out);
+                    }
+                } finally {
+                    if (frame != null) frame.recycle();
+                    try { retriever.release(); } catch (Exception ignored) { }
+                }
+            }
+            Map<String,String> headers = new HashMap<>();
+            headers.put("Cache-Control", "private, max-age=86400");
+            return new WebResourceResponse("image/jpeg", null, 200, "OK", headers, new FileInputStream(cached));
+        } catch (Exception e) {
+            return missingMedia();
+        }
+    }
+
+    private WebResourceResponse mediaResponse(Uri uri, String rangeHeader, String method) {
         if (!isJetNoteLocalUrl(uri)) return null;
         String path = uri.getPath();
 
@@ -147,44 +247,67 @@ public class MainActivity extends Activity {
             return bundledDemoArchiveResponse();
         }
 
-        if (path == null || !path.matches("/media/[A-Za-z0-9_.-]+")) return missingMedia();
+        if (path == null || !path.matches("/media/[A-Za-z0-9_.-]+")) return null;
         String fileName = uri.getLastPathSegment();
         if (!AttachmentStore.isSafeFileName(fileName)) return missingMedia();
         try {
             File file = attachmentStore.fileForWeb(fileName);
             String mime = attachmentStore.mimeForFileName(fileName);
             long size = file.length();
+            Map<String, String> baseHeaders = mediaHeaders(mime);
+            baseHeaders.put("Accept-Ranges", "bytes");
 
-            long[] range = parseRange(rangeHeader, size);
-            if (range != null) {
-                long start = range[0];
-                long end = range[1];
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                return new WebResourceResponse(mime, null, 204, "No Content", baseHeaders,
+                        new java.io.ByteArrayInputStream(new byte[0]));
+            }
+
+            RangeResult parsedRange = parseRange(rangeHeader, size);
+            if (parsedRange.requested && !parsedRange.valid) {
+                baseHeaders.put("Content-Range", "bytes */" + size);
+                baseHeaders.put("Content-Length", "0");
+                return new WebResourceResponse(mime, null, 416, "Range Not Satisfiable", baseHeaders,
+                        new java.io.ByteArrayInputStream(new byte[0]));
+            }
+
+            if (parsedRange.valid) {
+                long start = parsedRange.start;
+                long end = parsedRange.end;
                 long length = end - start + 1;
+                Map<String, String> headers = new HashMap<>(baseHeaders);
+                headers.put("Content-Range", "bytes " + start + "-" + end + "/" + size);
+                headers.put("Content-Length", String.valueOf(length));
+
+                if ("HEAD".equalsIgnoreCase(method)) {
+                    return new WebResourceResponse(mime, null, 206, "Partial Content", headers,
+                            new java.io.ByteArrayInputStream(new byte[0]));
+                }
+
                 FileInputStream in = new FileInputStream(file);
                 long skipped = 0;
                 while (skipped < start) {
                     long step = in.skip(start - skipped);
-                    if (step <= 0) break;
+                    if (step <= 0) {
+                        int one = in.read();
+                        if (one == -1) break;
+                        step = 1;
+                    }
                     skipped += step;
                 }
                 if (skipped != start) {
                     in.close();
-                    return null;
+                    return missingMedia();
                 }
-                Map<String, String> headers = new HashMap<>();
-                headers.put("Access-Control-Allow-Origin", "*");
-                headers.put("Accept-Ranges", "bytes");
-                headers.put("Content-Range", "bytes " + start + "-" + end + "/" + size);
-                headers.put("Content-Length", String.valueOf(length));
                 return new WebResourceResponse(mime, null, 206, "Partial Content", headers,
                         new LimitedInputStream(in, length));
             }
 
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Access-Control-Allow-Origin", "*");
-                headers.put("Accept-Ranges", "bytes");
-            headers.put("Content-Length", String.valueOf(size));
-            return new WebResourceResponse(mime, null, 200, "OK", headers, new FileInputStream(file));
+            baseHeaders.put("Content-Length", String.valueOf(size));
+            if ("HEAD".equalsIgnoreCase(method)) {
+                return new WebResourceResponse(mime, null, 200, "OK", baseHeaders,
+                        new java.io.ByteArrayInputStream(new byte[0]));
+            }
+            return new WebResourceResponse(mime, null, 200, "OK", baseHeaders, new FileInputStream(file));
         } catch (IOException ignored) {
             return missingMedia();
         }
@@ -217,38 +340,75 @@ public class MainActivity extends Activity {
 
     private WebResourceResponse missingMedia(){return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));}
 
-    private static long[] parseRange(String header, long size) {
-        if (header == null || !header.startsWith("bytes=") || size <= 0) return null;
+    private static final class RangeResult {
+        final boolean requested;
+        final boolean valid;
+        final long start;
+        final long end;
+
+        RangeResult(boolean requested, boolean valid, long start, long end) {
+            this.requested = requested;
+            this.valid = valid;
+            this.start = start;
+            this.end = end;
+        }
+    }
+
+    private static RangeResult parseRange(String header, long size) {
+        if (header == null || header.trim().isEmpty()) {
+            return new RangeResult(false, false, 0, 0);
+        }
+        if (size <= 0 || !header.regionMatches(true, 0, "bytes=", 0, 6)) {
+            return new RangeResult(true, false, 0, 0);
+        }
         try {
             String raw = header.substring(6).trim();
-            if (raw.contains(",")) return null;
+            if (raw.isEmpty() || raw.contains(",")) return new RangeResult(true, false, 0, 0);
             int dash = raw.indexOf('-');
-            if (dash < 0) return null;
+            if (dash < 0) return new RangeResult(true, false, 0, 0);
             String startRaw = raw.substring(0, dash).trim();
             String endRaw = raw.substring(dash + 1).trim();
             long start;
             long end;
             if (startRaw.isEmpty()) {
+                if (endRaw.isEmpty()) return new RangeResult(true, false, 0, 0);
                 long suffix = Long.parseLong(endRaw);
-                if (suffix <= 0) return null;
+                if (suffix <= 0) return new RangeResult(true, false, 0, 0);
                 start = Math.max(0, size - suffix);
                 end = size - 1;
             } else {
                 start = Long.parseLong(startRaw);
                 end = endRaw.isEmpty() ? size - 1 : Long.parseLong(endRaw);
             }
-            if (start < 0 || start >= size || end < start) return null;
+            if (start < 0 || start >= size || end < start) return new RangeResult(true, false, 0, 0);
             end = Math.min(end, size - 1);
-            return new long[]{start, end};
+            return new RangeResult(true, true, start, end);
         } catch (RuntimeException ignored) {
-            return null;
+            return new RangeResult(true, false, 0, 0);
         }
     }
 
+    private static Map<String, String> mediaHeaders(String mime) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Access-Control-Allow-Origin", "*");
+        headers.put("Access-Control-Allow-Headers", "Range, Content-Type");
+        headers.put("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+        headers.put("Cache-Control", "no-store");
+        headers.put("Content-Type", mime == null ? "application/octet-stream" : mime);
+        headers.put("X-Content-Type-Options", "nosniff");
+        return headers;
+    }
+
     private static boolean isJetNoteLocalUrl(Uri uri) {
+        if (uri == null || !"https".equalsIgnoreCase(uri.getScheme())) return false;
+        String host = uri.getHost();
+        return APP_HOST.equalsIgnoreCase(host) || LEGACY_HOST.equalsIgnoreCase(host);
+    }
+
+    private static boolean isAppAssetUrl(Uri uri) {
         return uri != null
                 && "https".equalsIgnoreCase(uri.getScheme())
-                && "jetnote.local".equalsIgnoreCase(uri.getHost());
+                && APP_HOST.equalsIgnoreCase(uri.getHost());
     }
 
     private void openExternal(Uri uri) {
@@ -333,6 +493,10 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (nativeVideoPlayer != null && nativeVideoPlayer.isOpen()) {
+            nativeVideoPlayer.close();
+            return;
+        }
         if (dictionaryController != null && dictionaryController.isOpen()) {
             dictionaryController.handleBack();
             return;
@@ -357,6 +521,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         frontendIsReady=false;
+        if (nativeVideoPlayer != null) nativeVideoPlayer.close();
         if(mediaWriter!=null)mediaWriter.destroy();
         if (dictionaryController != null) dictionaryController.destroy();
         if (attachmentPicker != null) attachmentPicker.destroy();

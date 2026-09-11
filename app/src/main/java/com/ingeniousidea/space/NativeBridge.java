@@ -12,17 +12,19 @@ final class NativeBridge {
     private final AttachmentPickerController picker;
     private final AttachmentStore store;
     private final JetNoteArchiveController archive;
+    private final NativeVideoPlayer videoPlayer;
 
     NativeBridge(
             DictionaryController dictionary,
             AttachmentPickerController picker,
             AttachmentStore store,
-            JetNoteArchiveController archive, MediaWriteController mediaWriter, Runnable ready
+            JetNoteArchiveController archive, MediaWriteController mediaWriter, NativeVideoPlayer videoPlayer, Runnable ready
     ) {
         this.dictionary = dictionary;this.mediaWriter=mediaWriter;this.ready=ready;
         this.picker = picker;
         this.store = store;
         this.archive = archive;
+        this.videoPlayer = videoPlayer;
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
@@ -65,6 +67,12 @@ final class NativeBridge {
             } catch (Exception ignored) { }
             return result.toString();
         }
+    }
+
+
+    @JavascriptInterface
+    public void playVideo(String archivePath) {
+        videoPlayer.play(archivePath);
     }
 
     @JavascriptInterface

@@ -103,3 +103,4 @@ tasks.configureEach {
             (name.startsWith('compile') && name.endsWith('JavaWithJavac'))
     if (consumesGeneratedResources) dependsOn(generateJetNoteResources)
 }
+
