@@ -393,6 +393,33 @@ button:active {
   text-align: center;
 }
 
+.settings-action-choice.cache-attention {
+  border-color: #87cba0;
+  background: #eaf8ee;
+  box-shadow: inset 0 0 0 1px rgba(61, 157, 88, .10);
+}
+
+.settings-choice-cache-arrow {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  display: none;
+  color: #29934d;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.settings-action-choice.cache-attention .settings-choice-cache-arrow {
+  display: block;
+}
+
+/* Demo is a display-only session: no composer or persistent-data backup UI. */
+html.demo-read-only #mainComposerArea,
+html.demo-read-only .feed-composer-wrap {
+  display: none !important;
+}
+
 .settings-status {
   min-height: 18px;
   margin: 0 18px 14px;

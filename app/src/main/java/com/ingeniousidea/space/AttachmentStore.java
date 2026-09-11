@@ -35,10 +35,13 @@ final class AttachmentStore {
     static final String MEDIA_URL_PREFIX = "https://appassets.androidplatform.net/media/";
     private final Context context;
     private final File mediaDir;
+    private final File demoMediaDir;
+    private volatile boolean demoSessionActive;
 
     AttachmentStore(Context context) {
         this.context = context.getApplicationContext();
         this.mediaDir = new File(this.context.getFilesDir(), "jetnote-media");
+        this.demoMediaDir = new File(this.context.getCacheDir(), "jetnote-demo-session-media");
         if (!mediaDir.exists() && !mediaDir.mkdirs()) {
             throw new IllegalStateException("Unable to create attachment directory");
         }
@@ -61,7 +64,7 @@ final class AttachmentStore {
         String extension = safeExtension(originalName, mimeType);
         String id = UUID.randomUUID().toString();
         String fileName = id + extension;
-        File destination = new File(mediaDir, fileName);
+        File destination = new File(activeMediaDirectory(), fileName);
 
         MessageDigest digest = sha256Digest();
         long size;
@@ -103,7 +106,7 @@ final class AttachmentStore {
         String id = UUID.randomUUID().toString();
         String ext = safeExtension(originalName == null ? "legacy.jpg" : originalName, mimeType);
         String fileName = id + ext;
-        File destination = new File(mediaDir, fileName);
+        File destination = new File(activeMediaDirectory(), fileName);
         MessageDigest digest = sha256Digest();
         long size;
         try (DigestInputStream in = new DigestInputStream(new ByteArrayInputStream(bytes), digest);
@@ -123,7 +126,7 @@ final class AttachmentStore {
         if (archivePath == null || !archivePath.startsWith("media/")) return null;
         String name = archivePath.substring("media/".length());
         if (!isSafeFileName(name)) return null;
-        return new File(mediaDir, name);
+        return new File(activeMediaDirectory(), name);
     }
 
     JSONObject describe(String path) throws IOException, JSONException {
@@ -134,11 +137,11 @@ final class AttachmentStore {
         return buildMetadata(dot>0?name.substring(0,dot):name,normalizeType(null,mime),mime,null,name,file.length(),sha256(file),file);
     }
 
-    File mediaDirectory() { return mediaDir; }
+    File mediaDirectory() { return activeMediaDirectory(); }
 
     File fileForWeb(String fileName) throws IOException {
         if (!isSafeFileName(fileName)) throw new IOException("Invalid media name");
-        File file = new File(mediaDir, fileName);
+        File file = new File(activeMediaDirectory(), fileName);
         if (!file.isFile()) throw new IOException("Attachment not found");
         return file;
     }
@@ -149,6 +152,40 @@ final class AttachmentStore {
 
     String mimeForFileName(String fileName) {
         return guessMimeFromName(fileName);
+    }
+
+    synchronized void beginDemoSession() throws IOException {
+        demoSessionActive = true;
+        deleteRecursively(demoMediaDir);
+        if (!demoMediaDir.exists() && !demoMediaDir.mkdirs()) {
+            demoSessionActive = false;
+            throw new IOException("Unable to create demo media directory");
+        }
+    }
+
+    synchronized void activateUserWorkspace() {
+        demoSessionActive = false;
+    }
+
+    boolean isDemoSessionActive() {
+        return demoSessionActive;
+    }
+
+    synchronized void releaseDemoSession() {
+        demoSessionActive = false;
+        deleteRecursively(demoMediaDir);
+    }
+
+    private File activeMediaDirectory() {
+        return demoSessionActive ? demoMediaDir : mediaDir;
+    }
+
+    private static void deleteRecursively(File target) {
+        if (target == null || !target.exists()) return;
+        File[] children = target.listFiles();
+        if (children != null) for (File child : children) deleteRecursively(child);
+        //noinspection ResultOfMethodCallIgnored
+        target.delete();
     }
 
     static long copy(InputStream in, FileOutputStream out) throws IOException {

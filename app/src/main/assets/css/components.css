@@ -777,3 +777,49 @@
   padding:4px 5px;
 }
 .compose-video-item .video-inline-time { display:none; }
+
+
+/* First-boot demo loader */
+.startup-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: rgb(255,255,255);
+}
+.startup-loading[hidden] { display: none !important; }
+.startup-loading-panel {
+  width: min(360px, 84vw);
+  text-align: center;
+}
+.startup-loading-title {
+  margin-bottom: 18px;
+  color: #35a65a;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: .04em;
+}
+.startup-loading-track {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid #cfd8d2;
+  border-radius: 999px;
+  background: #f4f7f5;
+}
+.startup-loading-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: #35a65a;
+  transition: width .16s linear;
+}
+.startup-loading-percent {
+  margin-top: 9px;
+  color: #7d8781;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+html.startup-loading-active body { overflow: hidden !important; }

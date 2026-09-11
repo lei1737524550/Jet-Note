@@ -1,6 +1,7 @@
 let pendingDeleteRequest = null;
 
 function openDeleteConfirm(type, id, anchorRect = null) {
+  if (!isWorkspaceWritable()) return;
   pendingDeleteRequest = { type, id };
 
   const backdrop = document.getElementById('deleteConfirmBackdrop');
@@ -40,7 +41,7 @@ function handleDeleteConfirmBackdrop(event) {
 }
 
 async function confirmPendingDelete() {
-  if (!pendingDeleteRequest) return;
+  if (!isWorkspaceWritable() || !pendingDeleteRequest) return;
 
   const request = pendingDeleteRequest;
   cancelDeleteConfirm();

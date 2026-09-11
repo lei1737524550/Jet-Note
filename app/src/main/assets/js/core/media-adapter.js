@@ -99,6 +99,7 @@ async function pickEntryAudio(kind) {
   await pickEntryMedia(kind,'audio');
 }
 async function pickEntryMedia(kind, type) {
+  if (!isWorkspaceWritable()) return;
   if (entriesBusy || !entriesReady) return;
 
   if (type === 'image' && hasDraftVideos()) {

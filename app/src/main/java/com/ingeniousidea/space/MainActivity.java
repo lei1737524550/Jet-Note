@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
         root = new FrameLayout(this);
         webView = new WebView(this);
         webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
-        webView.setBackgroundColor(Color.rgb(240, 255, 230));
+        webView.setBackgroundColor(Color.rgb(255, 255, 255));
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
@@ -89,7 +89,7 @@ public class MainActivity extends Activity {
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
+                new NativeBridge(this, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
                 "JetNoteNative");
 
         webView.setWebViewClient(new WebViewClient() {
@@ -213,7 +213,8 @@ public class MainActivity extends Activity {
         try { source = attachmentStore.fileForWeb(fileName); } catch (IOException e) { return missingMedia(); }
         File cacheDir = new File(getCacheDir(), "jetnote-video-thumbs");
         if (!cacheDir.exists()) cacheDir.mkdirs();
-        File cached = new File(cacheDir, fileName + ".jpg");
+        String cacheName = (attachmentStore.isDemoSessionActive() ? "demo-" : "user-") + fileName + ".jpg";
+        File cached = new File(cacheDir, cacheName);
         try {
             if (!cached.isFile() || cached.lastModified() < source.lastModified()) {
                 MediaMetadataRetriever retriever = new MediaMetadataRetriever();

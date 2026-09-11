@@ -48,6 +48,7 @@ function applyName(name) {
 }
 
 function changeName() {
+  if (!isWorkspaceWritable()) return;
   const el = document.getElementById('mainName');
 
   if (el.isContentEditable) return;

@@ -1,11 +1,29 @@
 (async function loadProfile() {
+  const demoSession = isDemoSession();
+
+  if (!demoSession && typeof startShortStartupLoading === 'function') {
+    startShortStartupLoading();
+  }
+
   try {
+    if (demoSession) {
+      // A demo is always a fresh read-only session, never a second notebook.
+      await clearDemoSessionStorage();
+      if (typeof resetDemoSessionLanguage === 'function') resetDemoSessionLanguage();
+    } else {
+      // Also clears a stale cache left behind if Android previously killed a demo session.
+      window.JetNoteNative?.releaseDemoSession?.();
+    }
     await initializeEntries();
-    await loadBundledDemoArchiveOnce();
+
+    if (demoSession) {
+      await startBundledDemoStartupImport();
+    }
   } catch (error) {
     const message = error?.message || String(error);
+    hideStartupLoading?.();
     document.body.innerHTML = `
-      <main style="padding:24px;font-family:sans-serif;line-height:1.6">
+      <main style="padding:24px;font-family:sans-serif;line-height:1.6;background:#fff;min-height:100vh">
         <section style="max-width:560px;margin:48px auto;padding:20px;border:1px solid #c8cdd2;border-radius:16px;background:#fff">
           <strong style="color:#b3261e">数据初始化失败</strong>
           <div style="margin-top:10px;overflow-wrap:anywhere">${message}</div>
@@ -28,5 +46,14 @@
 
   renderPosts();
   applyLanguage();
+  if (typeof refreshWorkspacePermissions === 'function') refreshWorkspacePermissions();
+  if (typeof refreshModeSettingsVisibility === 'function') refreshModeSettingsVisibility();
+  if (typeof refreshModeSettings === 'function') refreshModeSettings();
 
+  if (!demoSession) await finishShortStartupLoading?.();
+  try {
+    if (window.JetNoteNative && typeof JetNoteNative.completeFirstBoot === 'function') {
+      JetNoteNative.completeFirstBoot();
+    }
+  } catch (_) {}
 })();

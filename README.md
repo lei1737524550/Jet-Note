@@ -16,21 +16,26 @@ Jet Note is a **local-first Android note-taking app** designed for fast, lightwe
 - **Custom backgrounds** — Use an image background or the built-in RGB background.
 - **Custom profile** — Change the username and avatar, with avatar cropping and shape options.
 - **Local backup and restore** — Export posts, media, username, and avatar into a portable `.jnote` archive.
-- **Usage and Demo modes** — Two isolated local data spaces make it possible to keep normal data separate from demonstration content.
+- **User workspace and Demo session** — Personal notes remain persistent, while the bundled demonstration is a disposable read-only session.
 - **Local-first storage** — Core note data does not require a Jet Note cloud account or remote backend.
 
-## Usage Mode and Demo Mode
+## User Workspace and Demo Session
 
-Jet Note provides two operating modes:
+Jet Note provides two distinct workspace behaviors:
 
-- **Usage Mode** — The normal workspace for personal data.
-- **Demo Mode** — A separate workspace intended for demonstrations and development-related use.
+- **User Mode** — The only persistent, writable workspace for personal data.
+- **Demo Mode** — A read-only display session constructed from the bundled archive.
 
-The two modes have isolated local storage. Posts, profile information, local settings, post/media databases, and appearance databases are kept separate.
+User data remains in its persistent local storage. Each time Demo Mode is entered,
+Jet Note clears the previous demo session, validates `demo.jnote`, installs its media
+into a cache-backed demo directory, and renders the bundled posts. Demo Mode hides
+post creation, editing, deletion, profile changes, import, and export. Returning to
+User Mode deletes the temporary demo database and media only; it never touches user
+posts or user media.
 
 Existing data from versions released before mode separation remains associated with **Usage Mode**.
 
-Demo Mode can be initialized from the bundled archive:
+Demo Mode is reconstructed from the bundled archive:
 
 ```text
 app/src/main/assets/demo.jnote
@@ -94,7 +99,7 @@ Jet Note is designed around local storage:
 - Attachments are stored in the application's private media storage.
 - Appearance and application preferences are stored locally.
 - Backup files are created only when the user explicitly exports data.
-- Usage Mode and Demo Mode use separate local data spaces.
+- User Mode is persistent; Demo Mode uses disposable session storage.
 
 The core note system does not depend on a Jet Note server.
 

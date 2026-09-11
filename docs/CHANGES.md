@@ -46,3 +46,11 @@
 - New media URLs use `https://appassets.androidplatform.net/media/...` while legacy `https://jetnote.local/media/...` remains readable.
 - Canonicalized known media filename extensions from the ContentResolver MIME type so playback responses expose the correct media MIME more reliably.
 - Original attachment bytes remain unchanged; `.jnote` import/export stays lossless.
+
+## V43 - transactional .jnote import/export hardening
+- Export now builds into a cache-side temporary archive first, verifies every SHA-256 entry, then copies the verified archive to the user-selected destination.
+- Import now copies the selected file into a staging area, fsyncs it, verifies ZIP structure, CRC/size consistency, required metadata checksums, media checksums, attachment sizes, and rejects hidden/unreferenced media entries.
+- Imported media is installed through a same-filesystem temporary file, fsync + SHA-256/size verification, then rename/fallback-copy with a second post-write verification.
+- Added free-space validation before extraction and explicit protection against incomplete source reads.
+- Fixed import mode normalization aliases.
+- Added phase-aware progress UI for read, extract, validate, commit, archive creation, verification, and destination write.

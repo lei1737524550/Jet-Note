@@ -267,9 +267,7 @@ final class DictionaryController {
     private void applyCachePolicyOnToolClose() {
         if (cachePreferences.getBoolean(CACHE_CLEAR_ON_CLOSE, false)) {
             clearWebCacheOnUiThread();
-            return;
         }
-        manageWebCacheNow();
     }
 
     private void clearWebCacheOnUiThread() {

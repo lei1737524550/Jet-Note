@@ -48,13 +48,15 @@ const I18N = {
     verified: "验证通过，请选择导入方式",
     importing: "正在导入…",
     importDone: "导入成功。",
+    startupLoading: '正在载入中',
+    startupDownloading: '正在下载中',
     added: "新增",
     updated: "更新",
     kept: "保留",
 
     settings: '设置',
     modeSelection: '模式选择',
-    usageMode: '使用模式',
+    usageMode: '用户模式',
     demoMode: '演示模式',
     language: '语言',
     avatarShape: '头像形状',
@@ -146,13 +148,15 @@ const I18N = {
     verified: "Verified. Choose an import mode.",
     importing: "Importing…",
     importDone: "Import complete.",
+    startupLoading: 'Loading…',
+    startupDownloading: 'Downloading…',
     added: "Added",
     updated: "Updated",
     kept: "Kept",
 
     settings: 'Settings',
     modeSelection: 'Mode',
-    usageMode: 'Usage mode',
+    usageMode: 'User mode',
     demoMode: 'Demo mode',
     language: 'Language',
     avatarShape: 'Avatar shape',
@@ -197,7 +201,18 @@ const I18N = {
 };
 
 const LANGUAGE_KEY = 'qzone_language';
-let currentLanguage = AppStorage.getItem(LANGUAGE_KEY) || 'zh';
+function detectDeviceLanguage() {
+  try {
+    if (window.JetNoteNative && typeof JetNoteNative.getDeviceLanguage === 'function') {
+      return JetNoteNative.getDeviceLanguage() === 'zh' ? 'zh' : 'en';
+    }
+  } catch (_) {}
+  const browserLanguage = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+  return /^zh(?:-|$)/i.test(browserLanguage) ? 'zh' : 'en';
+}
+
+// A user's manual choice always wins. Only the first run follows the phone.
+let currentLanguage = AppStorage.getItem(LANGUAGE_KEY) || detectDeviceLanguage();
 
 function t(key) {
   return (I18N[currentLanguage] && I18N[currentLanguage][key]) || I18N.zh[key] || key;
@@ -258,4 +273,8 @@ function setLanguage(lang) {
   currentLanguage = lang;
   AppStorage.setItem(LANGUAGE_KEY, lang);
   applyLanguage();
+}
+
+function resetDemoSessionLanguage() {
+  currentLanguage = detectDeviceLanguage();
 }

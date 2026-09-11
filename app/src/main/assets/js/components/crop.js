@@ -29,10 +29,12 @@ let pinchStartDist = 0;
 let pinchStartZoom = 1;
 
 function changeAvatar() {
+  if (!isWorkspaceWritable()) return;
   picker.click();
 }
 
 function handleAvatarFile(event) {
+  if (!isWorkspaceWritable()) { event.target.value = ''; return; }
   const file = event.target.files && event.target.files[0];
   event.target.value = '';
   if (file) openAvatarCrop(file, async result => {

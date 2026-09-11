@@ -18,6 +18,7 @@ function loadPosts() {
 }
 
 async function savePosts() {
+  if (!isWorkspaceWritable()) return false;
   try { await persistEntries([...draftMedia.post.values()]); return true; }
   catch(error) { console.error('Entry save failed',error); alert(t('storageFull')); return false; }
 }
@@ -39,7 +40,7 @@ function renderPosts() {
   const name = escapeHTML(getDisplayName());
   const avatar = getDisplayAvatar();
 
-  const composerHTML = `
+  const composerHTML = isWorkspaceWritable() ? `
     <div class="feed-composer-wrap">
       <div class="feed-composer">
         <button class="feed-composer-main"
@@ -76,7 +77,7 @@ function renderPosts() {
         </button>
       </div>
     </div>
-  `;
+  ` : '';
 
   const postsHTML = posts.map((post) => {
     const images = Array.isArray(post.images) ? post.images : [];
@@ -88,9 +89,9 @@ function renderPosts() {
           <img class="mini-avatar sync-avatar" src="${avatar}" alt="">
           <div class="post-name sync-name">${name}</div>
 
-          <button class="more"
+          ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
-                  aria-label="更多">${moreMenuIcon()}</button>
+                  aria-label="更多">${moreMenuIcon()}</button>` : ''}
         </div>
 
         <div class="text-content">${escapeHTML(post.text || '')}</div>
@@ -127,7 +128,7 @@ function syncComposerViewport() {
 }
 
 function openPostComposer(prefillText = '', postId = null, sourcePost = null) {
-  if(!entriesReady||entriesBusy)return;
+  if(!isWorkspaceWritable()||!entriesReady||entriesBusy)return;
   closePostActionPanel();
   editingPostId = postId;
 
@@ -199,6 +200,7 @@ function hasDraftVideos() {
 }
 
 function pickPostImages() {
+  if (!isWorkspaceWritable()) return;
   if (hasDraftVideos()) {
     alert(t('imageVideoExclusive'));
     return;
@@ -211,6 +213,7 @@ function pickPostImages() {
 }
 
 function pickPostVideos() {
+  if (!isWorkspaceWritable()) return;
   if (postDraftImages.length > 0) {
     alert(t('imageVideoExclusive'));
     return;
@@ -223,6 +226,7 @@ function pickPostVideos() {
 }
 
 function openPostComposerWithImagePicker() {
+  if (!isWorkspaceWritable()) return;
   openPostComposer();
 
   // Wait until the composer is mounted in body before opening the system picker.
@@ -230,17 +234,20 @@ function openPostComposerWithImagePicker() {
 }
 
 function openPostComposerWithAudioPicker() {
+  if (!isWorkspaceWritable()) return;
   openPostComposer();
   setTimeout(() => pickEntryAudio('post'), 60);
 }
 
 function openPostComposerWithVideoPicker() {
+  if (!isWorkspaceWritable()) return;
   openPostComposer();
   setTimeout(() => pickPostVideos(), 60);
 }
 
 async function handlePostImages(event) {
   const picker = event.target;
+  if (!isWorkspaceWritable()) { picker.value = ''; return; }
   if (hasDraftVideos()) {
     alert(t('imageVideoExclusive'));
     picker.value = '';
@@ -289,6 +296,7 @@ function renderPostImagePreview() {
 
 async function handlePostVideos(event) {
   const picker = event.target;
+  if (!isWorkspaceWritable()) { picker.value = ''; return; }
   const files = Array.from(picker.files || []);
   picker.value = '';
 
@@ -393,6 +401,7 @@ function closePostActionPanel() {
 }
 
 function openPostActionPanel(event, postId) {
+  if (!isWorkspaceWritable()) return;
   event.preventDefault();
   event.stopPropagation();
 
@@ -425,6 +434,7 @@ function openPostActionPanel(event, postId) {
 }
 
 function editActivePost() {
+  if (!isWorkspaceWritable()) return;
   if (activePostActionId === null) return;
 
   const post = posts.find(item => String(item.id) === String(activePostActionId));
@@ -437,6 +447,7 @@ function editActivePost() {
 }
 
 function deleteActivePost() {
+  if (!isWorkspaceWritable()) return;
   if (activePostActionId === null) return;
 
   const postId = activePostActionId;
@@ -481,7 +492,7 @@ function formatNowForPost() {
 }
 
 async function publishTextPost() {
-  if(!entriesReady||entriesBusy||document.querySelector('[data-add-audio="post"]').disabled)return;
+  if(!isWorkspaceWritable()||!entriesReady||entriesBusy||document.querySelector('[data-add-audio="post"]').disabled)return;
   const textarea = document.getElementById('postComposerText');
   const content = textarea.value.trim();
 
