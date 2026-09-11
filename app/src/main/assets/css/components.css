@@ -198,18 +198,28 @@
   align-items: center;
   justify-content: center;
   background: rgba(0,0,0,.96);
-  touch-action: manipulation;
+  overflow: hidden;
+  touch-action: none;
 }
 .image-viewer.open {
   display: flex;
 }
 .image-viewer img {
   display: block;
-  max-width: 100vw;
-  max-height: 100dvh;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
   width: auto;
   height: auto;
   object-fit: contain;
+  transform-origin: center center;
+  transition: transform .14s ease-out;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+}
+.image-viewer img.zoomed {
+  cursor: grab;
 }
 .image-viewer-close {
   position: fixed;

@@ -1,0 +1,8 @@
+{
+  "source": "../drawable/icon.png",
+  "output": "icon_rounded.png",
+  "outputSize": 1254,
+  "cornerRadius": 250,
+  "fit": "centerCrop",
+  "format": "png"
+}

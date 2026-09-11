@@ -97,6 +97,20 @@ Jet Note is designed around local storage:
 
 The core note system does not depend on a Jet Note server.
 
+## Launcher Icon Generation
+
+The rounded launcher icon is generated during the Android resource merge rather
+than maintained as a separate hand-edited image. Its source and rule are:
+
+```text
+app/src/main/res/drawable/icon.png
+app/src/main/res/drawable-nodpi/make_round_png.json
+```
+
+The JSON rule controls the output file name, size and corner radius. The build
+copies regular resources into its generated resource directory, then produces
+`drawable-nodpi/icon_rounded.png` from that rule for the manifest to use.
+
 The **Dictionary** and **Sentences** features are exceptions to the offline-first model because they load third-party websites. Network availability, regional accessibility, and the behavior of those services can affect these features.
 
 ## Dictionary
