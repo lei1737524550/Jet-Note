@@ -4,7 +4,7 @@ const EntryStore={
   async open(){
     if(this.db)return this.db;
     this.db=await new Promise((resolve,reject)=>{
-      const databaseName=getCurrentAppMode()==='demo'?'jet_note_entries_demo':'jet_note_entries';
+      const databaseName='jet_note_entries';
       const request=indexedDB.open(databaseName,1);
       request.onupgradeneeded=()=>{request.result.createObjectStore('state');request.result.createObjectStore('media',{keyPath:'id'});};
       request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);request.onblocked=()=>reject(Error('Database upgrade blocked'));

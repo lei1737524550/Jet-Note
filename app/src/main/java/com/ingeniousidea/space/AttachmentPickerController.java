@@ -128,7 +128,7 @@ final class AttachmentPickerController {
                 activity.runOnUiThread(() -> dispatchSuccess(completedRequest, results));
             } catch (Exception error) {
                 activity.runOnUiThread(() -> {
-                    Toast.makeText(activity, "附件读取失败", Toast.LENGTH_LONG).show();
+                    Toast.makeText(activity, "Failed to read attachment", Toast.LENGTH_LONG).show();
                     dispatchError(completedRequest, error.getMessage() == null ? "attachment-read-failed" : error.getMessage());
                 });
             }

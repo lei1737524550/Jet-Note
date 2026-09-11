@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -52,10 +51,6 @@ import org.json.JSONObject;
 final class DictionaryController {
     private static final String DOWNLOAD_SCHEME = "jetnote-download";
     private static final int TOOLBAR_HEIGHT_DP = 50;
-    private static final String CACHE_PREFERENCES = "jet_note_web_cache";
-    private static final String CACHE_CLEAR_ON_CLOSE = "clear_on_tool_close";
-    private static final String CACHE_LIMIT_MB = "limit_mb";
-    private static final int DEFAULT_CACHE_LIMIT_MB = 50;
 
     /*
      * Keeps the original resource-discovery logic, but routes result taps back to native code.
@@ -65,7 +60,6 @@ final class DictionaryController {
     private final Activity activity;
     private final AudioSaveController audioSaver;
     private final FrameLayout root;
-    private final SharedPreferences cachePreferences;
     private final Map<Long, String> activeDownloads = new HashMap<>();
     private final Set<String> observedAudioUrls = new LinkedHashSet<>();
     private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
@@ -91,7 +85,7 @@ final class DictionaryController {
     private boolean receiverRegistered;
     private String pageUrl="https://www.merriam-webster.com/";
     private String pageTitle="Dictionary";
-    private String pageLanguage="zh";
+    private String pageLanguage="en";
     private final Runnable hideStatusRunnable = () -> {
         if (downloadStatus != null) downloadStatus.setVisibility(View.GONE);
     };
@@ -100,7 +94,6 @@ final class DictionaryController {
         this.activity = activity;
         this.audioSaver=new AudioSaveController(activity);
         this.root = root;
-        this.cachePreferences = activity.getSharedPreferences(CACHE_PREFERENCES, Context.MODE_PRIVATE);
     }
 
     void open(String url, String title, String language) {
@@ -109,7 +102,7 @@ final class DictionaryController {
             if (overlay != null) close();
             pageUrl = url;
             pageTitle = title;
-            pageLanguage = "en".equalsIgnoreCase(language) ? "en" : "zh";
+            pageLanguage = "en";
             observedAudioUrls.clear();
             openOnUiThread();
         });
@@ -228,46 +221,8 @@ final class DictionaryController {
         observedAudioUrls.clear();
     }
 
-    /** Returns only disposable WebView cache usage; Jet Note media stays in files/jetnote-media. */
-    String getWebCacheSettings() {
-        try {
-            JSONObject result = new JSONObject();
-            result.put("bytes", webCacheBytes());
-            result.put("clearOnClose", cachePreferences.getBoolean(CACHE_CLEAR_ON_CLOSE, false));
-            result.put("limitMb", cachePreferences.getInt(CACHE_LIMIT_MB, DEFAULT_CACHE_LIMIT_MB));
-            return result.toString();
-        } catch (Exception ignored) {
-            return "{\"bytes\":0,\"clearOnClose\":false,\"limitMb\":50}";
-        }
-    }
-
-    void setWebCacheClosePolicy(boolean clearOnClose) {
-        cachePreferences.edit().putBoolean(CACHE_CLEAR_ON_CLOSE, clearOnClose).apply();
-    }
-
-    void setWebCacheLimitMb(int limitMb) {
-        int safeLimit = limitMb == 200 ? 200 : DEFAULT_CACHE_LIMIT_MB;
-        cachePreferences.edit().putInt(CACHE_LIMIT_MB, safeLimit).apply();
-    }
-
-    /** Clears HTTP/WebView cache only. Cookies, posts, attachments and local backup data are retained. */
-    void clearWebCache() {
-        activity.runOnUiThread(this::clearWebCacheOnUiThread);
-    }
-
-    /** Runs the selected capacity rule immediately and returns whether clearing was requested. */
-    boolean manageWebCacheNow() {
-        long limitBytes = (long) cachePreferences.getInt(CACHE_LIMIT_MB, DEFAULT_CACHE_LIMIT_MB)
-                * 1024L * 1024L;
-        if (webCacheBytes() < limitBytes) return false;
-        clearWebCache();
-        return true;
-    }
-
     private void applyCachePolicyOnToolClose() {
-        if (cachePreferences.getBoolean(CACHE_CLEAR_ON_CLOSE, false)) {
-            clearWebCacheOnUiThread();
-        }
+        clearWebCacheOnUiThread();
     }
 
     private void clearWebCacheOnUiThread() {
@@ -315,7 +270,7 @@ final class DictionaryController {
         bar.setElevation(dp(3));
 
         ImageButton back = createBackButton();
-        back.setContentDescription("en".equals(pageLanguage) ? "Back" : "返回");
+        back.setContentDescription("en".equals(pageLanguage) ? "Back" : "Back");
         back.setOnClickListener(v -> {
             if (dictionaryWebView != null && dictionaryWebView.canGoBack()) dictionaryWebView.goBack();
             else close();
@@ -334,9 +289,9 @@ final class DictionaryController {
                 dp(40), dp(36), Gravity.START | Gravity.CENTER_VERTICAL);
         bar.addView(back, backParams);
 
-        TextView get = createToolbarButton("en".equals(pageLanguage) ? "Get Audio" : "获取音频", 0xff168a45, true);
+        TextView get = createToolbarButton("en".equals(pageLanguage) ? "Get Audio" : "Get Audio", 0xff168a45, true);
         get.setTextSize(14);
-        get.setContentDescription("en".equals(pageLanguage) ? "Get page audio" : "获取页面音频");
+        get.setContentDescription("en".equals(pageLanguage) ? "Get page audio" : "Get page audio");
         get.setOnClickListener(v -> runGetScript());
         // Long press is a compact refresh shortcut; it no longer creates an in-page button.
         get.setOnLongClickListener(v -> { reloadCurrentPage(); return true; });
@@ -439,7 +394,7 @@ final class DictionaryController {
         if (dictionaryWebView != null) dictionaryWebView.setVisibility(View.INVISIBLE);
         if (loadStatePanel != null) loadStatePanel.setVisibility(View.VISIBLE);
         if (loadStateTitle != null) {
-            loadStateTitle.setText("en".equals(pageLanguage) ? "Loading…" : "正在加载中");
+            loadStateTitle.setText("en".equals(pageLanguage) ? "Loading…" : "Loading…");
             loadStateTitle.setTextColor(0xff78b88c);
         }
         if (loadSpinner != null) loadSpinner.setVisibility(View.VISIBLE);
@@ -451,7 +406,7 @@ final class DictionaryController {
         if (dictionaryWebView != null) { dictionaryWebView.stopLoading(); dictionaryWebView.setVisibility(View.INVISIBLE); }
         if (loadStatePanel != null) loadStatePanel.setVisibility(View.VISIBLE);
         if (loadStateTitle != null) {
-            loadStateTitle.setText("en".equals(pageLanguage) ? "Load failed" : "加载失败");
+            loadStateTitle.setText("en".equals(pageLanguage) ? "Load failed" : "Load failed");
             loadStateTitle.setTextColor(0xffb3261e);
         }
         if (loadSpinner != null) loadSpinner.setVisibility(View.GONE);
@@ -482,7 +437,7 @@ final class DictionaryController {
                     + "window.JET_NOTE_NATIVE_AUDIO_URLS=" + new JSONArray(observedAudioUrls).toString() + ";\n"
                     + new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
             dictionaryWebView.evaluateJavascript(script,null);
-        }catch(java.io.IOException e){showDownloadStatus("无法加载 Get 脚本",false);}
+        }catch(java.io.IOException e){showDownloadStatus("Unable to load the Get Audio script",false);}
     }
 
     private void injectAudioObserver() {
@@ -523,7 +478,7 @@ final class DictionaryController {
         view.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onJsAlert(WebView webView, String url, String message, JsResult result) {
-                showDownloadStatus(message == null ? "提示" : message, false);
+                showDownloadStatus(message == null ? "Notice" : message, false);
                 result.confirm();
                 return true;
             }
@@ -599,7 +554,7 @@ final class DictionaryController {
         if (uri == null || !DOWNLOAD_SCHEME.equalsIgnoreCase(uri.getScheme())) return false;
         String raw = uri.getQueryParameter("url");
         if (raw == null || raw.isEmpty()) {
-            showDownloadStatus("没有找到可下载的音频地址", false);
+            showDownloadStatus("No downloadable audio URL was found.", false);
             return true;
         }
         offerDownload(raw, null, null, mimeFromUrl(raw));
@@ -618,14 +573,14 @@ final class DictionaryController {
     }
 
     private void offerDownload(String url,String userAgent,String disposition,String mime) {
-        if(url==null||!url.startsWith("https://")){showDownloadStatus("不支持的音频地址",false);return;}
+        if(url==null||!url.startsWith("https://")){showDownloadStatus("Unsupported audio URL",false);return;}
         final String resolved=mime==null||mime.isEmpty()?mimeFromUrl(url):mime;
         final String name=safeDownloadName(URLUtil.guessFileName(url,disposition,resolved));
-        new android.app.AlertDialog.Builder(activity).setTitle("保存音频")
-            .setItems(new String[]{"下载到 Downloads（系统通知）","另存为…（选择位置）"},(dialog,which)->{
+        new android.app.AlertDialog.Builder(activity).setTitle("Save audio")
+            .setItems(new String[]{"Download to Downloads (system notification)","Save as… (choose location)"},(dialog,which)->{
                 if(which==0)startDownload(url,userAgent,disposition,resolved);
                 else audioSaver.choose(url,dictionaryWebView,name,resolved);
-            }).setNegativeButton("取消",null).show();
+            }).setNegativeButton("Cancel",null).show();
     }
 
     private void startDownload(String url, String userAgent, String contentDisposition, String mimeType) {
@@ -633,12 +588,12 @@ final class DictionaryController {
         try {
             uri = Uri.parse(url);
         } catch (RuntimeException e) {
-            showDownloadStatus("下载失败：音频地址无效", false);
+            showDownloadStatus("Download failed: invalid audio URL", false);
             return;
         }
         String scheme = uri.getScheme();
         if (!"https".equalsIgnoreCase(scheme)) {
-            showDownloadStatus("下载失败：不支持的地址", false);
+            showDownloadStatus("Download failed: unsupported URL", false);
             return;
         }
 
@@ -651,7 +606,7 @@ final class DictionaryController {
         try {
             DownloadManager.Request request = new DownloadManager.Request(uri);
             request.setTitle(fileName);
-            request.setDescription("Jet Note " + pageTitle + " 音频");
+            request.setDescription("Jet Note " + pageTitle + " audio");
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setAllowedOverMetered(true);
             request.setAllowedOverRoaming(true);
@@ -680,16 +635,16 @@ final class DictionaryController {
             ensureDownloadReceiver();
             long id = manager.enqueue(request);
             activeDownloads.put(id, fileName);
-            showDownloadStatus("开始下载：" + fileName, true);
+            showDownloadStatus("Download started: " + fileName, true);
         } catch (RuntimeException e) {
-            showDownloadStatus("下载失败：" + fileName, false);
+            showDownloadStatus("Download failed: " + fileName, false);
         }
     }
 
     private void reportDownloadResult(long id, String fileName) {
         DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) {
-            showDownloadStatus("下载状态未知：" + fileName, false);
+            showDownloadStatus("Unknown download status: " + fileName, false);
             return;
         }
 
@@ -702,9 +657,9 @@ final class DictionaryController {
         } catch (RuntimeException ignored) { }
 
         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-            showDownloadStatus("下载完成：" + fileName, true);
+            showDownloadStatus("Download complete: " + fileName, true);
         } else {
-            showDownloadStatus("下载失败：" + fileName, false);
+            showDownloadStatus("Download failed: " + fileName, false);
         }
     }
 

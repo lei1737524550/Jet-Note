@@ -55,14 +55,6 @@ const ArchiveCodec=(()=>{
       }; file.start();
     }); unzip.register(fflate.UnzipInflate); for(let i=0; i<bytes.length; i+=16384)unzip.push(bytes.subarray(i,i+16384),i+16384>=bytes.length); if(Object.keys(files).length!==entries.size)fail('Incomplete ZIP'); return files;
   }
-  function normalizeProfile(profile){
-    if(!profile||typeof profile!=='object')return null;
-    const name=typeof profile.name==='string'&&profile.name.trim()?profile.name.trim():'jnoter';
-    const avatar=typeof profile.avatar==='string'&&/^data:image\/[A-Za-z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+$/.test(profile.avatar)?profile.avatar:null;
-    return{
-      name,avatar
-    };
-  }
   async function exportSnapshot(state){
     const files=Object.create(null); let total=0; function add(path,bytes){
       if(files[path]){
@@ -80,9 +72,7 @@ const ArchiveCodec=(()=>{
         id,type:'image',mimeType:match[1],originalName:null,path,size:bytes.length,sha256:hash
       };
     }
-    const posts=[]; for(const record of state.posts||[])posts.push(await ArchiveMapping.toCanonical(record,stored,image)); add('data/posts.json',encode(posts)); const profile=normalizeProfile(state.profile); if(profile)add('data/profile.json',encode(profile)); const content={
-      posts:'data/posts.json'
-    }; if(profile)content.profile='data/profile.json'; add('manifest.json',encode({
+    const posts=[]; for(const record of state.posts||[])posts.push(await ArchiveMapping.toCanonical(record,stored,image)); add('data/posts.json',encode(posts)); const content={posts:'data/posts.json'}; add('manifest.json',encode({
       format:'jet-note',formatVersion:2,app:'Jet Note',appVersion:'2.4',createdAt:new Date().toISOString(),encoding:'UTF-8',content
     })); const checksums={
     }; for(const[path,bytes]of Object.entries(files))checksums[path]=sha256(bytes); add('checksums.json',encode(checksums)); const zip=fflate.zipSync(files,{
@@ -99,9 +89,7 @@ const ArchiveCodec=(()=>{
           type:attachment.mimeType
         }),imageSource:attachment.type==='image'?'data:'+attachment.mimeType+';base64,'+bytesToBase64(bytes):null
       };
-    }); if(manifest.content.profile){
-      if(!files['data/profile.json'])fail('Missing data/profile.json'); result.profile=normalizeProfile(decodeJSON(files['data/profile.json']));
-    }else result.profile=null; return result;
+    }); result.profile=null; return result;
   }
   return{
     exportSnapshot,validate

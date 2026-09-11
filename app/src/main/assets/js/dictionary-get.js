@@ -9,7 +9,7 @@
     previous.remove();
   }
 
-  const zh = window.JET_NOTE_UI_LANGUAGE !== 'en';
+  const zh = false && window.JET_NOTE_UI_LANGUAGE !== 'en';
 
   const urls = new Map();
 

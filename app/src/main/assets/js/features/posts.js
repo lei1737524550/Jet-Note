@@ -23,22 +23,11 @@ async function savePosts() {
   catch(error) { console.error('Entry save failed',error); alert(t('storageFull')); return false; }
 }
 
-function getDisplayName() {
-  const el = document.getElementById('mainName');
-  return el ? el.textContent.trim() : 'jnoter';
-}
-
-function getDisplayAvatar() {
-  const el = document.getElementById('mainAvatar');
-  return el ? el.src : '';
-}
 
 function renderPosts() {
   const list = document.getElementById('postList');
   if (!list) return;
 
-  const name = escapeHTML(getDisplayName());
-  const avatar = getDisplayAvatar();
 
   const composerHTML = isWorkspaceWritable() ? `
     <div class="feed-composer-wrap">
@@ -85,10 +74,7 @@ function renderPosts() {
 
     return `
       <article class="post" data-post-id="${postId}">
-        <div class="post-head">
-          <img class="mini-avatar sync-avatar" src="${avatar}" alt="">
-          <div class="post-name sync-name">${name}</div>
-
+        <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
                   aria-label="更多">${moreMenuIcon()}</button>` : ''}
@@ -488,7 +474,7 @@ function formatNowForPost() {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
-  return currentLanguage === 'en' ? `Today ${hh}:${mm}` : `今天${hh}:${mm}`;
+  return `Today ${hh}:${mm}`;
 }
 
 async function publishTextPost() {

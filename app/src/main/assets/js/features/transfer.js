@@ -1,8 +1,4 @@
 
-let startupDemoImportActive = false;
-let bundledDemoImportActive = false;
-let bundledDemoResolve = null;
-let bundledDemoReject = null;
 let shortStartupTimer = null;
 
 function startupLoaderText(key, fallback) {
@@ -38,11 +34,11 @@ function startShortStartupLoading() {
   const state = window.JetNoteStartupLoader || {};
   state.startedAt = state.startedAt || Date.now();
   window.JetNoteStartupLoader = state;
-  setStartupLoadingProgress(12, startupLoaderText('startupDownloading', '正在下载中'));
-  requestAnimationFrame(() => setStartupLoadingProgress(72, startupLoaderText('startupDownloading', '正在下载中')));
+  setStartupLoadingProgress(12, startupLoaderText('startupDownloading', 'Downloading…'));
+  requestAnimationFrame(() => setStartupLoadingProgress(72, startupLoaderText('startupDownloading', 'Downloading…')));
   shortStartupTimer = setTimeout(() => {
     shortStartupTimer = null;
-    setStartupLoadingProgress(92, startupLoaderText('startupDownloading', '正在下载中'));
+    setStartupLoadingProgress(92, startupLoaderText('startupDownloading', 'Downloading…'));
   }, 150);
 }
 
@@ -50,33 +46,9 @@ async function finishShortStartupLoading() {
   const startedAt = window.JetNoteStartupLoader?.startedAt || Date.now();
   const remaining = Math.max(0, 200 - (Date.now() - startedAt));
   if (remaining) await new Promise(resolve => setTimeout(resolve, remaining));
-  setStartupLoadingProgress(100, startupLoaderText('startupDownloading', '正在下载中'));
+  setStartupLoadingProgress(100, startupLoaderText('startupDownloading', 'Downloading…'));
   await new Promise(resolve => requestAnimationFrame(resolve));
   hideStartupLoading();
-}
-
-function startBundledDemoStartupImport() {
-  return startBundledDemoImport(true);
-}
-
-/*
- * Demo attachments must be installed through the native archive importer.
- * Importing only in JavaScript preserves attachment metadata in IndexedDB but
- * leaves video paths without their private media files.
- */
-function startBundledDemoImport(showStartupLoader = false) {
-  if (!window.JetNoteNative || typeof JetNoteNative.importBundledDemo !== 'function') {
-    return Promise.reject(new Error('当前版本不支持内置演示数据导入'));
-  }
-  startupDemoImportActive = showStartupLoader;
-  bundledDemoImportActive = true;
-  entriesBusy = true;
-  setStartupLoadingProgress(0, startupLoaderText('startupLoading', '正在载入中'));
-  return new Promise((resolve, reject) => {
-    bundledDemoResolve = resolve;
-    bundledDemoReject = reject;
-    JetNoteNative.importBundledDemo();
-  });
 }
 
 let pendingArchive=null;
@@ -105,7 +77,7 @@ function setArchiveProgress({message='',done=0,total=0,percent=0,finished=false,
   clearTimeout(archiveProgressHideTimer);
   box.hidden=false;
   const p=Math.max(0,Math.min(100,Number(percent)||0));
-  label.textContent=message||'处理中…';
+  label.textContent=message||'Processing…';
   pct.textContent=Math.round(p)+'%';
   fill.style.width=p+'%';
   if(track)track.setAttribute('aria-valuenow',String(Math.round(p)));
@@ -121,11 +93,11 @@ function clearArchiveProgress(delay=0){
   else box.hidden=true;
 }
 function openDictionary(){
-  if(window.JetNoteNative?.openDictionary)JetNoteNative.openDictionary(currentLanguage);
+  if(window.JetNoteNative?.openDictionary)JetNoteNative.openDictionary('en');
   else window.open('https://www.merriam-webster.com/','_blank','noopener');
 }
 function openSentences(){
-  if(window.JetNoteNative?.openSentences)JetNoteNative.openSentences(currentLanguage);
+  if(window.JetNoteNative?.openSentences)JetNoteNative.openSentences('en');
   else window.open('https://soundoftext.com/','_blank','noopener');
 }
 async function exportArchive(){
@@ -137,10 +109,10 @@ async function exportArchive(){
   }
   entriesBusy=true;
   archiveStatus(t('exporting'));
-  setArchiveProgress({message:'正在准备导出…',percent:0});
+  setArchiveProgress({message:'Preparing export…',percent:0});
   try{
     const snapshot=await EntryStore.read(),bytes=await ArchiveCodec.exportSnapshot({
-      ...snapshot,profile:getProfileSnapshot()
+      ...snapshot
     }),name='JetNote_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jnote',blob=new Blob([bytes],{
       type:'application/vnd.jnote+zip'
     }),url=URL.createObjectURL(blob),link=document.createElement('a');
@@ -270,7 +242,7 @@ async function importSnapshot(incoming, mode) {
   /*
    * Existing media is relevant for merge/add collision protection. During a
    * replace import, however, the incoming archive becomes the authoritative
-   * data set, so an old demo attachment with the same ID must not prevent the
+   * data set, so an old attachment with the same ID must not prevent the
    * replacement from succeeding.
    */
   if (mode !== 'replace') {
@@ -282,10 +254,7 @@ async function importSnapshot(incoming, mode) {
     }
   }
 
-  const previousProfile = incoming.profile ? getProfileSnapshot() : null;
-
   try {
-    if (incoming.profile) applyProfileSnapshot(incoming.profile);
     await EntryStore.commit(nextPosts, importedMedia);
 
     if (mode === 'replace') {
@@ -295,11 +264,6 @@ async function importSnapshot(incoming, mode) {
       await EntryStore.removeUnreferencedMedia(referencedMediaIds);
     }
   } catch (error) {
-    if (previousProfile) {
-      try {
-        applyProfileSnapshot(previousProfile);
-      } catch (_) {}
-    }
     throw error;
   }
 
@@ -313,7 +277,7 @@ async function confirmArchiveImport(){
   if(!pendingArchive||entriesBusy)return;
   entriesBusy=true;
   archiveStatus(t('importing'));
-  setArchiveProgress({message:'正在提交导入…',percent:75});
+  setArchiveProgress({message:'Committing import…',percent:75});
   if(pendingArchive.nativeToken){
     pendingArchive.selectedMode=document.getElementById('importMode').value;
     JetNoteNative.commitImportMedia(pendingArchive.nativeToken);
@@ -331,7 +295,7 @@ async function confirmArchiveImport(){
   }
 }
 function finishImport(stats){
-  setArchiveProgress({message:'导入完成',done:1,total:1,percent:100,finished:true});
+  setArchiveProgress({message:'Import complete',done:1,total:1,percent:100,finished:true});
   archiveStatus(t('importDone')+' '+t('added')+': '+stats.added+' · '+t('updated')+': '+stats.updated+' · '+t('kept')+': '+stats.kept);
   pendingArchive=null;
   document.getElementById('importPreview').classList.remove('open');
@@ -342,17 +306,17 @@ function chooseArchive(){
   if(window.JetNoteNative?.importJetNote){
     entriesBusy=true;
     archiveStatus(t('validating'));
-    setArchiveProgress({message:'等待选择备份文件…',percent:0});
+    setArchiveProgress({message:'Choose a backup file…',percent:0});
     JetNoteNative.importJetNote('merge');
   }else document.getElementById('archivePicker').click();
 }
 async function exportNativeArchive(){
   entriesBusy=true;
   archiveStatus(t('exporting'));
-  setArchiveProgress({message:'正在整理导出数据…',percent:0});
+  setArchiveProgress({message:'Preparing export data…',percent:0});
   try{
     const state=await EntryStore.read(),payload={
-      appVersion:'3.7',profile:getProfileSnapshot(),posts:[]
+      appVersion:'3.7',posts:[]
     };
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
@@ -365,46 +329,28 @@ async function exportNativeArchive(){
 }
 window.JetNoteArchive={
   onProgress(operation,phase,done,total,percent,message){
-    if (bundledDemoImportActive && operation === 'import') {
-      setStartupLoadingProgress(percent, startupLoaderText('startupLoading', '正在载入中'));
-      return;
-    }
     setArchiveProgress({
-      message:message||((operation==='export'?'导出':'导入')+'处理中…'),
+      message:message||((operation==='export'?'Export ':'Import ')+'in progress…'),
       done:Number(done)||0,total:Number(total)||0,percent:Number(percent)||0,
       finished:phase==='done',error:phase==='error'
     });
   },
   onValidated(token,mode,postsJson,profileJson){
     try{
-      if(pendingArchive||!entriesReady||document.querySelector('#postComposeScreen.open'))throw Error('请先完成当前编辑或导入');
+      if(pendingArchive||!entriesReady||document.querySelector('#postComposeScreen.open'))throw Error('Finish the current edit or import first.');
       pendingArchive=ArchiveMapping.fromCanonical(JSON.parse(postsJson),attachment=>({
         ...attachment,sha256:attachment.sha256.toLowerCase()
       }));
-      pendingArchive.profile=profileJson?JSON.parse(profileJson):null;
+      // Legacy archives may still carry profile.json. It is intentionally ignored.
+      pendingArchive.profile=null;
       pendingArchive.nativeToken=token;
-      if (bundledDemoImportActive) {
-        pendingArchive.selectedMode='replace';
-        entriesBusy=true;
-        if (startupDemoImportActive) setStartupLoadingProgress(78, startupLoaderText('startupLoading', '正在载入中'));
-        JetNoteNative.commitImportMedia(token);
-      } else {
-        showImportPreview();
-        entriesBusy=false;
-      }
+      showImportPreview();
+      entriesBusy=false;
     }catch(error){
       JetNoteNative.rollbackImport(token);
-      if (bundledDemoImportActive) {
-        const reject = bundledDemoReject;
-        bundledDemoImportActive=false;
-        startupDemoImportActive=false;
-        bundledDemoResolve=null; bundledDemoReject=null;
-        entriesBusy=false;
-        if (reject) reject(error);
-      } else {
-        archiveStatus(t('transferFailed')+error.message);
-        alert(t('transferFailed')+error.message);
-      }
+      entriesBusy=false;
+      archiveStatus(t('transferFailed')+error.message);
+      alert(t('transferFailed')+error.message);
     }
   },
   async onMediaCommitted(token){
@@ -414,71 +360,37 @@ window.JetNoteArchive={
       return;
     }
     try{
-      if (bundledDemoImportActive) setStartupLoadingProgress(96, startupLoaderText('startupLoading', '正在载入中'));
-      else setArchiveProgress({message:'正在提交说说数据…',percent:96});
+      setArchiveProgress({message:'Committing note data…',percent:96});
       const stats=await importSnapshot(pendingArchive,pendingArchive.selectedMode);
       JetNoteNative.finalizeImport(token);
-      if (bundledDemoImportActive) {
-        setStartupLoadingProgress(100, startupLoaderText('startupLoading', '正在载入中'));
-        if (startupDemoImportActive) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-        const resolve = bundledDemoResolve;
-        const wasStartupDemo = startupDemoImportActive;
-        bundledDemoImportActive=false;
-        startupDemoImportActive=false;
-        bundledDemoResolve=null; bundledDemoReject=null;
-        pendingArchive=null;
-        if (wasStartupDemo) hideStartupLoading();
-        if (resolve) resolve(stats);
-      } else {
-        finishImport(stats);
-      }
+      finishImport(stats);
     }catch(error){
       JetNoteNative.rollbackImport(token);
       pendingArchive=null;
-      document.getElementById('importPreview').classList.remove('open');
-      if (bundledDemoImportActive) {
-        const reject = bundledDemoReject;
-        bundledDemoImportActive=false;
-        startupDemoImportActive=false;
-        bundledDemoResolve=null; bundledDemoReject=null;
-        if (reject) reject(error);
-      } else {
-        archiveStatus(t('transferFailed')+error.message);
-        alert(t('transferFailed')+error.message);
-      }
-    }
-    finally{
+      document.getElementById('importPreview')?.classList.remove('open');
+      archiveStatus(t('transferFailed')+error.message);
+      alert(t('transferFailed')+error.message);
+    }finally{
       entriesBusy=false;
     }
   },
   onError(message){
     entriesBusy=false;
-    if (bundledDemoImportActive) {
-      const reject = bundledDemoReject;
-      bundledDemoImportActive=false;
-      startupDemoImportActive=false;
-      bundledDemoResolve=null; bundledDemoReject=null;
-      pendingArchive=null;
-      if (reject) reject(new Error(message));
-      return;
-    }
-    if(message==='已取消导入'){clearArchiveProgress();archiveStatus(message);return;}
+    if(message==='Import cancelled'){clearArchiveProgress();archiveStatus(message);return;}
     setArchiveProgress({message:message,percent:0,error:true});
     archiveStatus(t('transferFailed')+message);
     if(pendingArchive?.nativeToken){
       pendingArchive=null;
-      document.getElementById('importPreview').classList.remove('open');
+      document.getElementById('importPreview')?.classList.remove('open');
     }
-    if(message!=='已取消导入')alert(message);
+    if(message!=='Import cancelled')alert(message);
   },
   onExportFinished(success,message){
     entriesBusy=false;
-    if(!success&&message==='已取消导出'){clearArchiveProgress();archiveStatus(message);return;}
-    if(success)setArchiveProgress({message:'导出完成',done:1,total:1,percent:100,finished:true});
+    if(!success&&message==='Export cancelled'){clearArchiveProgress();archiveStatus(message);return;}
+    if(success)setArchiveProgress({message:'Export complete',done:1,total:1,percent:100,finished:true});
     else setArchiveProgress({message,percent:0,error:true});
     archiveStatus(message);
-    if(!success&&message!=='已取消导出')alert(message);
+    if(!success&&message!=='Export cancelled')alert(message);
   }
 };

@@ -414,11 +414,7 @@ button:active {
   display: block;
 }
 
-/* Demo is a display-only session: no composer or persistent-data backup UI. */
-html.demo-read-only #mainComposerArea,
-html.demo-read-only .feed-composer-wrap {
-  display: none !important;
-}
+
 
 .settings-status {
   min-height: 18px;
@@ -543,3 +539,9 @@ html.demo-read-only .feed-composer-wrap {
   line-height: 1.35;
   color: #8b949d;
 }
+
+.tools-screen{z-index:30020;}
+.tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.tool-choice{min-height:132px;border:1px solid #cfd1d5;border-radius:18px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#30353a;font-size:17px;}
+.tool-choice svg{width:34px;height:34px;}
+.rgb-editor.open{display:block;}

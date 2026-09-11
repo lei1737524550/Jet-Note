@@ -779,7 +779,7 @@
 .compose-video-item .video-inline-time { display:none; }
 
 
-/* First-boot demo loader */
+/* Startup loader */
 .startup-loading {
   position: fixed;
   inset: 0;

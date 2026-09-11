@@ -74,12 +74,12 @@ final class JetNoteArchiveController {
             try {
                 validateExportPayload(payload);
             } catch (Exception e) {
-                dispatchExportFinished(false, "导出数据结构无效：" + safeMessage(e));
+                dispatchExportFinished(false, "Invalid export data: " + safeMessage(e));
                 return;
             }
 
             pendingExportPayload = payload;
-            dispatchProgress("export", "prepare", 0, 0, 0, "正在准备导出…");
+            dispatchProgress("export", "prepare", 0, 0, 0, "Preparing export…");
             Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("application/vnd.jnote+zip");
@@ -89,56 +89,24 @@ final class JetNoteArchiveController {
                 activity.startActivityForResult(intent, REQUEST_EXPORT);
             } catch (RuntimeException e) {
                 pendingExportPayload = null;
-                dispatchExportFinished(false, "没有可用的文件保存器");
+                dispatchExportFinished(false, "No file saver is available.");
             }
         });
     }
 
     void importFromUri(Uri source, String mode) {
         if (source == null) {
-            dispatchImportError("导入文件地址无效");
+            dispatchImportError("Invalid import file URI.");
             return;
         }
         io.execute(() -> stageAndValidateImport(source, normalizeMode(mode)));
     }
 
 
-    void importBundledDemo() {
-        io.execute(() -> {
-            File source = new File(activity.getCacheDir(), "jetnote-bundled-demo-" + UUID.randomUUID() + ".jnote");
-            try (InputStream in = activity.getAssets().open("demo.jnote");
-                 FileOutputStream out = new FileOutputStream(source)) {
-                // Demo is a disposable session. Start with an empty cache-backed
-                // media directory before staging the bundled archive.
-                store.beginDemoSession();
-                dispatchProgress("import", "read", 0, 0, 1, "正在载入演示数据…");
-                byte[] buffer = new byte[COPY_BUFFER];
-                int read;
-                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
-                out.flush();
-                out.getFD().sync();
-                if (source.length() == 0) throw new IOException("内置 demo.jnote 为空");
-                stageAndValidateImport(Uri.fromFile(source), "replace");
-            } catch (Exception e) {
-                dispatchProgress("import", "error", 0, 0, 0, "演示数据导入失败：" + safeMessage(e));
-                dispatchImportError("演示数据导入失败：" + safeMessage(e));
-            } finally {
-                if (source.exists()) source.delete();
-            }
-        });
-    }
-
-    void releaseDemoSession() {
-        // Switch requests must never delete the user media directory. The store
-        // first returns to the user workspace, then clears only cache-backed demo bytes.
-        store.activateUserWorkspace();
-        io.execute(store::releaseDemoSession);
-    }
-
     void requestImport(String mode) {
         activity.runOnUiThread(() -> {
             pendingImportMode = normalizeMode(mode);
-            dispatchProgress("import", "select", 0, 0, 0, "请选择 .jnote 文件");
+            dispatchProgress("import", "select", 0, 0, 0, "Choose a .jnote file");
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.setType("*/*");
@@ -150,7 +118,7 @@ final class JetNoteArchiveController {
                 activity.startActivityForResult(intent, REQUEST_IMPORT);
             } catch (RuntimeException e) {
                 pendingImportMode = null;
-                dispatchImportError("没有可用的文件选择器");
+                dispatchImportError("No file picker is available.");
             }
         });
     }
@@ -164,11 +132,11 @@ final class JetNoteArchiveController {
             String payload = pendingExportPayload;
             pendingExportPayload = null;
             if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null || payload == null) {
-                dispatchExportFinished(false, "已取消导出");
+                dispatchExportFinished(false, "已Cancel导出");
                 return;
             }
             Uri destination = data.getData();
-            dispatchProgress("export", "prepare", 0, 0, 1, "正在构建备份…");
+            dispatchProgress("export", "prepare", 0, 0, 1, "Building backup…");
             io.execute(() -> exportArchive(destination, payload));
             return;
         }
@@ -177,11 +145,11 @@ final class JetNoteArchiveController {
             String mode = pendingImportMode == null ? "merge" : pendingImportMode;
             pendingImportMode = null;
             if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
-                dispatchImportError("已取消导入");
+                dispatchImportError("已Cancel导入");
                 return;
             }
             Uri source = data.getData();
-            dispatchProgress("import", "read", 0, querySize(source), 1, "正在读取备份…");
+            dispatchProgress("import", "read", 0, querySize(source), 1, "Reading backup…");
             io.execute(() -> stageAndValidateImport(source, mode));
         }
     }
@@ -194,13 +162,13 @@ final class JetNoteArchiveController {
                 return;
             }
             try {
-                dispatchProgress("import", "commit", 0, 0, 75, "正在安装媒体…");
+                dispatchProgress("import", "commit", 0, 0, 75, "Installing media…");
                 commitStagedMedia(session);
                 session.mediaCommitted = true;
                 dispatchMediaCommitted(token);
             } catch (Exception e) {
                 rollbackFiles(session);
-                dispatchImportError("媒体导入失败：" + safeMessage(e));
+                dispatchImportError("Media import failed: " + safeMessage(e));
                 cleanupSession(token);
             }
         });
@@ -210,8 +178,8 @@ final class JetNoteArchiveController {
         io.execute(() -> {
             ImportSession session = sessions.remove(token);
             if (session != null) deleteRecursively(session.stageDir);
-            dispatchProgress("import", "done", 1, 1, 100, "导入完成，媒体与数据均已提交");
-            activity.runOnUiThread(() -> Toast.makeText(activity, "Jet Note 导入成功", Toast.LENGTH_SHORT).show());
+            dispatchProgress("import", "done", 1, 1, 100, "Import complete. Media and data were committed.");
+            activity.runOnUiThread(() -> Toast.makeText(activity, "Jet Note import complete", Toast.LENGTH_SHORT).show());
         });
     }
 
@@ -396,9 +364,9 @@ final class JetNoteArchiveController {
         }
 
         try {
-            dispatchProgress("import", "read", 0, querySize(source), 2, "正在复制备份到安全临时区…");
+            dispatchProgress("import", "read", 0, querySize(source), 2, "Copying backup to a safe staging area…");
             Map<String, String> mediaDigests = extractZip(source, stageDir);
-            dispatchProgress("import", "validate", 0, 0, 62, "正在验证清单和校验和…");
+            dispatchProgress("import", "validate", 0, 0, 62, "Validating manifest and checksums…");
             File manifestFile = new File(stageDir, "manifest.json");
             File postsFile = new File(stageDir, "data/posts.json");
             File profileFile = new File(stageDir, "data/profile.json");
@@ -408,9 +376,9 @@ final class JetNoteArchiveController {
             requireMetadataFile(checksumsFile);
 
             JSONObject manifest = new JSONObject(readUtf8Limited(manifestFile));
-            if (!"jet-note".equals(manifest.optString("format"))) throw new IOException("不是 Jet Note 备份文件");
+            if (!"jet-note".equals(manifest.optString("format"))) throw new IOException("Not a Jet Note backup file");
             if (manifest.optInt("formatVersion", -1) != FORMAT_VERSION) {
-                throw new IOException("暂不支持 formatVersion=" + manifest.optInt("formatVersion", -1));
+                throw new IOException("Unsupported formatVersion=" + manifest.optInt("formatVersion", -1));
             }
 
             JSONObject content = manifest.optJSONObject("content");
@@ -467,7 +435,7 @@ final class JetNoteArchiveController {
                 extra.removeAll(attachments.keySet());
                 java.util.Set<String> missing = new java.util.HashSet<>(attachments.keySet());
                 missing.removeAll(mediaDigests.keySet());
-                throw new IOException("媒体清单与实际 ZIP 不一致" + (!missing.isEmpty() ? "，缺少 " + missing.size() + " 项" : "") + (!extra.isEmpty() ? "，多出 " + extra.size() + " 项" : ""));
+                throw new IOException("Media manifest does not match the ZIP" + (!missing.isEmpty() ? "; missing " + missing.size() + " entries" : "") + (!extra.isEmpty() ? "; extra " + extra.size() + " entries" : ""));
             }
 
             List<String> referencedMedia = new ArrayList<>();
@@ -475,16 +443,16 @@ final class JetNoteArchiveController {
                 String path = item.getKey();
                 validateMediaPath(path);
                 File file = fileInside(stageDir, path);
-                if (!file.isFile()) throw new IOException("备份缺少附件：" + path);
+                if (!file.isFile()) throw new IOException("Backup is missing attachment: " + path);
 
                 String expected = checksums.optString(path, "");
                 String actual = mediaDigests.get(path);
                 if (expected.isEmpty() || actual == null || !expected.equalsIgnoreCase(actual)) {
-                    throw new IOException("SHA-256 校验失败：" + path);
+                    throw new IOException("SHA-256 verification failed: " + path);
                 }
                 String metadataSha = item.getValue().optString("sha256", "");
                 if (!metadataSha.isEmpty() && !metadataSha.equalsIgnoreCase(actual)) {
-                    throw new IOException("附件元数据校验失败：" + path);
+                    throw new IOException("Attachment metadata verification failed: " + path);
                 }
                 JSONObject meta=item.getValue();
                 if(meta.has("size")&&!meta.isNull("size")&&meta.getLong("size")!=file.length())throw new IOException("Attachment size mismatch");
@@ -495,12 +463,12 @@ final class JetNoteArchiveController {
             for (String path : referencedMedia) mediaSizes.put(path, fileInside(stageDir, path).length());
             ImportSession session = new ImportSession(token, mode, stageDir, postsJson, profileJson, referencedMedia, mediaDigests, mediaSizes);
             sessions.put(token, session);
-            dispatchProgress("import", "ready", referencedMedia.size(), referencedMedia.size(), 75, "验证完成，等待确认导入");
+            dispatchProgress("import", "ready", referencedMedia.size(), referencedMedia.size(), 75, "Validation complete. Waiting for import confirmation.");
             dispatchImportValidated(session);
         } catch (Exception e) {
             deleteRecursively(stageDir);
-            dispatchProgress("import", "error", 0, 0, 0, "导入验证失败：" + safeMessage(e));
-            dispatchImportError("导入验证失败：" + safeMessage(e));
+            dispatchProgress("import", "error", 0, 0, 0, "Import validation failed: " + safeMessage(e));
+            dispatchImportError("Import validation failed: " + safeMessage(e));
         }
     }
 
@@ -510,20 +478,20 @@ final class JetNoteArchiveController {
         long sourceTotal = querySize(source);
         try (InputStream sourceStream = openSourceStream(source);
              FileOutputStream out = new FileOutputStream(container)) {
-            if (sourceStream == null) throw new IOException("无法读取备份文件");
+            if (sourceStream == null) throw new IOException("Unable to read backup file");
             byte[] buffer = new byte[COPY_BUFFER];
             long done = 0L;
             int read;
             while ((read = sourceStream.read(buffer)) != -1) {
                 out.write(buffer, 0, read);
                 done += read;
-                dispatchProgress("import", "read", done, sourceTotal, 2 + scaledPercent(done, sourceTotal, 23), "正在读取备份…");
+                dispatchProgress("import", "read", done, sourceTotal, 2 + scaledPercent(done, sourceTotal, 23), "Reading backup…");
             }
             out.flush();
             out.getFD().sync();
         }
-        if (container.length() == 0) throw new IOException("备份文件为空");
-        if (sourceTotal >= 0 && container.length() != sourceTotal) throw new IOException("备份读取不完整");
+        if (container.length() == 0) throw new IOException("Backup file is empty");
+        if (sourceTotal >= 0 && container.length() != sourceTotal) throw new IOException("Backup read is incomplete");
 
         Map<String, ZipEntry> central = new HashMap<>();
         long expandedTotal = 0L;
@@ -537,14 +505,14 @@ final class JetNoteArchiveController {
                     if (!isAllowedDirectory(n)) throw new IOException("Invalid ZIP directory");
                 } else {
                     validateArchiveEntryName(n);
-                    if (e.getSize() < 0) throw new IOException("ZIP 条目大小未知：" + n);
+                    if (e.getSize() < 0) throw new IOException("Unknown ZIP entry size: " + n);
                     expandedTotal = safeAdd(expandedTotal, e.getSize());
                 }
             }
         }
         long usable = stageDir.getUsableSpace();
         if (usable > 0 && expandedTotal > usable - Math.min(128L * 1024L * 1024L, usable / 10)) {
-            throw new IOException("存储空间不足，无法安全解压备份");
+            throw new IOException("Not enough storage to safely extract the backup");
         }
 
         int entryCount = 0;
@@ -554,18 +522,18 @@ final class JetNoteArchiveController {
              ZipInputStream zip = new ZipInputStream(new BufferedInputStream(raw))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
-                if (++entryCount > MAX_ZIP_ENTRIES) throw new IOException("ZIP 条目过多");
+                if (++entryCount > MAX_ZIP_ENTRIES) throw new IOException("Too many ZIP entries");
                 String name = entry.getName();
                 if (!names.add(name) || !central.containsKey(name)) throw new IOException("Duplicate or inconsistent ZIP entry: " + name);
                 if (entry.isDirectory()) {
-                    if (!isAllowedDirectory(name)) throw new IOException("非法目录：" + name);
+                    if (!isAllowedDirectory(name)) throw new IOException("Invalid directory: " + name);
                     zip.closeEntry();
                     continue;
                 }
                 validateArchiveEntryName(name);
                 File output = fileInside(stageDir, name);
                 File parent = output.getParentFile();
-                if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("无法创建目录");
+                if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create directory");
 
                 long entryDone = 0L;
                 long expectedSize = central.get(name).getSize();
@@ -576,17 +544,17 @@ final class JetNoteArchiveController {
                     int read;
                     while ((read = zip.read(buffer)) != -1) {
                         entryDone += read;
-                        if (entryDone > limit) throw new IOException("条目过大：" + name);
+                        if (entryDone > limit) throw new IOException("Entry too large: " + name);
                         out.write(buffer, 0, read);
                         if (digest != null) digest.update(buffer, 0, read);
                         long totalDone = expandedDone + entryDone;
                         dispatchProgress("import", "extract", totalDone, expandedTotal,
-                                25 + scaledPercent(totalDone, expandedTotal, 35), "正在解压并校验…");
+                                25 + scaledPercent(totalDone, expandedTotal, 35), "Extracting and verifying…");
                     }
                     out.flush();
                     out.getFD().sync();
                 }
-                if (entryDone != expectedSize || output.length() != expectedSize) throw new IOException("ZIP 条目读取不完整：" + name);
+                if (entryDone != expectedSize || output.length() != expectedSize) throw new IOException("Incomplete ZIP entry: " + name);
                 if (digest != null) mediaDigests.put(name, AttachmentStore.hex(digest.digest()));
                 expandedDone += entryDone;
                 zip.closeEntry();
@@ -610,18 +578,18 @@ final class JetNoteArchiveController {
             index++;
             File staged = fileInside(session.stageDir, path);
             File target = store.fileForArchivePath(path);
-            if (target == null) throw new IOException("非法媒体路径：" + path);
+            if (target == null) throw new IOException("Invalid media path: " + path);
             String expectedSha = session.mediaDigests.get(path);
             long expectedSize = session.mediaSizes.getOrDefault(path, staged.length());
-            if (expectedSha == null || staged.length() != expectedSize) throw new IOException("暂存媒体不完整：" + path);
+            if (expectedSha == null || staged.length() != expectedSize) throw new IOException("Staged media is incomplete: " + path);
 
             if (target.exists()) {
-                if (target.length() != expectedSize) throw new IOException("附件 ID 冲突（大小不同）：" + path);
+                if (target.length() != expectedSize) throw new IOException("Attachment ID collision (different size): " + path);
                 String existing = AttachmentStore.sha256(target);
-                if (!existing.equalsIgnoreCase(expectedSha)) throw new IOException("附件 ID 冲突：" + path);
+                if (!existing.equalsIgnoreCase(expectedSha)) throw new IOException("Attachment ID collision: " + path);
                 done += expectedSize;
                 dispatchProgress("import", "commit", done, total, 75 + scaledPercent(done, total, 20),
-                        "正在安装媒体 " + index + "/" + session.mediaPaths.size());
+                        "Installing media " + index + "/" + session.mediaPaths.size());
                 continue;
             }
 
@@ -639,14 +607,14 @@ final class JetNoteArchiveController {
                         fileDone += read;
                         long totalDone = done + fileDone;
                         dispatchProgress("import", "commit", totalDone, total, 75 + scaledPercent(totalDone, total, 20),
-                                "正在安装媒体 " + index + "/" + session.mediaPaths.size());
+                                "Installing media " + index + "/" + session.mediaPaths.size());
                     }
                     out.flush();
                     out.getFD().sync();
                 }
                 String copiedSha = AttachmentStore.hex(digest.digest());
                 if (fileDone != expectedSize || temp.length() != expectedSize || !copiedSha.equalsIgnoreCase(expectedSha)) {
-                    throw new IOException("媒体复制校验失败：" + path);
+                    throw new IOException("Media copy verification failed: " + path);
                 }
 
                 if (!temp.renameTo(target)) {
@@ -664,7 +632,7 @@ final class JetNoteArchiveController {
                 if (!target.isFile() || target.length() != expectedSize || !AttachmentStore.sha256(target).equalsIgnoreCase(expectedSha)) {
                     //noinspection ResultOfMethodCallIgnored
                     target.delete();
-                    throw new IOException("媒体落盘后校验失败：" + path);
+                    throw new IOException("Media verification after write failed: " + path);
                 }
                 session.createdFiles.add(target);
                 done += expectedSize;
@@ -676,7 +644,7 @@ final class JetNoteArchiveController {
                 throw error;
             }
         }
-        dispatchProgress("import", "commit", total, total, 95, "媒体完整性校验通过");
+        dispatchProgress("import", "commit", total, total, 95, "Media integrity verified");
     }
 
     private void rollbackFiles(ImportSession session) {
@@ -720,7 +688,7 @@ final class JetNoteArchiveController {
                     String a = previous.optString("sha256", "");
                     String b = attachment.optString("sha256", "");
                     if (!a.isEmpty() && !b.isEmpty() && !a.equalsIgnoreCase(b)) {
-                        throw new IOException("同一路径出现不同附件：" + path);
+                        throw new IOException("Different attachments use the same path: " + path);
                     }
                 } else {
                     result.put(path, attachment);
@@ -732,7 +700,7 @@ final class JetNoteArchiveController {
     private void validateExportPayload(String payload) throws JSONException, IOException {
         JSONObject root = new JSONObject(payload);
         JSONArray posts = root.optJSONArray("posts");
-        if (posts == null) throw new IOException("缺少 posts");
+        if (posts == null) throw new IOException("Missing posts");
         JSONObject profile = root.optJSONObject("profile");
         if (profile != null) validateProfileJson(profile.toString());
         collectAttachments(posts);
@@ -781,14 +749,14 @@ final class JetNoteArchiveController {
 
 
     private InputStream openSourceStream(Uri uri) throws IOException {
-        if (uri == null) throw new IOException("导入文件地址无效");
+        if (uri == null) throw new IOException("Invalid import file URI.");
         if ("file".equalsIgnoreCase(uri.getScheme())) {
             String path = uri.getPath();
-            if (path == null) throw new IOException("文件路径无效");
+            if (path == null) throw new IOException("Invalid file path");
             return new FileInputStream(new File(path));
         }
         InputStream in = activity.getContentResolver().openInputStream(uri);
-        if (in == null) throw new IOException("无法读取备份文件");
+        if (in == null) throw new IOException("Unable to read backup file");
         return in;
     }
 
@@ -855,14 +823,14 @@ final class JetNoteArchiveController {
         int read;
         while ((read = in.read(buffer)) != -1) {
             total += read;
-            if (total > limit) throw new IOException("元数据条目过大");
+            if (total > limit) throw new IOException("Metadata entry too large");
             out.write(buffer, 0, read);
         }
         return out.toString(StandardCharsets.UTF_8.name());
     }
 
     private static String readUtf8Limited(File file) throws IOException {
-        if (!file.isFile() || file.length() > MAX_METADATA_BYTES) throw new IOException("元数据文件过大或不存在");
+        if (!file.isFile() || file.length() > MAX_METADATA_BYTES) throw new IOException("Metadata file is too large or missing");
         try (InputStream in = new FileInputStream(file)) {
             byte[] bytes = new byte[(int) file.length()];
             int offset = 0;
@@ -871,7 +839,7 @@ final class JetNoteArchiveController {
                 if (read == -1) break;
                 offset += read;
             }
-            if (offset != bytes.length) throw new IOException("元数据读取不完整");
+            if (offset != bytes.length) throw new IOException("Incomplete metadata read");
             return new String(bytes, StandardCharsets.UTF_8);
         }
     }
@@ -883,7 +851,7 @@ final class JetNoteArchiveController {
             int read;
             while ((read = in.read(buffer)) != -1) {
                 total += read;
-                if (total > limit) throw new IOException("元数据条目过大");
+                if (total > limit) throw new IOException("Metadata entry too large");
                 out.write(buffer, 0, read);
             }
         }
@@ -893,7 +861,7 @@ final class JetNoteArchiveController {
         File file = new File(root, relative);
         String rootPath = root.getCanonicalPath() + File.separator;
         String filePath = file.getCanonicalPath();
-        if (!filePath.startsWith(rootPath)) throw new IOException("ZIP 路径穿越被拒绝");
+        if (!filePath.startsWith(rootPath)) throw new IOException("ZIP path traversal rejected");
         return file;
     }
 
@@ -908,14 +876,14 @@ final class JetNoteArchiveController {
     }
 
     private static void validateMediaPath(String path) throws IOException {
-        if (path == null || !path.startsWith("media/")) throw new IOException("非法附件路径：" + path);
+        if (path == null || !path.startsWith("media/")) throw new IOException("Invalid attachment path: " + path);
         String fileName = path.substring("media/".length());
-        if (!AttachmentStore.isSafeFileName(fileName)) throw new IOException("非法附件文件名");
+        if (!AttachmentStore.isSafeFileName(fileName)) throw new IOException("Invalid attachment filename");
     }
 
     private static void requireMetadataFile(File file) throws IOException {
-        if (!file.isFile()) throw new IOException("缺少 " + file.getName());
-        if (file.length() > MAX_METADATA_BYTES) throw new IOException(file.getName() + " 过大");
+        if (!file.isFile()) throw new IOException("Missing " + file.getName());
+        if (file.length() > MAX_METADATA_BYTES) throw new IOException(file.getName() + " is too large");
     }
 
     private static void validateProfileJson(String json) throws JSONException, IOException {

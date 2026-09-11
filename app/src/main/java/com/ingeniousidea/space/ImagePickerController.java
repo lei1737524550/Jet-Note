@@ -43,7 +43,7 @@ final class ImagePickerController {
             document.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
             if (!tryLaunchImagePicker(document)) {
                 finishImageSelection(null);
-                Toast.makeText(activity, "无法打开文件选择器", Toast.LENGTH_LONG).show();
+                Toast.makeText(activity, "Unable to open the file picker", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -73,7 +73,7 @@ final class ImagePickerController {
         gallery.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultipleImages);
         if (!tryLaunchImagePicker(gallery)) {
             finishImageSelection(null);
-            Toast.makeText(activity, "没有可用的图片选择器，请安装或启用相册应用", Toast.LENGTH_LONG).show();
+            Toast.makeText(activity, "No image picker is available. Install or enable a gallery app.", Toast.LENGTH_LONG).show();
         }
     }
 

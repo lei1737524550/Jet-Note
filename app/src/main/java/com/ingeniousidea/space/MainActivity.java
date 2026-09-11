@@ -213,7 +213,7 @@ public class MainActivity extends Activity {
         try { source = attachmentStore.fileForWeb(fileName); } catch (IOException e) { return missingMedia(); }
         File cacheDir = new File(getCacheDir(), "jetnote-video-thumbs");
         if (!cacheDir.exists()) cacheDir.mkdirs();
-        String cacheName = (attachmentStore.isDemoSessionActive() ? "demo-" : "user-") + fileName + ".jpg";
+        String cacheName = "user-" + fileName + ".jpg";
         File cached = new File(cacheDir, cacheName);
         try {
             if (!cached.isFile() || cached.lastModified() < source.lastModified()) {
@@ -243,10 +243,6 @@ public class MainActivity extends Activity {
     private WebResourceResponse mediaResponse(Uri uri, String rangeHeader, String method) {
         if (!isJetNoteLocalUrl(uri)) return null;
         String path = uri.getPath();
-
-        if ("/demo.jnote".equals(path)) {
-            return bundledDemoArchiveResponse();
-        }
 
         if (path == null || !path.matches("/media/[A-Za-z0-9_.-]+")) return null;
         String fileName = uri.getLastPathSegment();
@@ -311,31 +307,6 @@ public class MainActivity extends Activity {
             return new WebResourceResponse(mime, null, 200, "OK", baseHeaders, new FileInputStream(file));
         } catch (IOException ignored) {
             return missingMedia();
-        }
-    }
-    private WebResourceResponse bundledDemoArchiveResponse() {
-        try {
-            InputStream in = getAssets().open("demo.jnote");
-            Map<String, String> headers = new HashMap<>();
-            headers.put("Access-Control-Allow-Origin", "*");
-            headers.put("Cache-Control", "no-store");
-            return new WebResourceResponse(
-                    "application/vnd.jnote+zip",
-                    null,
-                    200,
-                    "OK",
-                    headers,
-                    in
-            );
-        } catch (IOException ignored) {
-            return new WebResourceResponse(
-                    "text/plain",
-                    "UTF-8",
-                    404,
-                    "Not Found",
-                    new HashMap<>(),
-                    new java.io.ByteArrayInputStream(new byte[0])
-            );
         }
     }
 
@@ -467,7 +438,7 @@ public class MainActivity extends Activity {
             if("true".equals(value)){
                 webView.evaluateJavascript("entriesBusy=true;archiveStatus(t('validating'));",null);
                 archiveController.importFromUri(uri,"merge");
-            } else android.widget.Toast.makeText(this,"请先完成当前编辑或导入，再打开备份",android.widget.Toast.LENGTH_LONG).show();
+            } else android.widget.Toast.makeText(this,"Finish the current edit or import before opening a backup.",android.widget.Toast.LENGTH_LONG).show();
         });
     }
 

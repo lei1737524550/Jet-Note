@@ -1,7 +1,7 @@
 function isStandardHomePage() {
   const openIds = [
-    'settingsScreen',
-    'postComposeScreen', 'imageViewer', 'cropScreen',
+    'settingsScreen', 'toolsScreen',
+    'postComposeScreen', 'imageViewer',
     'deleteConfirmBackdrop', 'postActionPanel'
   ];
 
@@ -9,9 +9,7 @@ function isStandardHomePage() {
     const el = document.getElementById(id);
     return el && el.classList.contains('open');
   });
-
-  const name = document.getElementById('mainName');
-  const editingName = !!(name && name.isContentEditable);
+  const editingName = false;
   const scrolled = Math.abs(window.scrollY || document.documentElement.scrollTop || 0) > 2;
 
   return !hasOpenLayer && !editingName && !scrolled;
@@ -37,19 +35,13 @@ function returnToStandardHome() {
   const viewer = document.getElementById('imageViewer');
   if (viewer) viewer.classList.remove('open');
 
-  if (cropScreen && cropScreen.classList.contains('open')) closeCrop();
-
   const settings = document.getElementById('settingsScreen');
   if (settings && settings.classList.contains('open')) closeSettings();
+  const tools = document.getElementById('toolsScreen');
+  if (tools && tools.classList.contains('open')) closeTools();
 
   const postComposer = document.getElementById('postComposeScreen');
   if (postComposer && postComposer.classList.contains('open')) closePostComposer();
-
-  // 结束用户名编辑态。
-  const name = document.getElementById('mainName');
-  if (name && name.isContentEditable && typeof finishNameEdit === 'function') {
-    finishNameEdit(true);
-  }
 
   document.body.style.overflow = '';
   window.scrollTo(0, 0);
