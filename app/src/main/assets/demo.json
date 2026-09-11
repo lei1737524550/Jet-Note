@@ -1,5 +1,5 @@
 {
-    "mode_setting": "user",
-    "first_boot": true,
-    "display_in_setting": false
+    "launch_mode": "user",
+    "display_demo_switch": true,
+    "demo_policy": "read_only_session"
 }

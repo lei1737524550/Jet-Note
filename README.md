@@ -41,6 +41,20 @@ Demo Mode is reconstructed from the bundled archive:
 app/src/main/assets/demo.jnote
 ```
 
+Its packaged policy is defined in `app/src/main/assets/demo.json`:
+
+```json
+{
+  "launch_mode": "user",
+  "display_demo_switch": true,
+  "demo_policy": "read_only_session"
+}
+```
+
+With `display_demo_switch: true`, the mode picker is shown and the user's last
+selection is remembered. With `false`, the picker is hidden and `launch_mode`
+is enforced on every startup, including after an overwrite install.
+
 The bundled file uses the same `.jnote` archive format as regular Jet Note backups. This makes demo content replaceable without introducing a separate demo-data format.
 
 ## `.jnote` Backup Format
@@ -237,6 +251,24 @@ If Android reports that a newly built APK has a signature inconsistent with the 
 ## Source Formatting
 
 Project-owned source code is intended to remain readable and maintainable. CSS and JavaScript should use normal formatted, multi-line source rather than intentionally minified production-style formatting unless there is a specific technical reason to do otherwise.
+
+## Bilingual Line Notes
+
+Every text file under `app/src/main` has a Chinese/English, line-numbered
+companion note in:
+
+```text
+docs/BILINGUAL_LINE_NOTES/INDEX.md
+```
+
+The original source remains executable and unmodified. This is especially
+important for JSON resource files and minified third-party vendor libraries,
+where inserting comments would break parsing or dependency integrity. Regenerate
+the note tree after source edits with:
+
+```bash
+python3 tools/generate_bilingual_line_notes.py --replace
+```
 
 ## Third-Party Resources
 

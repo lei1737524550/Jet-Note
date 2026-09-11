@@ -1,0 +1,62 @@
+# app/src/main 双语逐行备注 / Bilingual line-note index
+
+这些备注与 `app/src/main` 的原始文本文件一一对应。它们位于 `docs/`，不会被 Android 构建打进 APK，也不会改变应用运行行为。
+
+These notes map one-to-one to the original text files in `app/src/main`. They live in `docs/`, are not packaged into the APK, and do not change app behavior.
+
+| 原文件 / Source file | 文本行数 / Text lines | 备注文件 / Note file |
+| --- | ---: | --- |
+| `AndroidManifest.xml` | 42 | `AndroidManifest.xml.notes.md` |
+| `assets/config/video-playback.json` | 3 | `assets/config/video-playback.json.notes.md` |
+| `assets/css/attachments.css` | 286 | `assets/css/attachments.css.notes.md` |
+| `assets/css/base.css` | 265 | `assets/css/base.css.notes.md` |
+| `assets/css/components.css` | 825 | `assets/css/components.css.notes.md` |
+| `assets/css/layout.css` | 28 | `assets/css/layout.css.notes.md` |
+| `assets/css/pages.css` | 545 | `assets/css/pages.css.notes.md` |
+| `assets/demo.json` | 5 | `assets/demo.json.notes.md` |
+| `assets/icons/FEATHER-LICENSE.txt` | 21 | `assets/icons/FEATHER-LICENSE.txt.notes.md` |
+| `assets/icons/README.txt` | 2 | `assets/icons/README.txt.notes.md` |
+| `assets/icons/volume-2.svg` | 1 | `assets/icons/volume-2.svg.notes.md` |
+| `assets/index.html` | 415 | `assets/index.html.notes.md` |
+| `assets/js/components/confirmation.js` | 64 | `assets/js/components/confirmation.js.notes.md` |
+| `assets/js/components/crop.js` | 253 | `assets/js/components/crop.js.notes.md` |
+| `assets/js/components/media.js` | 86 | `assets/js/components/media.js.notes.md` |
+| `assets/js/components/menu.js` | 3 | `assets/js/components/menu.js.notes.md` |
+| `assets/js/components/notice.js` | 26 | `assets/js/components/notice.js.notes.md` |
+| `assets/js/components/viewer.js` | 202 | `assets/js/components/viewer.js.notes.md` |
+| `assets/js/core/archive-mapping.js` | 96 | `assets/js/core/archive-mapping.js.notes.md` |
+| `assets/js/core/archive.js` | 109 | `assets/js/core/archive.js.notes.md` |
+| `assets/js/core/bootstrap.js` | 56 | `assets/js/core/bootstrap.js.notes.md` |
+| `assets/js/core/dom.js` | 9 | `assets/js/core/dom.js.notes.md` |
+| `assets/js/core/entries.js` | 77 | `assets/js/core/entries.js.notes.md` |
+| `assets/js/core/i18n.js` | 280 | `assets/js/core/i18n.js.notes.md` |
+| `assets/js/core/media-adapter.js` | 165 | `assets/js/core/media-adapter.js.notes.md` |
+| `assets/js/core/navigation.js` | 64 | `assets/js/core/navigation.js.notes.md` |
+| `assets/js/core/storage.js` | 145 | `assets/js/core/storage.js.notes.md` |
+| `assets/js/core/viewport.js` | 25 | `assets/js/core/viewport.js.notes.md` |
+| `assets/js/dictionary-get.js` | 423 | `assets/js/dictionary-get.js.notes.md` |
+| `assets/js/features/album.js` | 348 | `assets/js/features/album.js.notes.md` |
+| `assets/js/features/appearance.js` | 179 | `assets/js/features/appearance.js.notes.md` |
+| `assets/js/features/audio.js` | 358 | `assets/js/features/audio.js.notes.md` |
+| `assets/js/features/posts.js` | 558 | `assets/js/features/posts.js.notes.md` |
+| `assets/js/features/profile.js` | 110 | `assets/js/features/profile.js.notes.md` |
+| `assets/js/features/settings.js` | 135 | `assets/js/features/settings.js.notes.md` |
+| `assets/js/features/settings.js.tmp` | 0 | `assets/js/features/settings.js.tmp.notes.md` |
+| `assets/js/features/transfer.js` | 484 | `assets/js/features/transfer.js.notes.md` |
+| `assets/vendor/fflate.LICENSE` | 21 | `assets/vendor/fflate.LICENSE.notes.md` |
+| `assets/vendor/fflate.js` | 1 | `assets/vendor/fflate.js.notes.md` |
+| `assets/vendor/sha256.LICENSE` | 22 | `assets/vendor/sha256.LICENSE.notes.md` |
+| `assets/vendor/sha256.js` | 9 | `assets/vendor/sha256.js.notes.md` |
+| `java/com/ingeniousidea/space/AttachmentPickerController.java` | 173 | `java/com/ingeniousidea/space/AttachmentPickerController.java.notes.md` |
+| `java/com/ingeniousidea/space/AttachmentStore.java` | 375 | `java/com/ingeniousidea/space/AttachmentStore.java.notes.md` |
+| `java/com/ingeniousidea/space/AudioSaveController.java` | 64 | `java/com/ingeniousidea/space/AudioSaveController.java.notes.md` |
+| `java/com/ingeniousidea/space/DictionaryController.java` | 764 | `java/com/ingeniousidea/space/DictionaryController.java.notes.md` |
+| `java/com/ingeniousidea/space/EdgeToEdgeController.java` | 84 | `java/com/ingeniousidea/space/EdgeToEdgeController.java.notes.md` |
+| `java/com/ingeniousidea/space/ImagePickerController.java` | 147 | `java/com/ingeniousidea/space/ImagePickerController.java.notes.md` |
+| `java/com/ingeniousidea/space/JetNoteArchiveController.java` | 1002 | `java/com/ingeniousidea/space/JetNoteArchiveController.java.notes.md` |
+| `java/com/ingeniousidea/space/MainActivity.java` | 542 | `java/com/ingeniousidea/space/MainActivity.java.notes.md` |
+| `java/com/ingeniousidea/space/MediaWriteController.java` | 56 | `java/com/ingeniousidea/space/MediaWriteController.java.notes.md` |
+| `java/com/ingeniousidea/space/NativeBridge.java` | 166 | `java/com/ingeniousidea/space/NativeBridge.java.notes.md` |
+| `java/com/ingeniousidea/space/NativeVideoPlayer.java` | 135 | `java/com/ingeniousidea/space/NativeVideoPlayer.java.notes.md` |
+| `res/drawable/ic_back_chevron.xml` | 14 | `res/drawable/ic_back_chevron.xml.notes.md` |
+| `res/drawable-nodpi/make_round_png.json` | 8 | `res/drawable-nodpi/make_round_png.json.notes.md` |

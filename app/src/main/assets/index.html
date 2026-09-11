@@ -32,15 +32,19 @@
     var isChinese = nativeLanguage === 'zh' || (!nativeLanguage && /^zh(?:-|$)/i.test(browserLanguage));
     var cfg = window.JetNoteNative && typeof JetNoteNative.getDemoConfig === 'function'
       ? JSON.parse(JetNoteNative.getDemoConfig()) : null;
-    var demoFirstBoot = !!(cfg && cfg.mode_setting === 'demo' && cfg.first_boot === true);
+    var launchMode = cfg && (cfg.launch_mode || cfg.mode_setting);
+    var storedMode = localStorage.getItem('jet_note_app_mode');
+    var initialDemoSession = !!(cfg && (cfg.display_demo_switch === false
+      ? launchMode === 'demo'
+      : storedMode === 'demo' || (!storedMode && launchMode === 'demo')));
     window.JetNoteStartupLoader = {
       startedAt: Date.now(),
-      demoFirstBoot: demoFirstBoot,
+      demoFirstBoot: initialDemoSession,
       language: isChinese ? 'zh' : 'en'
     };
     document.documentElement.classList.add('startup-loading-active');
     var label = document.getElementById('startupLoadingLabel');
-    if (label) label.textContent = demoFirstBoot
+    if (label) label.textContent = initialDemoSession
       ? (isChinese ? '正在载入中' : 'Loading…')
       : (isChinese ? '正在下载中' : 'Downloading…');
   } catch (_) {}

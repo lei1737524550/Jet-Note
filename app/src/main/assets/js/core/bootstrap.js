@@ -11,7 +11,9 @@
       await clearDemoSessionStorage();
       if (typeof resetDemoSessionLanguage === 'function') resetDemoSessionLanguage();
     } else {
-      // Also clears a stale cache left behind if Android previously killed a demo session.
+      // A package update can force User mode while an older build left demo
+      // IndexedDB behind. This removes demo-only storage; user data is untouched.
+      await clearDemoSessionStorage();
       window.JetNoteNative?.releaseDemoSession?.();
     }
     await initializeEntries();
@@ -51,9 +53,4 @@
   if (typeof refreshModeSettings === 'function') refreshModeSettings();
 
   if (!demoSession) await finishShortStartupLoading?.();
-  try {
-    if (window.JetNoteNative && typeof JetNoteNative.completeFirstBoot === 'function') {
-      JetNoteNative.completeFirstBoot();
-    }
-  } catch (_) {}
 })();

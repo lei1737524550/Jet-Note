@@ -45,8 +45,8 @@ async function setAppMode(mode) {
 function refreshModeSettingsVisibility() {
   const card = document.getElementById('modeSettingsCard');
   if (!card) return;
-  const config = typeof getDemoConfig === 'function' ? getDemoConfig() : { display_in_setting: true };
-  card.hidden = config.display_in_setting === false;
+  const config = typeof getDemoConfig === 'function' ? getDemoConfig() : { display_demo_switch: true };
+  card.hidden = config.display_demo_switch === false;
 }
 
 function openSettings() {

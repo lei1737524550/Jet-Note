@@ -29,7 +29,11 @@ const GlobalStorage = {
 let cachedDemoConfig = null;
 function getDemoConfig() {
   if (cachedDemoConfig) return cachedDemoConfig;
-  const fallback = { mode_setting: 'user', first_boot: false, display_in_setting: true };
+  const fallback = {
+    launch_mode: 'user',
+    display_demo_switch: true,
+    demo_policy: 'read_only_session'
+  };
   try {
     if (!window.JetNoteNative || typeof JetNoteNative.getDemoConfig !== 'function') {
       cachedDemoConfig = fallback;
@@ -37,9 +41,11 @@ function getDemoConfig() {
     }
     const parsed = JSON.parse(JetNoteNative.getDemoConfig());
     cachedDemoConfig = {
-      mode_setting: parsed?.mode_setting === 'demo' ? 'demo' : 'user',
-      first_boot: !!parsed?.first_boot,
-      display_in_setting: parsed?.display_in_setting !== false
+      // Accept a legacy demo.json during project migration.
+      launch_mode: (parsed?.launch_mode ?? parsed?.mode_setting) === 'demo' ? 'demo' : 'user',
+      display_demo_switch: parsed?.display_demo_switch ?? (parsed?.display_in_setting !== false),
+      // This build deliberately has one safe demo policy only.
+      demo_policy: 'read_only_session'
     };
   } catch (error) {
     console.warn('demo.json config read failed', error);
@@ -49,14 +55,20 @@ function getDemoConfig() {
 }
 
 function initializeConfiguredMode() {
+  const config = getDemoConfig();
   const existing = GlobalStorage.getItem(APP_MODE_STORAGE_KEY);
+  // A fixed package is authoritative, including after an overwrite install.
+  // This prevents an old hidden Demo selection from trapping a new user build.
+  if (config.display_demo_switch === false) {
+    GlobalStorage.setItem(APP_MODE_STORAGE_KEY, config.launch_mode);
+    return;
+  }
   if (existing === 'usage') {
     GlobalStorage.setItem(APP_MODE_STORAGE_KEY, 'user');
     return;
   }
   if (existing === 'user' || existing === 'demo') return;
-  const config = getDemoConfig();
-  GlobalStorage.setItem(APP_MODE_STORAGE_KEY, config.mode_setting === 'demo' ? 'demo' : DEFAULT_APP_MODE);
+  GlobalStorage.setItem(APP_MODE_STORAGE_KEY, config.launch_mode);
 }
 initializeConfiguredMode();
 

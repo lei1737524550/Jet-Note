@@ -1,7 +1,6 @@
 package com.ingeniousidea.space;
 
 import android.app.Activity;
-import android.content.Context;
 import android.webkit.JavascriptInterface;
 
 import org.json.JSONObject;
@@ -13,9 +12,6 @@ import java.util.Locale;
 
 /** Narrow JavaScript bridge exposed only to Jet Note's bundled local page. */
 final class NativeBridge {
-    private static final String RUNTIME_PREFS = "jet_note_runtime";
-    private static final String FIRST_BOOT_COMPLETE = "first_boot_complete";
-
     private final Activity activity;
     private final DictionaryController dictionary;
     private final MediaWriteController mediaWriter;
@@ -56,38 +52,33 @@ final class NativeBridge {
     @JavascriptInterface public void cancelMedia(String token){mediaWriter.cancel(token);}
     @JavascriptInterface public String describeMedia(String path){try{return store.describe(path).toString();}catch(Exception e){return MediaWriteController.error(e);}}
 
-    /**
-     * Read the packaged demo.json and combine it with the runtime first-boot marker.
-     * The asset remains immutable; "first_boot" is true only until startup is
-     * successfully completed on this installation.
-     */
+    /** Read and normalize the packaged, immutable workspace policy. */
     @JavascriptInterface
     public String getDemoConfig() {
         JSONObject result = new JSONObject();
         try {
             JSONObject asset = readDemoConfigAsset();
-            String mode = "demo".equals(asset.optString("mode_setting")) ? "demo" : "user";
-            boolean configuredFirstBoot = asset.optBoolean("first_boot", true);
-            boolean completed = activity.getSharedPreferences(RUNTIME_PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(FIRST_BOOT_COMPLETE, false);
-            result.put("mode_setting", mode);
-            result.put("first_boot", configuredFirstBoot && !completed);
-            result.put("display_in_setting", asset.optBoolean("display_in_setting", true));
+            // Legacy keys are accepted for old project folders, but every caller
+            // receives the current explicit policy names.
+            String rawLaunchMode = asset.has("launch_mode")
+                    ? asset.optString("launch_mode") : asset.optString("mode_setting");
+            boolean displaySwitch = asset.has("display_demo_switch")
+                    ? asset.optBoolean("display_demo_switch", true)
+                    : asset.optBoolean("display_in_setting", true);
+            // This build only supports a non-persistent, read-only demo session.
+            String policy = "read_only_session";
+            result.put("launch_mode", "demo".equals(rawLaunchMode) ? "demo" : "user");
+            result.put("display_demo_switch", displaySwitch);
+            result.put("demo_policy", policy);
         } catch (Exception error) {
             try {
-                result.put("mode_setting", "user");
-                result.put("first_boot", false);
-                result.put("display_in_setting", true);
+                result.put("launch_mode", "user");
+                result.put("display_demo_switch", true);
+                result.put("demo_policy", "read_only_session");
                 result.put("error", error.getMessage() == null ? "demo-config-error" : error.getMessage());
             } catch (Exception ignored) { }
         }
         return result.toString();
-    }
-
-    @JavascriptInterface
-    public void completeFirstBoot() {
-        activity.getSharedPreferences(RUNTIME_PREFS, Context.MODE_PRIVATE)
-                .edit().putBoolean(FIRST_BOOT_COMPLETE, true).apply();
     }
 
     /** Import app/src/main/assets/demo.jnote through the native validated importer. */
