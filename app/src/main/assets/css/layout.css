@@ -10,8 +10,8 @@
 }
 .settings-header { top:var(--safe-top); }
 .post-compose-header { top:0; }
-.settings-body { top:calc(var(--safe-top) + 64px); bottom:var(--content-bottom,var(--safe-bottom)); }
-.settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:white; }
+.settings-body { top:calc(var(--safe-top) + var(--page-action-bar-height)); bottom:var(--content-bottom,var(--safe-bottom)); }
+.settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:var(--page-background); }
 #postComposerText{ font-size:var(--body-size); line-height:var(--body-leading); }
 .image-viewer-close { top:calc(var(--safe-top) + 8px); }
 /* Canvas coordinates are independent of CSS display size. */

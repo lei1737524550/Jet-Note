@@ -1,8 +1,28 @@
 {
-  "caret_width": 2,
+  "post_editor_text_caret": {
+    "text_caret_width_px": 2,
+    "text_caret_color": "#14A89A",
+    "text_caret_visible_state_duration_ms": 750,
+    "text_caret_hidden_state_duration_ms": 750
+  },
   "cursor_drop_color": "#14A89A",
+  "appearance_default_colors": {
+    "background": "#AED194",
+    "body": "#D2E9C2",
+    "color_view_picker_after_reset": "#000000"
+  },
+  "color_view_copy_feedback_transition": {
+    "copied_first_transition_color": "#34A853",
+    "copied_second_transition_color": "#F9AB00",
+    "copied_final_resting_color": "#111111",
+    "first_transition_color_display_duration_ms": 2000,
+    "second_transition_color_display_duration_ms": 1050
+  },
   "videoPlayback": {
     "maxConcurrentPlayingVideos": 1
+  },
+  "audioPlayback": {
+    "maxConcurrentPlayingAudios": 2
   },
   "edit_post_tool_1": "video",
   "edit_post_tool_2": "photo",
@@ -48,7 +68,25 @@
     "icon": "sentence",
     "labelKey": "config_tool_2"
   },
-  "top_bar": {
+  "top_post_string_color": "F06E80",
+  "top_post_string_font_size": 2,
+  "top_post_border_color": "bfc1c4",
+  "write_sth_border_color": "bfc1c4",
+  "main_posts_border_color": "bfc1c4",
+  "main_status_bar": {
+    "main_status_bar_height": 52,
+    "main_status_bar_vertical_move": -40,
+    "_main_status_bar_top_margin": 0,
+    "_main_status_bar_bottom_margin": 0,
+    "_main_status_bar_horizontal_margin": 8,
+    "_main_status_bar_text_font_size": 16,
+    "_main_status_bar_battery_icon_and_percentage_gap": 7,
+    "_main_status_bar_battery_icon_size": 22,
+    "_main_status_bar_settings_button_hit_area_size": 44,
+    "_main_status_bar_settings_icon_size": 24,
+    "_main_status_bar_time_region_right_padding": 0
+  },
+  "page_action_bar": {
     "height": 50,
     "controlHeight": 36,
     "titleSize": 16,
@@ -67,24 +105,8 @@
     "toolActionTextColor": "#168a45",
     "shadowElevation": 2
   },
-  "top_post_string": "welcome to Jet Note",
-  "top_post_string_color": "F06E80",
-  "top_post_string_font_size": 2,
-  "top_post_border_color": "bfc1c4",
-  "write_sth_border_color": "bfc1c4",
-  "main_posts_border_color": "bfc1c4",
   "main_page": {
-    "three_post_one_body_vertical_move": 40,
-    "top_status_area_height": 52,
-    "top_status_area_top_margin": 0,
-    "top_status_area_bottom_margin": 0,
-    "top_status_area_horizontal_margin": 8,
-    "top_status_font_size": 16,
-    "top_status_battery_item_gap": 7,
-    "top_status_battery_icon_size": 22,
-    "top_status_settings_button_size": 44,
-    "top_status_settings_icon_size": 24,
-    "top_status_time_right_padding": 0
+    "three_post_one_body_vertical_move": -32
   },
   "no_starred_post": {
     "outer_border_color": "bfc1c4",
@@ -93,21 +115,108 @@
     "time_stamp_bottom_margin": 3
   },
   "starred_post": {
-    "outer_border_color": "bfc1c4",
+    "outer_border_color": "d3cc06",
     "time_stamp_color": "999da2",
     "time_stamp_top_margin": 3,
-    "time_stamp_bottom_margin": 3
+    "time_stamp_bottom_margin": 3,
+    "star_activation_transition_border_color": "#34A853",
+    "star_activation_transition_border_color_display_duration_ms": 2250
   },
   "super_starred_post": {
-    "outer_border_color": "bfc1c4",
+    "outer_border_color": "ff0073",
     "time_stamp_color": "999da2",
     "time_stamp_top_margin": 10,
-    "time_stamp_bottom_margin": 3
+    "time_stamp_bottom_margin": 3,
+    "super_star_activation_transition_border_color": "#34A853",
+    "super_star_activation_transition_border_color_display_duration_ms": 2250
   },
-  "colorview_string_1": "天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰",
-  "colorview_string_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-  "colorview_set_background_button_text": "Set Background",
-  "colorview_switch_to_hex_button_text": "HEX",
-  "colorview_switch_to_decimal_button_text": "Decimal",
-  "colorview_export_color_button_text": "Export Color"
+  "buttom_string_buttom_bar": {
+    "settings_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "icons/back-chevron.svg",
+      "left_button_action_name": "close_settings",
+      "right_button_content_type": "none",
+      "right_button_string_or_asset_path": "none",
+      "right_button_action_name": "none",
+      "center_string_language_key": "settings.page_title",
+      "left_button_accessibility_label_language_key": "common.back"
+    },
+    "new_post_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "icons/close.svg",
+      "left_button_action_name": "cancel_post_composer",
+      "right_button_content_type": "asset_path",
+      "right_button_string_or_asset_path": "icons/send-blue.svg",
+      "right_button_action_name": "publish_post",
+      "center_string_language_key": "post_composer.new_post_title",
+      "left_button_accessibility_label_language_key": "common.cancel",
+      "right_button_accessibility_label_language_key": "post_composer.post_action"
+    },
+    "edit_post_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "icons/close.svg",
+      "left_button_action_name": "cancel_post_composer",
+      "right_button_content_type": "asset_path",
+      "right_button_string_or_asset_path": "icons/send-blue.svg",
+      "right_button_action_name": "publish_post",
+      "center_string_language_key": "post_composer.edit_post_title",
+      "left_button_accessibility_label_language_key": "common.cancel",
+      "right_button_accessibility_label_language_key": "post_composer.save_action"
+    },
+    "tools_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "icons/back-chevron.svg",
+      "left_button_action_name": "close_tools",
+      "right_button_content_type": "none",
+      "right_button_string_or_asset_path": "none",
+      "right_button_action_name": "none",
+      "center_string_language_key": "tools.page_title",
+      "left_button_accessibility_label_language_key": "common.back"
+    }
+  },
+  "jet_note_type": {
+    "body_content_automatic_contrast": {
+      "relative_luminance_threshold": 0.5,
+      "light_background_foreground_color": "#111111",
+      "dark_background_foreground_color": "#f5f5f5"
+    },
+    "jet_note_type_background": {
+      "settings": "current_background",
+      "edit_post": "current_background",
+      "tools": {
+        "tool_1": "current_background",
+        "tool_2": "current_background",
+        "fallback": "current_background"
+      },
+      "three_post_one_body": {
+        "top_post": "current_body",
+        "post_composer": "current_body",
+        "main_posts": "current_body"
+      },
+      "edit_post_right_side_tool_buttons": {
+        "normal_background": "current_body",
+        "tools_expanded_background": "current_body"
+      },
+      "settings_body_cards": {
+        "backup": "current_body",
+        "color_view": "current_body"
+      },
+      "page_action_bar": "current_background"
+    },
+    "jet_note_type_border_color": {
+      "settings": "#bfc1c4",
+      "edit_post": "#bfc1c4",
+      "tools": {
+        "tool_1": "#bfc1c4",
+        "tool_2": "#bfc1c4",
+        "fallback": "#bfc1c4"
+      },
+      "three_post_one_body": {
+        "top_post": "#bfc1c4",
+        "post_composer": "#bfc1c4",
+        "main_posts": "#bfc1c4"
+      },
+      "page_action_bar": "#bfc1c4"
+    }
+  }
 }

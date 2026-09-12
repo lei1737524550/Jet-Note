@@ -1,8 +1,14 @@
 (function () {
   'use strict';
+  const ASSET_VERSION = '20260912-pill5';
+
+  function versioned(path) {
+    const separator=String(path).includes('?')?'&':'?';
+    return `${path}${separator}v=${ASSET_VERSION}`;
+  }
 
   async function fetchFragment(path) {
-    const response = await fetch(path, { cache: 'no-store' });
+    const response = await fetch(versioned(path), { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Failed to load HTML fragment: ${path} (${response.status})`);
     }
@@ -21,7 +27,7 @@
   function loadScript(src) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = src;
+      script.src = versioned(src);
       script.async = false;
       script.onload = resolve;
       script.onerror = () => reject(new Error(`Failed to load script: ${src}`));

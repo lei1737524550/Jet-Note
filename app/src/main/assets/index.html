@@ -7,11 +7,12 @@
 <meta name="theme-color" content="#ffffff">
 
 <title>Jet Note</title>
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/components.css">
-<link rel="stylesheet" href="css/pages.css">
-<link rel="stylesheet" href="css/layout.css">
-<link rel="stylesheet" href="css/attachments.css">
+<link rel="stylesheet" href="css/base.css?v=20260912-pill5">
+<link rel="stylesheet" href="css/components.css?v=20260912-pill5">
+<link rel="stylesheet" href="css/pages.css?v=20260912-pill5">
+<link rel="stylesheet" href="css/layout.css?v=20260912-pill5">
+<link rel="stylesheet" href="css/attachments.css?v=20260912-pill5">
+<script src="js/core/viewport.js"></script>
 </head>
 
 <body>
@@ -36,19 +37,21 @@
 
   <section class="header"><div class="wave3"></div></section>
 
-  <!-- Independent home status row. It is deliberately outside Three Posts, One Body
-       so WebView resume/inset recalculation cannot move or resize it with the Post body. -->
-  <section class="top-status-area" id="topStatusArea" aria-label="Device status and settings">
-    <div class="top-status-battery-region" id="topStatusBatteryRegion">
-      <img class="top-status-battery-icon" id="topStatusBatteryIcon" src="icons/battery_75.svg" alt="">
-      <span class="top-status-battery-percentage" id="topStatusBatteryPercentage">--%</span>
+  <!-- main_status_bar: home-only battery / HH:mm / Settings component.
+       main_status_bar_height controls only this section box height.
+       main_status_bar_vertical_move moves only this row vertically without moving Three Posts, One Body.
+       Android system_safe_area is applied separately by .phone. -->
+  <section class="main-status-bar" id="mainStatusBar" aria-label="Device status and settings">
+    <div class="main-status-bar-battery-region" id="mainStatusBarBatteryRegion">
+      <img class="main-status-bar-battery-icon" id="mainStatusBarBatteryIcon" src="icons/battery_75.svg" alt="">
+      <span class="main-status-bar-battery-percentage" id="mainStatusBarBatteryPercentage">--%</span>
     </div>
-    <div class="top-status-empty-region" aria-hidden="true"></div>
-    <div class="top-status-time-region" id="topStatusTimeRegion">
-      <span id="topStatusTime">--:--</span>
+    <div class="main-status-bar-empty-region" aria-hidden="true"></div>
+    <div class="main-status-bar-time-region" id="mainStatusBarTimeRegion">
+      <span id="mainStatusBarTime">--:--</span>
     </div>
-    <div class="top-status-settings-region" id="topStatusSettingsRegion">
-      <button class="top-status-settings-button" type="button" onclick="openSettings()" aria-label="Settings">
+    <div class="main-status-bar-settings-region" id="mainStatusBarSettingsRegion">
+      <button class="main-status-bar-settings-button" type="button" onclick="openSettings()" aria-label="Settings" data-ui-aria-label="home.settings_accessibility_label">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.31-.08.65-.08.97 0 .31.03.62.07.92l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.39 1.04.71 1.62.95l.36 2.53c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.53c.58-.24 1.12-.56 1.62-.95l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
       </button>
     </div>
@@ -99,7 +102,8 @@
 </div>
 </div>
 
-<script src="js/core/view_loader.js"></script>
+<script src="js/components/jet_note_type.js?v=20260912-pill5"></script>
+<script src="js/core/view_loader.js?v=20260912-pill5"></script>
 <script>
 (async function startJetNoteFrontend() {
   try {
@@ -119,8 +123,9 @@
     });
 
     await window.JetNoteViewLoader.loadScripts([
+      'js/core/ui_language.js',
       'js/components/notice.js',
-      'js/components/jet_topbar.js',
+      'js/components/page_action_bar.js',
       'js/components/jet_scrollbar.js',
       'vendor/fflate.js',
       'vendor/sha256.js',
@@ -133,7 +138,6 @@
       'js/core/storage.js',
       'js/core/dom.js',
       'js/components/post_menu_icon.js',
-      'js/core/viewport.js',
       'js/core/language.js',
       'js/features/settings_page.js',
       'js/core/editor_controller.js',
@@ -142,7 +146,7 @@
       'js/components/image_viewer.js',
       'js/components/delete_confirm_dialog.js',
       'js/features/posts.js',
-      'js/features/top_status.js',
+      'js/features/main_status_bar.js',
       'js/core/navigation.js',
       'js/features/appearance.js',
       'js/core/bootstrap.js',

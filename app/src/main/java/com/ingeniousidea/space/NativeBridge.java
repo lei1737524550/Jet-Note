@@ -43,6 +43,22 @@ final class NativeBridge {
 
     @JavascriptInterface public void frontendReady(){ready.run();}
 
+    /** Enable IME rich-image commits only while the Post Composer textarea is focused. */
+    @JavascriptInterface
+    public void setPostComposerImagePasteTargetActive(boolean active) {
+        activity.runOnUiThread(() -> {
+            if (webView instanceof RichContentWebView) {
+                ((RichContentWebView) webView).setPostComposerPasteTargetActive(active);
+            }
+        });
+    }
+
+    /** Remove a newly imported attachment that the frontend rejected before it entered a draft. */
+    @JavascriptInterface
+    public void discardMedia(String archivePath) {
+        try { store.deleteArchivePath(archivePath); } catch (Exception ignored) { }
+    }
+
     /** Returns Android's current battery percentage, or -1 if unavailable. */
     @JavascriptInterface
     public int getBatteryPercentage() {
@@ -94,11 +110,11 @@ final class NativeBridge {
 
 
     @JavascriptInterface
-    public void openTool(String url, String title, String language) {
+    public void openTool(String url, String title, String language, String backgroundColor, String borderColor) {
         if (url == null || !url.startsWith("https://")) return;
         String safeTitle = title == null || title.trim().isEmpty() ? "Tool" : title.trim();
         String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-        dictionary.open(url, safeTitle, safeLanguage);
+        dictionary.open(url, safeTitle, safeLanguage, backgroundColor, borderColor);
     }
 
     @JavascriptInterface

@@ -6,25 +6,17 @@ let posts = loadPosts();
 let editingPostId = null;
 let postDraftImages = [];
 
+const TOP_POST_DEFAULT_STRING = 'welcome to Jet Note';
+let topPostDefaultString = TOP_POST_DEFAULT_STRING;
+
 const TOP_POST_DEFAULT_CONFIG = Object.freeze({
-  top_post_string: 'welcome to Jet Note',
   top_post_string_color: 'F06E80',
   top_post_string_font_size: 2,
   top_post_border_color: 'bfc1c4',
   write_sth_border_color: 'bfc1c4',
   main_posts_border_color: 'bfc1c4',
   main_page: {
-    three_post_one_body_vertical_move: -60,
-    top_status_area_height: 52,
-    top_status_area_top_margin: 0,
-    top_status_area_bottom_margin: 0,
-    top_status_area_horizontal_margin: 8,
-    top_status_font_size: 16,
-    top_status_battery_item_gap: 7,
-    top_status_battery_icon_size: 22,
-    top_status_settings_button_size: 44,
-    top_status_settings_icon_size: 24,
-    top_status_time_right_padding: 0
+    three_post_one_body_vertical_move: -60
   },
   no_starred_post: {
     outer_border_color: 'bfc1c4',
@@ -34,25 +26,66 @@ const TOP_POST_DEFAULT_CONFIG = Object.freeze({
   },
   starred_post: {
     outer_border_color: 'bfc1c4',
+    star_activation_transition_border_color: '34A853',
+    star_activation_transition_border_color_display_duration_ms: 250,
     time_stamp_color: '999da2',
     time_stamp_top_margin: 3,
     time_stamp_bottom_margin: 3
   },
   super_starred_post: {
     outer_border_color: 'bfc1c4',
+    super_star_activation_transition_border_color: '34A853',
+    super_star_activation_transition_border_color_display_duration_ms: 250,
     time_stamp_color: '999da2',
     time_stamp_top_margin: 10,
     time_stamp_bottom_margin: 3
   }
 });
 let topPostConfig = {...TOP_POST_DEFAULT_CONFIG};
+const postStarBorderTransitionUntil = new Map();
+
+function activatePostStarBorderTransition(post, state) {
+  if (!post || (state !== 'starred' && state !== 'super_starred')) return;
+  const config = postVisualConfigForState(state);
+  const durationKey = state === 'super_starred'
+    ? 'super_star_activation_transition_border_color_display_duration_ms'
+    : 'star_activation_transition_border_color_display_duration_ms';
+  const duration = Math.max(0, Number(config[durationKey]) || 250);
+  const id = String(post.id);
+  const expiresAt = Date.now() + duration;
+  postStarBorderTransitionUntil.set(id, { state, expiresAt });
+  setTimeout(() => {
+    const active = postStarBorderTransitionUntil.get(id);
+    if (!active || active.expiresAt !== expiresAt) return;
+    postStarBorderTransitionUntil.delete(id);
+    renderPosts();
+  }, duration);
+}
+
+function transientPostBorderColor(postId, state) {
+  const id = String(postId ?? '');
+  const active = postStarBorderTransitionUntil.get(id);
+  if (!active || active.state !== state || active.expiresAt <= Date.now()) {
+    if (active && active.expiresAt <= Date.now()) postStarBorderTransitionUntil.delete(id);
+    return null;
+  }
+  const config = postVisualConfigForState(state);
+  const colorKey = state === 'super_starred'
+    ? 'super_star_activation_transition_border_color'
+    : 'star_activation_transition_border_color';
+  return configBorderColor(config[colorKey], '#34A853');
+}
 
 // Initialize home-page geometry and border variables immediately; config.json overwrites them after loading.
 applyHomeLayoutConfig();
 
-fetch('config.json', {cache: 'no-store'})
-  .then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed')))
-  .then(config => {
+Promise.all([
+  fetch('config.json', {cache: 'no-store'}).then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed'))),
+  window.JetNoteUiLanguage?.get
+    ? window.JetNoteUiLanguage.get('home.top_post_default', TOP_POST_DEFAULT_STRING)
+    : Promise.resolve(TOP_POST_DEFAULT_STRING)
+]).then(([config, defaultString]) => {
+    topPostDefaultString = defaultString || TOP_POST_DEFAULT_STRING;
     topPostConfig = {
       ...TOP_POST_DEFAULT_CONFIG,
       ...config,
@@ -138,10 +171,10 @@ function configPixelMargin(value, fallback = 0) {
   return Math.max(-1000, Math.min(number, 1000));
 }
 
-function postVisualStyle(state) {
+function postVisualStyle(state, postId = null) {
   const config = postVisualConfigForState(state);
   const defaults = TOP_POST_DEFAULT_CONFIG[state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post'];
-  const border = configBorderColor(config.outer_border_color, configBorderColor(defaults.outer_border_color));
+  const border = transientPostBorderColor(postId, state) || configBorderColor(config.outer_border_color, configBorderColor(defaults.outer_border_color));
   const timeColor = configBorderColor(config.time_stamp_color, configBorderColor(defaults.time_stamp_color, '#999da2'));
   const top = configPixelMargin(config.time_stamp_top_margin, defaults.time_stamp_top_margin);
   const bottom = configPixelMargin(config.time_stamp_bottom_margin, defaults.time_stamp_bottom_margin);
@@ -164,22 +197,6 @@ function applyHomeLayoutConfig() {
     mainPageDefaults.three_post_one_body_vertical_move
   );
   root.style.setProperty('--three-post-one-body-vertical-move', `${verticalMove}px`);
-
-  const px = (name, value, fallback, min = -1000, max = 1000) => {
-    const number = Number(value);
-    const safe = Number.isFinite(number) ? Math.max(min, Math.min(number, max)) : fallback;
-    root.style.setProperty(name, `${safe}px`);
-  };
-  px('--main-page-top-status-height', mainPage.top_status_area_height, mainPageDefaults.top_status_area_height, 1, 500);
-  px('--main-page-top-status-top-margin', mainPage.top_status_area_top_margin, mainPageDefaults.top_status_area_top_margin);
-  px('--main-page-top-status-bottom-margin', mainPage.top_status_area_bottom_margin, mainPageDefaults.top_status_area_bottom_margin);
-  px('--main-page-top-status-horizontal-margin', mainPage.top_status_area_horizontal_margin, mainPageDefaults.top_status_area_horizontal_margin, 0, 500);
-  px('--main-page-top-status-font-size', mainPage.top_status_font_size, mainPageDefaults.top_status_font_size, 1, 100);
-  px('--main-page-top-status-battery-gap', mainPage.top_status_battery_item_gap, mainPageDefaults.top_status_battery_item_gap, 0, 100);
-  px('--main-page-top-status-battery-icon-size', mainPage.top_status_battery_icon_size, mainPageDefaults.top_status_battery_icon_size, 1, 200);
-  px('--main-page-top-status-settings-button-size', mainPage.top_status_settings_button_size, mainPageDefaults.top_status_settings_button_size, 1, 200);
-  px('--main-page-top-status-settings-icon-size', mainPage.top_status_settings_icon_size, mainPageDefaults.top_status_settings_icon_size, 1, 200);
-  px('--main-page-top-status-time-right-padding', mainPage.top_status_time_right_padding, mainPageDefaults.top_status_time_right_padding, 0, 500);
 }
 
 function renderTopPost() {
@@ -189,7 +206,7 @@ function renderTopPost() {
 
   const post = getSuperStarPost();
   if (!post) {
-    const text = escapeHTML(String(topPostConfig.top_post_string ?? TOP_POST_DEFAULT_CONFIG.top_post_string));
+    const text = escapeHTML(String(topPostDefaultString || TOP_POST_DEFAULT_STRING));
     card.className = 'top-post-card top-post-empty common_border';
     card.removeAttribute('style');
     card.innerHTML = `
@@ -202,7 +219,7 @@ function renderTopPost() {
   const postId = escapeHTML(String(post.id));
   const images = Array.isArray(post.images) ? post.images : [];
   card.className = 'top-post-card top-post-super common_border';
-  card.setAttribute('style', postVisualStyle('super_starred'));
+  card.setAttribute('style', postVisualStyle('super_starred', post.id));
   card.innerHTML = `
     <div class="top-post-layout">
       <div class="top-post-content" data-post-id="${postId}">
@@ -289,7 +306,7 @@ function renderPosts() {
     const postId=escapeHTML(String(post.id));
 
     return `
-      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post))}">
+      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post), post.id)}">
         <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
@@ -365,16 +382,20 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
     const textarea = document.getElementById('postComposerText');
     const title = screen?.querySelector('.post-compose-title');
     const publishBtn = screen?.querySelector('.post-compose-publish');
+    const composeTopBar = screen?.querySelector('.buttom-string-buttom-bar');
     const body = screen?.querySelector('.post-compose-body');
     if (!screen || !textarea || !title || !publishBtn || !body) throw new Error('Composer view is incomplete');
     initializePostComposerTools?.();
 
-    title.textContent = postId === null ? t('writePost') : t('editPost');
-    // Keep the reusable icon control intact. Only its accessible label changes
-    // between create and edit mode; replacing textContent would delete the SVG icon.
+    const topBarPageKey = postId === null ? 'new_post_page' : 'edit_post_page';
+    if (composeTopBar && window.JetBottomStringBottomBar?.renderBar) {
+      await window.JetBottomStringBottomBar.renderBar(composeTopBar, topBarPageKey);
+    } else {
+      title.textContent = postId === null ? t('writePost') : t('editPost');
+    }
     const publishLabel = postId === null ? t('publish') : t('save');
-    publishBtn.setAttribute('aria-label', publishLabel);
-    publishBtn.setAttribute('title', publishLabel);
+    publishBtn.setAttribute('aria-label', publishBtn.getAttribute('aria-label') || publishLabel);
+    publishBtn.setAttribute('title', publishBtn.getAttribute('title') || publishLabel);
 
     textarea.value = initialDraft.text;
 
@@ -647,7 +668,15 @@ async function toggleFavoriteActivePost() {
 
   const previous = structuredClone(posts);
   const state = getPostStarState(post);
-  setPostStarState(post, state === 'none' ? 'starred' : 'none');
+  const nextState = state === 'none' ? 'starred' : 'none';
+  setPostStarState(post, nextState);
+  if (nextState === 'starred') activatePostStarBorderTransition(post, 'starred');
+
+  // Every short-press favorite action closes the shared three-dot menu before
+  // renderPosts(). The panel lives under document.body, so rebuilding the post
+  // list cannot remove it for us. This also covers cancelling Super Star.
+  closePostActionPanel();
+
   await commitStarStateChange(previous);
 }
 
@@ -663,6 +692,7 @@ async function toggleSuperStarActivePost() {
     if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
   }
   setPostStarState(post, 'super_starred');
+  activatePostStarBorderTransition(post, 'super_starred');
 
   // Super Star moves the post into Top Post, so the action menu anchored to the
   // post's old screen coordinates must disappear before the list is rebuilt.

@@ -49,6 +49,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -56,7 +58,10 @@ import org.json.JSONObject;
 /** Hosts Jet Note web tools in an isolated WebView with audio discovery and downloads. */
 final class DictionaryController {
     private static final String DOWNLOAD_SCHEME = "jetnote-download";
-    private final JetTopBarSpec topBarSpec;
+    private static final Pattern CSS_RGB_COLOR = Pattern.compile(
+            "rgba?\\(\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})\\s*,\\s*(\\d{1,3})(?:\\s*,\\s*(?:0(?:\\.\\d+)?|1(?:\\.0+)?))?\\s*\\)",
+            Pattern.CASE_INSENSITIVE);
+    private final PageActionBarSpec pageActionBarSpec;
 
     /*
      * Keeps the original resource-discovery logic, but routes result taps back to native code.
@@ -95,6 +100,8 @@ final class DictionaryController {
     private String pageUrl="about:blank";
     private String pageTitle="Tool";
     private String pageLanguage="en";
+    private int toolBackgroundColor = Color.WHITE;
+    private int toolBorderColor = 0xffbfc1c4;
     private final Runnable hideStatusRunnable = () -> {
         if (downloadStatus != null) downloadStatus.setVisibility(View.GONE);
     };
@@ -103,20 +110,22 @@ final class DictionaryController {
             Activity activity, FrameLayout root, WebView mainWebView, AttachmentStore attachmentStore
     ) {
         this.activity = activity;
-        this.topBarSpec = JetTopBarSpec.load(activity);
+        this.pageActionBarSpec = PageActionBarSpec.load(activity);
         this.audioSaver = new AudioSaveController(activity);
         this.root = root;
         this.mainWebView = mainWebView;
         this.attachmentStore = attachmentStore;
     }
 
-    void open(String url, String title, String language) {
+    void open(String url, String title, String language, String backgroundColor, String borderColor) {
         activity.runOnUiThread(() -> {
             if (overlay != null && url.equals(pageUrl)) return;
             if (overlay != null) close();
             pageUrl = url;
             pageTitle = title;
             pageLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+            toolBackgroundColor = parseColor(backgroundColor, pageActionBarSpec.backgroundColor);
+            toolBorderColor = parseColor(borderColor, pageActionBarSpec.borderColor);
             observedAudioUrls.clear();
             openOnUiThread();
         });
@@ -126,23 +135,23 @@ final class DictionaryController {
         if (overlay != null) return;
 
         overlay = new FrameLayout(activity);
-        overlay.setBackgroundColor(Color.WHITE);
+        overlay.setBackgroundColor(toolBackgroundColor);
         root.addView(overlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         dictionaryWebView = new WebView(activity);
         dictionaryWebView.setVerticalScrollBarEnabled(false);
         dictionaryWebView.setHorizontalScrollBarEnabled(false);
-        dictionaryWebView.setBackgroundColor(Color.WHITE);
+        dictionaryWebView.setBackgroundColor(toolBackgroundColor);
         configure(dictionaryWebView);
         FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        webParams.topMargin = dp(topBarSpec.height);
+        webParams.topMargin = dp(pageActionBarSpec.height);
         overlay.addView(dictionaryWebView, webParams);
 
         toolbar = createToolbar();
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(topBarSpec.height), Gravity.TOP);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(pageActionBarSpec.height), Gravity.TOP);
         overlay.addView(toolbar, toolbarParams);
 
         downloadStatus = createStatusBanner();
@@ -156,7 +165,7 @@ final class DictionaryController {
         loadStatePanel = createLoadStatePanel();
         FrameLayout.LayoutParams stateParams = new FrameLayout.LayoutParams(
                 dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        stateParams.topMargin = dp(topBarSpec.height / 2);
+        stateParams.topMargin = dp(pageActionBarSpec.height / 2);
         overlay.addView(loadStatePanel, stateParams);
         showLoadingState();
 
@@ -187,7 +196,7 @@ final class DictionaryController {
                 toolbar.setLayoutParams(tp);
 
                 FrameLayout.LayoutParams wp = (FrameLayout.LayoutParams) dictionaryWebView.getLayoutParams();
-                wp.topMargin = top + dp(topBarSpec.height);
+                wp.topMargin = top + dp(pageActionBarSpec.height);
                 wp.leftMargin = left;
                 wp.rightMargin = right;
                 dictionaryWebView.setLayoutParams(wp);
@@ -283,43 +292,43 @@ final class DictionaryController {
     private View createToolbar() {
         FrameLayout bar = new FrameLayout(activity);
         bar.setPadding(0, 0, 0, 0);
-        bar.setBackgroundColor(topBarSpec.backgroundColor);
-        bar.setElevation(dp(topBarSpec.shadowElevation));
+        bar.setBackgroundColor(toolBackgroundColor);
+        bar.setElevation(dp(pageActionBarSpec.shadowElevation));
 
         ImageButton back = createBackButton();
         back.setContentDescription("en".equals(pageLanguage) ? "Back" : "Back");
         back.setOnClickListener(v -> close());
         TextView title = new TextView(activity);
         title.setText(pageTitle);
-        title.setTextColor(topBarSpec.titleColor);
-        title.setTextSize(topBarSpec.titleSize);
+        title.setTextColor(pageActionBarSpec.titleColor);
+        title.setTextSize(pageActionBarSpec.titleSize);
         title.setGravity(Gravity.CENTER);
         // Keep the title at the true toolbar center, regardless of the side button widths.
         FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(topBarSpec.controlHeight), Gravity.CENTER);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(pageActionBarSpec.controlHeight), Gravity.CENTER);
         bar.addView(title, titleParams);
 
         FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(
-                dp(topBarSpec.iconButtonWidth), dp(topBarSpec.controlHeight), Gravity.START | Gravity.CENTER_VERTICAL);
-        backParams.leftMargin = dp(topBarSpec.leftAxis - topBarSpec.iconButtonWidth / 2);
+                dp(pageActionBarSpec.iconButtonWidth), dp(pageActionBarSpec.controlHeight), Gravity.START | Gravity.CENTER_VERTICAL);
+        backParams.leftMargin = dp(pageActionBarSpec.leftAxis - pageActionBarSpec.iconButtonWidth / 2);
         bar.addView(back, backParams);
 
         ImageButton get = createToolbarIconButton(
                 com.ingeniousidea.space.R.drawable.ic_audio_action,
-                topBarSpec.toolActionTextColor);
+                pageActionBarSpec.toolActionTextColor);
         get.setContentDescription("Get page audio");
         get.setOnClickListener(v -> runGetScript());
         // Long press is a compact refresh shortcut; it no longer creates an in-page button.
         get.setOnLongClickListener(v -> { reloadCurrentPage(); return true; });
         FrameLayout.LayoutParams getParams = new FrameLayout.LayoutParams(
-                dp(topBarSpec.iconButtonWidth), dp(topBarSpec.controlHeight), Gravity.END | Gravity.CENTER_VERTICAL);
+                dp(pageActionBarSpec.iconButtonWidth), dp(pageActionBarSpec.controlHeight), Gravity.END | Gravity.CENTER_VERTICAL);
         // Use the same right-side center axis as New Post's send action.
-        getParams.rightMargin = dp(topBarSpec.rightAxis - topBarSpec.iconButtonWidth / 2);
+        getParams.rightMargin = dp(pageActionBarSpec.rightAxis - pageActionBarSpec.iconButtonWidth / 2);
         bar.addView(get, getParams);
 
-        // Same 1px bottom divider used by the HTML .jet-topbar.
+        // Same 1px bottom divider used by the HTML .page-action-bar.
         View divider = new View(activity);
-        divider.setBackgroundColor(topBarSpec.dividerColor);
+        divider.setBackgroundColor(pageActionBarSpec.dividerColor);
         FrameLayout.LayoutParams dividerParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(1), Gravity.BOTTOM);
         bar.addView(divider, dividerParams);
@@ -332,14 +341,14 @@ final class DictionaryController {
         button.setImageResource(com.ingeniousidea.space.R.drawable.ic_back_chevron);
         button.setScaleType(android.widget.ImageView.ScaleType.CENTER);
         button.setPadding(0, 0, 0, 0);
-        button.setColorFilter(topBarSpec.normalTextColor);
+        button.setColorFilter(pageActionBarSpec.normalTextColor);
         button.setClickable(true);
         button.setFocusable(true);
 
         GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(topBarSpec.controlRadius));
-        background.setStroke(dp(1), topBarSpec.borderColor);
+        background.setColor(toolBackgroundColor);
+        background.setCornerRadius(dp(pageActionBarSpec.controlRadius));
+        background.setStroke(dp(1), toolBorderColor);
         button.setBackground(background);
         return button;
     }
@@ -354,9 +363,9 @@ final class DictionaryController {
         button.setFocusable(true);
 
         GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(topBarSpec.controlRadius));
-        background.setStroke(dp(1), topBarSpec.borderColor);
+        background.setColor(toolBackgroundColor);
+        background.setCornerRadius(dp(pageActionBarSpec.controlRadius));
+        background.setStroke(dp(1), toolBorderColor);
         button.setBackground(background);
         return button;
     }
@@ -370,9 +379,9 @@ final class DictionaryController {
         button.setFocusable(true);
 
         GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(topBarSpec.controlRadius));
-        background.setStroke(dp(1), topBarSpec.borderColor);
+        background.setColor(toolBackgroundColor);
+        background.setCornerRadius(dp(pageActionBarSpec.controlRadius));
+        background.setStroke(dp(1), toolBorderColor);
         button.setBackground(background);
         return button;
     }
@@ -387,9 +396,9 @@ final class DictionaryController {
         status.setElevation(dp(7));
 
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xfff8f9fa);
+        bg.setColor(toolBackgroundColor);
         bg.setCornerRadius(dp(14));
-        bg.setStroke(dp(1), 0xffd7d9dd);
+        bg.setStroke(dp(1), toolBorderColor);
         status.setBackground(bg);
         return status;
     }
@@ -401,9 +410,9 @@ final class DictionaryController {
         panel.setPadding(dp(22), dp(20), dp(22), dp(20));
         panel.setElevation(dp(5));
         GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xfffbfdfb);
+        bg.setColor(toolBackgroundColor);
         bg.setCornerRadius(dp(18));
-        bg.setStroke(dp(1), 0xffd7e1d8);
+        bg.setStroke(dp(1), toolBorderColor);
         panel.setBackground(bg);
 
         loadStateTitle = new TextView(activity);
@@ -501,6 +510,41 @@ final class DictionaryController {
         dictionaryWebView.evaluateJavascript(script, null);
     }
 
+    private int parseColor(String value, int fallback) {
+        if (value == null) return fallback;
+        String normalized = value.trim();
+        Matcher cssRgb = CSS_RGB_COLOR.matcher(normalized);
+        if (cssRgb.matches()) {
+            try {
+                int red = Integer.parseInt(cssRgb.group(1));
+                int green = Integer.parseInt(cssRgb.group(2));
+                int blue = Integer.parseInt(cssRgb.group(3));
+                if (red <= 255 && green <= 255 && blue <= 255) {
+                    return Color.rgb(red, green, blue);
+                }
+            } catch (NumberFormatException ignored) { }
+            return fallback;
+        }
+        try { return Color.parseColor(normalized); }
+        catch (Exception ignored) { return fallback; }
+    }
+
+    private String cssColor(int color) {
+        return String.format(Locale.US, "#%02X%02X%02X", Color.red(color), Color.green(color), Color.blue(color));
+    }
+
+    /** Keep native Tool 1 / Tool 2 surfaces visually attached to the editor that launched them. */
+    private void injectToolBackground() {
+        if (dictionaryWebView == null) return;
+        String color = cssColor(toolBackgroundColor);
+        String script = "(() => {"
+                + "let style=document.getElementById('jet-note-tool-background-style');"
+                + "if(!style){style=document.createElement('style');style.id='jet-note-tool-background-style';document.documentElement.appendChild(style);}"
+                + "style.textContent='html,body{background:" + color + " !important;}';"
+                + "})();";
+        dictionaryWebView.evaluateJavascript(script, null);
+    }
+
     private void configure(WebView view) {
         WebSettings settings = view.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -537,6 +581,7 @@ final class DictionaryController {
 
             @Override
             public void onPageFinished(WebView webView, String url) {
+                injectToolBackground();
                 showLoadedPage();
                 injectAudioObserver();
             }

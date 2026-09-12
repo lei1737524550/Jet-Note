@@ -15,6 +15,10 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputContentInfo;
+
+import org.json.JSONObject;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
@@ -32,7 +36,7 @@ public class MainActivity extends Activity {
     private static final String LOCAL_PAGE = "https://" + APP_HOST + "/assets/index.html";
 
     private FrameLayout root;
-    private WebView webView;
+    private RichContentWebView webView;
     private ImagePickerController imagePicker;
     private AttachmentPickerController attachmentPicker;
     private AttachmentStore attachmentStore;
@@ -49,7 +53,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         root = new FrameLayout(this);
-        webView = new WebView(this);
+        webView = new RichContentWebView(this);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
@@ -59,6 +63,7 @@ public class MainActivity extends Activity {
         setContentView(root);
 
         attachmentStore = new AttachmentStore(this);
+        webView.setRichContentListener(this::acceptImeRichContent);
         mediaWriter=new MediaWriteController(this,attachmentStore);
         imagePicker = new ImagePickerController(this);
         edgeToEdge = new EdgeToEdgeController(this, webView);
@@ -91,14 +96,13 @@ public class MainActivity extends Activity {
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
+                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();dispatchPendingImport();})),
                 "JetNoteNative");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                edgeToEdge.dispatchInsets();
-
+                edgeToEdge.synchronizeInsets();
             }
 
             @Override
@@ -168,6 +172,55 @@ public class MainActivity extends Activity {
         });
 
         webView.loadUrl(LOCAL_PAGE);
+    }
+
+    /**
+     * Accept image content committed directly by an IME (for example Gboard's
+     * clipboard image paste). The URI is copied byte-for-byte into Jet Note's
+     * normal attachment store, then the frontend receives the same metadata
+     * shape used by the regular image picker.
+     */
+    private boolean acceptImeRichContent(InputContentInfo content, int flags, Bundle opts) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1 || content == null) return false;
+        if (content.getDescription() == null || !content.getDescription().hasMimeType("image/*")) return false;
+
+        final Uri uri = content.getContentUri();
+        if (uri == null) return false;
+
+        boolean permissionRequested = false;
+        try {
+            if ((flags & InputConnection.INPUT_CONTENT_GRANT_READ_URI_PERMISSION) != 0) {
+                content.requestPermission();
+                permissionRequested = true;
+            }
+        } catch (Exception error) {
+            dispatchImeImagePasteError("image-permission-denied");
+            return true;
+        }
+
+        final boolean releasePermission = permissionRequested;
+        new Thread(() -> {
+            try {
+                JSONObject meta = attachmentStore.importFromUri(uri, "image");
+                String script = "window.JetNoteNativeCallbacks&&window.JetNoteNativeCallbacks.onKeyboardImagePasted("
+                        + meta.toString() + ");";
+                webView.post(() -> webView.evaluateJavascript(script, null));
+            } catch (Exception error) {
+                dispatchImeImagePasteError(error.getMessage() == null ? "image-read-failed" : error.getMessage());
+            } finally {
+                if (releasePermission) {
+                    try { content.releasePermission(); } catch (Exception ignored) { }
+                }
+            }
+        }, "JetNote-Gboard-ImagePaste").start();
+        return true;
+    }
+
+    private void dispatchImeImagePasteError(String message) {
+        String safe = JSONObject.quote(message == null ? "image-read-failed" : message);
+        webView.post(() -> webView.evaluateJavascript(
+                "window.JetNoteNativeCallbacks&&window.JetNoteNativeCallbacks.onKeyboardImagePasteError(" + safe + ");",
+                null));
     }
 
     private WebResourceResponse assetResponse(Uri uri) {
@@ -493,7 +546,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (edgeToEdge != null) edgeToEdge.hideStatusBar();
+        if (edgeToEdge != null) {
+            edgeToEdge.hideStatusBar();
+            edgeToEdge.synchronizeInsets();
+        }
         if (webView != null) {
             webView.onResume();
             webView.post(() -> webView.evaluateJavascript(
@@ -508,7 +564,10 @@ public class MainActivity extends Activity {
         // Returning from a picker/dialog may restore the system status bar.
         // Re-apply Jet Note's status-bar-only immersive mode when the app
         // regains focus; the bottom navigation bar is deliberately untouched.
-        if (hasFocus && edgeToEdge != null) edgeToEdge.hideStatusBar();
+        if (hasFocus && edgeToEdge != null) {
+            edgeToEdge.hideStatusBar();
+            edgeToEdge.synchronizeInsets();
+        }
     }
 
     @Override

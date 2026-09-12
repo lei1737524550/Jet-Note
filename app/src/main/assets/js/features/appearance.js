@@ -1,5 +1,12 @@
-const DEFAULT_BACKGROUND = {rgb:{r:255,g:255,b:255}};
+const DEFAULT_BACKGROUND = {rgb:{r:174,g:209,b:148}};
+const DEFAULT_BODY = {rgb:{r:210,g:233,b:194}};
 let currentBackground = structuredClone(DEFAULT_BACKGROUND);
+let currentBody = structuredClone(DEFAULT_BODY);
+let appearanceDefaults = {
+  background:structuredClone(DEFAULT_BACKGROUND),
+  body:structuredClone(DEFAULT_BODY),
+  picker:{rgb:{r:0,g:0,b:0}}
+};
 
 const AppearanceRepository = {
   databasePromise:null,
@@ -21,6 +28,14 @@ const AppearanceRepository = {
   async putBackground(value){
     const db=await this.database();
     return new Promise((resolve,reject)=>{const tx=db.transaction('settings','readwrite');tx.objectStore('settings').put(value,'background');tx.oncomplete=resolve;tx.onabort=tx.onerror=()=>reject(tx.error||new Error('Background save failed'));});
+  },
+  async getBody(){
+    const db=await this.database();
+    return new Promise((resolve,reject)=>{const tx=db.transaction('settings','readonly');const req=tx.objectStore('settings').get('body');tx.oncomplete=()=>resolve(req.result);tx.onabort=tx.onerror=()=>reject(tx.error||new Error('Body read failed'));});
+  },
+  async putBody(value){
+    const db=await this.database();
+    return new Promise((resolve,reject)=>{const tx=db.transaction('settings','readwrite');tx.objectStore('settings').put(value,'body');tx.oncomplete=resolve;tx.onabort=tx.onerror=()=>reject(tx.error||new Error('Body save failed'));});
   }
 };
 function clampRgb(value,fallback){const n=Number(value);return Number.isInteger(n)&&n>=0&&n<=255?n:fallback;}
@@ -28,11 +43,38 @@ function normalizeBackground(value){
   const rgb=(value&&typeof value==='object'&&value.rgb&&typeof value.rgb==='object')?value.rgb:{};
   return {rgb:{r:clampRgb(rgb.r,255),g:clampRgb(rgb.g,255),b:clampRgb(rgb.b,255)}};
 }
+function colorHexToAppearance(value,fallback){
+  const match=String(value||'').trim().match(/^#?([0-9a-f]{6})$/i);
+  if(!match)return structuredClone(fallback);
+  const hex=match[1];
+  return {rgb:{r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16)}};
+}
+async function loadAppearanceDefaults(){
+  try {
+    const response=await fetch('config.json',{cache:'no-store'});
+    if(!response.ok)throw new Error(`config.json ${response.status}`);
+    const configured=(await response.json())?.appearance_default_colors||{};
+    appearanceDefaults={
+      background:colorHexToAppearance(configured.background,DEFAULT_BACKGROUND),
+      body:colorHexToAppearance(configured.body,DEFAULT_BODY),
+      picker:colorHexToAppearance(configured.color_view_picker_after_reset,{rgb:{r:0,g:0,b:0}})
+    };
+  } catch(error) { console.warn('Appearance defaults unavailable',error); }
+  return appearanceDefaults;
+}
 function applyBackground(value){
   currentBackground=normalizeBackground(value);const {r,g,b}=currentBackground.rgb;const color=`rgb(${r},${g},${b})`;
   document.documentElement.style.setProperty('--page-background',color);
   document.documentElement.style.setProperty('--page-background-image','none');
+  // Resolve every Jet Note visual type from one background source. Components can
+  // opt into current_background in config.json without each page duplicating logic.
+  const bodyColor=`rgb(${currentBody.rgb.r},${currentBody.rgb.g},${currentBody.rgb.b})`;
+  window.JetNoteType?.apply?.(color,bodyColor).catch?.(error=>console.warn('Jet Note type appearance failed',error));
   const theme=document.querySelector('meta[name="theme-color"]');if(theme)theme.content=color;
+}
+function applyBody(value){
+  currentBody=normalizeBackground(value);
+  applyBackground(currentBackground);
 }
 function refreshAppearanceSettings(){
   const {r,g,b}=currentBackground.rgb;
@@ -46,7 +88,9 @@ async function saveRgbBackground(showStatus=true){
   catch(error){console.error('Background save failed',error);alert(t('storageFull'));return false;}
 }
 applyBackground(DEFAULT_BACKGROUND);
-AppearanceRepository.getBackground().then(value=>{applyBackground(value);refreshAppearanceSettings();}).catch(error=>console.warn('Background restore failed',error));
+loadAppearanceDefaults().then(defaults=>Promise.all([AppearanceRepository.getBackground(),AppearanceRepository.getBody()])
+  .then(([background,body])=>{currentBody=normalizeBackground(body||defaults.body);applyBackground(background||defaults.background);refreshAppearanceSettings();}))
+  .catch(error=>console.warn('Appearance restore failed',error));
 
 
 /* Color View is the single color utility. One current color drives the HSV
@@ -61,10 +105,72 @@ const ColorViewTool = (() => {
   let numericMode = 'decimal';
   let labels = {
     setBackground:'Set Background',
-    toHex:'HEX',
-    toDecimal:'Decimal',
-    exportColor:'Export Color'
+    setBody:'Set Body',
+    reset:'Reset',
+    hex:'HEX',
+    decimal:'DEC',
+    exportColor:'Export Color',
+    copy:'Copy',
+    backgroundSet:'Background set',
+    bodySet:'Body color set',
+    resetComplete:'Background and body reset',
+    copied:'Copied',
+    copyFailed:'Copy failed'
   };
+  let exportVisible = false;
+  let copyFeedbackGeneration = 0;
+  let copyFeedbackTimers = [];
+  let copyFeedbackConfig = {
+    copiedFirstTransitionColor:'#34A853',
+    copiedSecondTransitionColor:'#F9AB00',
+    copiedFinalRestingColor:'#111111',
+    firstTransitionColorDisplayDurationMs:250,
+    secondTransitionColorDisplayDurationMs:250
+  };
+
+  async function loadCopyFeedbackConfig() {
+    try {
+      const response=await fetch('config.json',{cache:'no-store'});
+      if(!response.ok)return;
+      const config=await response.json();
+      const value=config?.color_view_copy_feedback_transition;
+      if(!value || typeof value!=='object')return;
+      copyFeedbackConfig={
+        copiedFirstTransitionColor:String(value.copied_first_transition_color||copyFeedbackConfig.copiedFirstTransitionColor),
+        copiedSecondTransitionColor:String(value.copied_second_transition_color||copyFeedbackConfig.copiedSecondTransitionColor),
+        copiedFinalRestingColor:String(value.copied_final_resting_color||copyFeedbackConfig.copiedFinalRestingColor),
+        firstTransitionColorDisplayDurationMs:Math.max(0,Number(value.first_transition_color_display_duration_ms)||250),
+        secondTransitionColorDisplayDurationMs:Math.max(0,Number(value.second_transition_color_display_duration_ms)||250)
+      };
+    } catch(_) {}
+  }
+
+  function clearCopyFeedback() {
+    copyFeedbackGeneration += 1;
+    for(const timer of copyFeedbackTimers) clearTimeout(timer);
+    copyFeedbackTimers=[];
+    const status=document.getElementById('colorViewStatus');
+    if(status){status.textContent='';status.style.removeProperty('color');}
+    return copyFeedbackGeneration;
+  }
+
+  function showCopiedFeedback(generation) {
+    if(generation!==copyFeedbackGeneration)return;
+    const status=document.getElementById('colorViewStatus');
+    if(!status)return;
+    status.textContent=labels.copied;
+    status.style.color=copyFeedbackConfig.copiedFirstTransitionColor;
+    const firstDelay=copyFeedbackConfig.firstTransitionColorDisplayDurationMs;
+    const secondDelay=copyFeedbackConfig.secondTransitionColorDisplayDurationMs;
+    copyFeedbackTimers.push(setTimeout(()=>{
+      if(generation!==copyFeedbackGeneration)return;
+      status.style.color=copyFeedbackConfig.copiedSecondTransitionColor;
+    },firstDelay));
+    copyFeedbackTimers.push(setTimeout(()=>{
+      if(generation!==copyFeedbackGeneration)return;
+      status.style.color=copyFeedbackConfig.copiedFinalRestingColor;
+    },firstDelay+secondDelay));
+  }
 
   function clamp(value, min, max) {
     const n = Number(value);
@@ -78,6 +184,15 @@ const ColorViewTool = (() => {
   }
   function byteToHex(v){ return clampByte(v).toString(16).toUpperCase().padStart(2,'0'); }
   function rgbToHex(rgb){ return `#${byteToHex(rgb.r)}${byteToHex(rgb.g)}${byteToHex(rgb.b)}`; }
+  function formatColorValue(rgb){
+    return numericMode==='hex' ? rgbToHex(rgb) : `${rgb.r},${rgb.g},${rgb.b}`;
+  }
+  function refreshSavedColorDisplays(){
+    const backgroundValue=document.getElementById('colorViewBackgroundValue');
+    const bodyValue=document.getElementById('colorViewBodyValue');
+    if(backgroundValue)backgroundValue.textContent=formatColorValue(currentBackground.rgb);
+    if(bodyValue)bodyValue.textContent=formatColorValue(currentBody.rgb);
+  }
 
   function hsvToRgb(h, s, v) {
     const hh = ((Number(h) % 360) + 360) % 360;
@@ -148,19 +263,33 @@ const ColorViewTool = (() => {
     if (hueCaret) hueCaret.style.left=left;
   }
 
-  function refreshModeButton() {
-    const button=document.getElementById('colorViewModeToggleButton');
-    if(button) button.textContent = numericMode==='decimal' ? labels.toHex : labels.toDecimal;
+  function refreshModeSelector() {
+    const hexButton=document.getElementById('colorViewHexButton');
+    const decimalButton=document.getElementById('colorViewDecimalButton');
+    if(hexButton) {
+      const active=numericMode==='hex';
+      hexButton.textContent=labels.hex;
+      hexButton.classList.toggle('is-active',active);
+      hexButton.setAttribute('aria-pressed',String(active));
+    }
+    if(decimalButton) {
+      const active=numericMode==='decimal';
+      decimalButton.textContent=labels.decimal;
+      decimalButton.classList.toggle('is-active',active);
+      decimalButton.setAttribute('aria-pressed',String(active));
+    }
   }
 
   function commitFromHsv(nextH=hue,nextS=saturation,nextV=value) {
+    clearCopyFeedback();
     hue=((clamp(nextH,0,360)%360)+360)%360;
     saturation=clamp(nextS,0,1); value=clamp(nextV,0,1);
     currentRgb=hsvToRgb(hue,saturation,value);
-    paintPicker(); writeColorInputs(currentRgb); setPreviewTextColor(currentRgb);
+    paintPicker(); writeColorInputs(currentRgb); setPreviewTextColor(currentRgb); refreshExportDisplay();
   }
 
   function commitFromRgb(rgb, normalizeInputs=true) {
+    clearCopyFeedback();
     const next={r:clampByte(rgb.r,currentRgb.r),g:clampByte(rgb.g,currentRgb.g),b:clampByte(rgb.b,currentRgb.b)};
     const hsv=rgbToHsv(next.r,next.g,next.b);
     if (hsv.s>0 && hsv.v>0) hue=hsv.h;
@@ -168,6 +297,7 @@ const ColorViewTool = (() => {
     paintPicker();
     if (normalizeInputs) writeColorInputs(next,true);
     setPreviewTextColor(next);
+    refreshExportDisplay();
   }
 
   function parseDisplayedValue(raw) {
@@ -207,47 +337,126 @@ const ColorViewTool = (() => {
     el.addEventListener('pointerup',finish); el.addEventListener('pointercancel',finish);
   }
 
-  async function loadConfig() {
+  async function loadUiLanguage() {
     try {
-      const config = window.JetTopBar?.loadConfig
-        ? await window.JetTopBar.loadConfig()
-        : await fetch('config.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('config load failed');return r.json();});
-      const one=document.getElementById('colorViewTextPreview1'), two=document.getElementById('colorViewTextPreview2');
-      if(one && typeof config.colorview_string_1==='string') one.textContent=config.colorview_string_1;
-      if(two && typeof config.colorview_string_2==='string') two.textContent=config.colorview_string_2;
-      if(typeof config.colorview_set_background_button_text==='string') labels.setBackground=config.colorview_set_background_button_text;
-      if(typeof config.colorview_switch_to_hex_button_text==='string') labels.toHex=config.colorview_switch_to_hex_button_text;
-      if(typeof config.colorview_switch_to_decimal_button_text==='string') labels.toDecimal=config.colorview_switch_to_decimal_button_text;
-      if(typeof config.colorview_export_color_button_text==='string') labels.exportColor=config.colorview_export_color_button_text;
+      const get=window.JetNoteUiLanguage?.get;
+      if (get) {
+        const pairs=await Promise.all([
+          get('color_view.preview_sample_1','天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰'),
+          get('color_view.preview_sample_2','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+          get('color_view.set_background','Set Background'),
+          get('color_view.set_body','Set Body'),
+          get('color_view.reset','Reset'),
+          get('color_view.format_hex','HEX'),
+          get('color_view.format_decimal','DEC'),
+          get('color_view.export_color','Export Color'),
+          get('color_view.copy','Copy'),
+          get('color_view.background_set','Background set'),
+          get('color_view.body_set','Body color set'),
+          get('color_view.reset_complete','Background and body reset'),
+          get('color_view.copied','Copied'),
+          get('color_view.copy_failed','Copy failed')
+        ]);
+        const [preview1,preview2,setBackgroundLabel,setBodyLabel,resetLabel,hexLabel,decimalLabel,exportLabel,copyLabel,backgroundSet,bodySet,resetComplete,copied,copyFailed]=pairs;
+        const one=document.getElementById('colorViewTextPreview1'), two=document.getElementById('colorViewTextPreview2');
+        if(one) one.textContent=preview1;
+        if(two) two.textContent=preview2;
+        labels={setBackground:setBackgroundLabel,setBody:setBodyLabel,reset:resetLabel,hex:hexLabel,decimal:decimalLabel,exportColor:exportLabel,copy:copyLabel,backgroundSet,bodySet,resetComplete,copied,copyFailed};
+      }
       const setButton=document.getElementById('colorViewSetBackgroundButton'); if(setButton)setButton.textContent=labels.setBackground;
+      const setBodyButton=document.getElementById('colorViewSetBodyButton'); if(setBodyButton)setBodyButton.textContent=labels.setBody;
+      const resetButton=document.getElementById('colorViewResetButton'); if(resetButton)resetButton.textContent=labels.reset;
       const exportButton=document.getElementById('colorViewExportButton'); if(exportButton)exportButton.textContent=labels.exportColor;
-      refreshModeButton();
-    } catch(error) { console.warn('Color View config failed',error); }
+      const copyButton=document.getElementById('colorViewCopyButton'); if(copyButton)copyButton.textContent=labels.copy;
+      refreshModeSelector();
+      refreshSavedColorDisplays();
+      await window.JetNoteUiLanguage?.apply?.(document);
+    } catch(error) { console.warn('Color View UI language failed',error); }
   }
 
   async function setBackground() {
+    clearCopyFeedback();
     const next={rgb:{...currentRgb}};
     try {
       await AppearanceRepository.putBackground(next);
       applyBackground(next);
-      const status=document.getElementById('colorViewStatus'); if(status)status.textContent='Background set';
+      refreshSavedColorDisplays();
+      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.backgroundSet;
     } catch(error) {
       console.error('Background save failed',error); alert(t('storageFull'));
     }
   }
 
-  function toggleNumericMode() {
+  async function setBody() {
+    clearCopyFeedback();
+    const next={rgb:{...currentRgb}};
+    try {
+      await AppearanceRepository.putBody(next);
+      applyBody(next);
+      refreshSavedColorDisplays();
+      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.bodySet;
+    } catch(error) {
+      console.error('Body save failed',error); alert(t('storageFull'));
+    }
+  }
+
+  async function resetAppearance() {
+    clearCopyFeedback();
+    try {
+      const defaults=await loadAppearanceDefaults();
+      await Promise.all([
+        AppearanceRepository.putBackground(defaults.background),
+        AppearanceRepository.putBody(defaults.body)
+      ]);
+      currentBody=normalizeBackground(defaults.body);
+      applyBackground(defaults.background);
+      commitFromRgb(defaults.picker.rgb,true);
+      refreshSavedColorDisplays();
+      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.resetComplete;
+    } catch(error) {
+      console.error('Appearance reset failed',error); alert(t('storageFull'));
+    }
+  }
+
+  function setNumericMode(mode) {
+    if(mode!=='hex' && mode!=='decimal') return;
+    clearCopyFeedback();
     commitColorInputs(true);
-    numericMode = numericMode==='decimal' ? 'hex' : 'decimal';
-    writeColorInputs(currentRgb,true); refreshModeButton();
+    numericMode=mode;
+    writeColorInputs(currentRgb,true);
+    refreshModeSelector();
+    refreshSavedColorDisplays();
+    refreshExportDisplay();
   }
 
   function exportText() {
     return numericMode==='hex' ? rgbToHex(currentRgb) : `${currentRgb.r},${currentRgb.g},${currentRgb.b}`;
   }
 
-  async function exportColor() {
-    const text=exportText();
+  function refreshExportDisplay() {
+    if(!exportVisible) return;
+    const row=document.getElementById('colorViewExportRow');
+    const valueEl=document.getElementById('colorViewExportValue');
+    if(row) row.hidden=false;
+    if(valueEl) valueEl.textContent=exportText();
+  }
+
+  function exportColor() {
+    clearCopyFeedback();
+    exportVisible=!exportVisible;
+    const row=document.getElementById('colorViewExportRow');
+    const button=document.getElementById('colorViewExportButton');
+    if(row) row.hidden=!exportVisible;
+    if(button) button.setAttribute('aria-expanded',String(exportVisible));
+    if(exportVisible) refreshExportDisplay();
+  }
+
+  async function copyExportColor() {
+    // Copy exactly what the export row currently displays. The generation token
+    // invalidates stale async clipboard feedback when HEX/DEC changes mid-copy.
+    const generation=clearCopyFeedback();
+    const valueEl=document.getElementById('colorViewExportValue');
+    const text=(valueEl?.textContent || exportText()).trim();
     let copied=false;
     try { if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);copied=true;} } catch(_) {}
     if(!copied){
@@ -255,7 +464,12 @@ const ColorViewTool = (() => {
         const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();copied=document.execCommand('copy');ta.remove();
       } catch(_) {}
     }
-    const status=document.getElementById('colorViewStatus'); if(status)status.textContent=copied ? text : `Color: ${text}`;
+    if(generation!==copyFeedbackGeneration)return;
+    if(copied) showCopiedFeedback(generation);
+    else {
+      const status=document.getElementById('colorViewStatus');
+      if(status){status.textContent=labels.copyFailed;status.style.color=copyFeedbackConfig.copiedFinalRestingColor;}
+    }
   }
 
   function init() {
@@ -280,11 +494,16 @@ const ColorViewTool = (() => {
         input.addEventListener('keydown',event=>{if(event.key!=='Enter')return;event.preventDefault();commitColorInputs(true);input.blur();});
       }
       document.getElementById('colorViewSetBackgroundButton')?.addEventListener('click',setBackground);
-      document.getElementById('colorViewModeToggleButton')?.addEventListener('click',toggleNumericMode);
+      document.getElementById('colorViewSetBodyButton')?.addEventListener('click',setBody);
+      document.getElementById('colorViewResetButton')?.addEventListener('click',resetAppearance);
+      document.getElementById('colorViewHexButton')?.addEventListener('click',()=>setNumericMode('hex'));
+      document.getElementById('colorViewDecimalButton')?.addEventListener('click',()=>setNumericMode('decimal'));
       document.getElementById('colorViewExportButton')?.addEventListener('click',exportColor);
+      document.getElementById('colorViewCopyButton')?.addEventListener('click',copyExportColor);
     }
-    loadConfig();
-    writeColorInputs(currentRgb,true); refreshModeButton(); commitFromRgb(currentRgb,true);
+    loadUiLanguage();
+    loadCopyFeedbackConfig();
+    writeColorInputs(currentRgb,true); refreshModeSelector(); commitFromRgb(currentRgb,true); refreshSavedColorDisplays(); refreshExportDisplay();
   }
 
   return {init};

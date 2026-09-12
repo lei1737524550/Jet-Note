@@ -118,8 +118,12 @@ async function openConfiguredTool(id) {
   await EditorController.suspend(id);
   document.activeElement?.blur?.();
   const title = postToolLabel(definition, id);
-  if (window.JetNoteNative?.openTool) JetNoteNative.openTool(definition.url, title, 'en');
-  else window.open(definition.url, '_blank', 'noopener');
+  if (window.JetNoteNative?.openTool) {
+    const fallbackBackground = getComputedStyle(document.documentElement).getPropertyValue('--page-background').trim() || 'rgb(255,255,255)';
+    const background = await window.JetNoteType?.toolBackground?.(id) || fallbackBackground;
+    const borderColor = await window.JetNoteType?.toolBorderColor?.(id) || '#bfc1c4';
+    JetNoteNative.openTool(definition.url, title, 'en', background, borderColor);
+  } else window.open(definition.url, '_blank', 'noopener');
 }
 
 window.initializePostComposerTools = initializePostComposerTools;

@@ -63,6 +63,67 @@ function mediaExtension(mime) {
   [mime]||'bin');
 }
 const nativePickResolvers=new Map();
+function discardRejectedNativeMedia(meta) {
+  const path = meta?.path;
+  if (!path || !window.JetNoteNative?.discardMedia) return;
+  try { JetNoteNative.discardMedia(path); } catch (_) {}
+}
+
+function postComposerCanReceivePastedImage() {
+  const screen = document.getElementById('postComposeScreen');
+  const textarea = document.getElementById('postComposerText');
+  return !!(
+    screen?.classList.contains('open') &&
+    textarea &&
+    document.activeElement === textarea &&
+    typeof EditorController !== 'undefined' &&
+    EditorController.state === EditorController.State.EDITING
+  );
+}
+
+function acceptPastedImageMeta(meta) {
+  if (!meta || meta.type !== 'image' || !meta.id || !meta.path) {
+    discardRejectedNativeMedia(meta);
+    return 'invalid-image';
+  }
+  if (!postComposerCanReceivePastedImage() || !isWorkspaceWritable() || entriesBusy || !entriesReady) {
+    discardRejectedNativeMedia(meta);
+    return 'composer-unavailable';
+  }
+  if (hasDraftVideos()) {
+    discardRejectedNativeMedia(meta);
+    alert(t('imageVideoExclusive'));
+    return 'image-video-exclusive';
+  }
+  if (postDraftImages.length >= MAX_MEDIA_IMAGES) {
+    discardRejectedNativeMedia(meta);
+    alert(t('imageLimit'));
+    return 'image-limit';
+  }
+
+  draftAttachments.post.push(meta);
+  draftMedia.post.set(meta.id, meta);
+  postDraftImages.push(NativeMedia.url(meta));
+  renderPostImagePreview();
+  if (typeof syncPostEditorDraft === 'function') syncPostEditorDraft();
+  return 'added';
+}
+
+async function storeBrowserClipboardImage(file) {
+  const mime = String(file?.type || 'image/png').toLowerCase();
+  if (!mime.startsWith('image/')) throw Error('image-read-failed');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const hash = sha256(bytes);
+  return NativeMedia.storeBlob({
+    id: entryUuid(),
+    type: 'image',
+    mimeType: mime,
+    originalName: file.name || 'clipboard-image.' + mediaExtension(mime),
+    sha256: hash,
+    size: bytes.length
+  }, file);
+}
+
 window.JetNoteNativeCallbacks={
   onAttachmentsPicked(id,items){
     const p=nativePickResolvers.get(id);
@@ -78,8 +139,22 @@ window.JetNoteNativeCallbacks={
     const p=nativePickResolvers.get(id);
     nativePickResolvers.delete(id);
     p?.reject(Error(message || 'attachment-read-failed'));
+  },
+  onKeyboardImagePasted(meta){
+    acceptPastedImageMeta(meta);
+  },
+  onKeyboardImagePasteError(){
+    if (postComposerCanReceivePastedImage()) alert(t('imageReadFailed'));
   }
 };
+
+window.JetNotePastedImage = Object.freeze({
+  acceptMeta: acceptPastedImageMeta,
+  async acceptClipboardFile(file) {
+    const meta = await storeBrowserClipboardImage(file);
+    return acceptPastedImageMeta(meta);
+  }
+});
 function pickNativeAttachments(type) {
   return new Promise((resolve,reject)=>{
     const id=entryUuid(); nativePickResolvers.set(id,{

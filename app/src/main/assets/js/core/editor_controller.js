@@ -59,32 +59,70 @@ const EditorView = (() => {
 })();
 
 const ComposerCaret = (() => {
-  let input, layer, mirror;
+  let input, layer, mirror, beforeText, caret, afterText, blinkTimer = null;
+
+  function appearance() {
+    const configured = window.JetEditorAppearance || {};
+    const configuredWidth = Number(configured.caretWidth);
+    const caretWidth = Number.isFinite(configuredWidth) && configuredWidth >= 1
+      ? Math.round(configuredWidth)
+      : Math.max(1, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--post-compose-caret-width')) || 4);
+    return {
+      caretWidth,
+      caretColor: configured.caretColor || 'var(--post-compose-caret-color,#14A89A)',
+      visibleDuration: Math.max(50, Number(configured.caretVisibleStateDurationMs) || 750),
+      hiddenDuration: Math.max(50, Number(configured.caretHiddenStateDurationMs) || 750)
+    };
+  }
+
+  function stopBlink() {
+    if (blinkTimer !== null) clearTimeout(blinkTimer);
+    blinkTimer = null;
+  }
+
+  function scheduleBlink(visible) {
+    stopBlink();
+    if (!caret || !input || document.activeElement !== input) return;
+    const config = appearance();
+    caret.style.opacity = visible ? '1' : '0';
+    blinkTimer = setTimeout(() => scheduleBlink(!visible), visible ? config.visibleDuration : config.hiddenDuration);
+  }
+
+  function restartBlink() {
+    scheduleBlink(true);
+  }
+
   function refresh() {
     requestAnimationFrame(() => {
-      if (!input || !layer || document.activeElement !== input || input.selectionStart !== input.selectionEnd) { if (layer) layer.hidden = true; return; }
+      if (!input || !layer || document.activeElement !== input || input.selectionStart !== input.selectionEnd) {
+        if (layer) layer.hidden = true;
+        return;
+      }
       const s=getComputedStyle(input), p=input.selectionStart;
       for (const k of ['font','fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','paddingTop','paddingRight','paddingBottom','paddingLeft','boxSizing']) mirror.style[k]=s[k];
       layer.hidden=false; layer.style.left=`${input.offsetLeft}px`; layer.style.top=`${input.offsetTop}px`; layer.style.width=`${input.clientWidth}px`; layer.style.height=`${input.clientHeight}px`;
       mirror.style.width=`${input.clientWidth}px`; mirror.style.transform=`translate(${-input.scrollLeft}px,${-input.scrollTop}px)`;
-      const caret=document.createElement('span'); caret.className='post-compose-caret';
-      // config.json -> JetEditorAppearance -> this concrete element. The CSS
-      // custom property remains only as a fallback for startup/error cases.
-      const configuredWidth=Number(window.JetEditorAppearance?.caretWidth);
-      const caretWidth=Number.isFinite(configuredWidth)&&configuredWidth>=1
-        ? Math.round(configuredWidth)
-        : Math.max(1,parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--post-compose-caret-width'))||4);
-      caret.style.width=`${caretWidth}px`;
-      caret.style.minWidth=`${caretWidth}px`;
-      mirror.replaceChildren(document.createTextNode(input.value.slice(0,p)),caret,document.createTextNode(input.value.slice(p)));
+      const config = appearance();
+      caret.style.width=`${config.caretWidth}px`;
+      caret.style.minWidth=`${config.caretWidth}px`;
+      caret.style.backgroundColor=config.caretColor;
+      beforeText.data=input.value.slice(0,p);
+      afterText.data=input.value.slice(p);
     });
   }
   function bind(textarea) {
     if (!textarea || textarea.dataset.composerCaretBound) return;
     input=textarea; input.dataset.composerCaretBound='1'; const row=input.closest('.post-input-row'); if(!row)return;
-    layer=document.createElement('div'); layer.className='post-compose-caret-layer'; mirror=document.createElement('div'); mirror.className='post-compose-caret-mirror'; layer.appendChild(mirror); row.appendChild(layer);
-    for(const type of ['input','select','keyup','click','focus','blur','scroll']) input.addEventListener(type,refresh,{passive:type==='scroll'});
-    window.addEventListener('jetnote:editor-appearance-changed',refresh);
+    layer=document.createElement('div'); layer.className='post-compose-caret-layer';
+    mirror=document.createElement('div'); mirror.className='post-compose-caret-mirror';
+    beforeText=document.createTextNode('');
+    caret=document.createElement('span'); caret.className='post-compose-caret';
+    afterText=document.createTextNode('');
+    mirror.append(beforeText,caret,afterText); layer.appendChild(mirror); row.appendChild(layer);
+    for(const type of ['input','select','keyup','click','scroll']) input.addEventListener(type,refresh,{passive:type==='scroll'});
+    input.addEventListener('focus',()=>{refresh();restartBlink();});
+    input.addEventListener('blur',()=>{stopBlink();refresh();});
+    window.addEventListener('jetnote:editor-appearance-changed',()=>{refresh();restartBlink();});
   }
   return {bind,refresh};
 })();
@@ -140,10 +178,34 @@ const EditorController = (() => {
     await queueSnapshot(restored ? 'restore' : 'open');
     return PostDraftStore.get();
   }
+  function setNativeImagePasteTarget(active) {
+    try { window.JetNoteNative?.setPostComposerImagePasteTargetActive?.(!!active); } catch (_) {}
+  }
+  async function handleBrowserImagePaste(event, textarea) {
+    const items = Array.from(event.clipboardData?.items || []);
+    const imageItem = items.find(item => item.kind === 'file' && String(item.type || '').toLowerCase().startsWith('image/'));
+    if (!imageItem) return;
+    const file = imageItem.getAsFile?.();
+    if (!file || !window.JetNotePastedImage?.acceptClipboardFile) return;
+
+    // Rich-image paste is an attachment action. Prevent WebView from inserting
+    // a filename/object replacement character into the post text. Plain-text
+    // clipboard pastes are untouched because this path runs only for image files.
+    event.preventDefault();
+    try {
+      await window.JetNotePastedImage.acceptClipboardFile(file);
+    } catch (error) {
+      console.warn('[Editor] browser clipboard image paste failed', error);
+      if (document.activeElement === textarea) alert(t('imageReadFailed'));
+    }
+  }
   function bindTextarea(textarea) {
     if (!textarea || textarea === boundTextarea) return;
     boundTextarea = textarea;
     ComposerCaret.bind(textarea);
+    textarea.addEventListener('focus', () => setNativeImagePasteTarget(true));
+    textarea.addEventListener('blur', () => setNativeImagePasteTarget(false));
+    textarea.addEventListener('paste', event => { void handleBrowserImagePaste(event, textarea); });
     textarea.addEventListener('input', () => setText(textarea.value, textarea.selectionStart || 0, textarea.selectionEnd || 0));
     textarea.addEventListener('select', syncFromView);
     textarea.addEventListener('scroll', () => { if (state === State.EDITING) scheduleSnapshot('text-scroll'); }, { passive: true });
@@ -175,6 +237,7 @@ const EditorController = (() => {
   }
   async function discard() {
     if (state === State.CLOSED) return;
+    setNativeImagePasteTarget(false);
     state = State.CLOSING; clearTimeout(snapshotTimer);
     try { await EntryStore.clearDraft(); } catch (error) { console.warn('[Editor] draft cleanup failed', error); }
     PostDraftStore.clear(); state = State.CLOSED;
@@ -182,6 +245,7 @@ const EditorController = (() => {
   // An opening failure must never leave the editor stuck in OPENING. Keep the
   // persisted snapshot intact so the next successful open can restore it.
   function abortOpen() {
+    setNativeImagePasteTarget(false);
     clearTimeout(snapshotTimer);
     PostDraftStore.clear();
     state = State.CLOSED;

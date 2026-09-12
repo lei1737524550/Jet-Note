@@ -10,11 +10,11 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Single native view of config.json -> top_bar.
- * The bundled Web UI reads the same object in jet_topbar.js, so New Post and
+ * Single native view of config.json -> page_action_bar.
+ * The bundled Web UI reads the same object in page_action_bar.js, so New Post and
  * native tool pages share one geometry/visual specification instead of copied constants.
  */
-final class JetTopBarSpec {
+final class PageActionBarSpec {
     final int height;
     final int controlHeight;
     final int titleSize;
@@ -33,7 +33,7 @@ final class JetTopBarSpec {
     final int toolActionTextColor;
     final int shadowElevation;
 
-    private JetTopBarSpec(JSONObject value) {
+    private PageActionBarSpec(JSONObject value) {
         height = value.optInt("height", 50);
         controlHeight = value.optInt("controlHeight", 36);
         titleSize = value.optInt("titleSize", 16);
@@ -53,17 +53,17 @@ final class JetTopBarSpec {
         shadowElevation = value.optInt("shadowElevation", 2);
     }
 
-    static JetTopBarSpec load(Context context) {
+    static PageActionBarSpec load(Context context) {
         try (InputStream in = context.getAssets().open("config.json")) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[4096];
             int count;
             while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
             JSONObject root = new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
-            return new JetTopBarSpec(root.optJSONObject("top_bar") == null
-                    ? new JSONObject() : root.optJSONObject("top_bar"));
+            return new PageActionBarSpec(root.optJSONObject("page_action_bar") == null
+                    ? new JSONObject() : root.optJSONObject("page_action_bar"));
         } catch (Exception ignored) {
-            return new JetTopBarSpec(new JSONObject());
+            return new PageActionBarSpec(new JSONObject());
         }
     }
 

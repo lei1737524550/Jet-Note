@@ -29,10 +29,15 @@ const ViewportManager = (() => {
     const ratio = window.devicePixelRatio || 1;
     nativeKeyboardHeight = Math.max(0, keyboardHeight / ratio);
     const root = document.documentElement.style;
+    const cssInsets = {};
     for (const [name, value] of Object.entries({ top, right, bottom, left })) {
-      root.setProperty(`--safe-${name}`, `${Math.max(0, value / ratio)}px`);
+      const cssValue = Math.max(0, value / ratio);
+      cssInsets[name] = cssValue;
+      root.setProperty(`--system-safe-area-${name}`, `${cssValue}px`);
     }
+    document.documentElement.dataset.systemSafeAreaReady = 'true';
     update();
+    window.dispatchEvent(new CustomEvent('jetnote:system-safe-area-change', { detail: cssInsets }));
   }
 
   window.addEventListener('resize', requestUpdate, { passive: true });

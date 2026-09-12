@@ -159,17 +159,20 @@ button:disabled {
 }
 .audio-token-play sub{
   position:absolute;
-  right:-3px;
-  bottom:-3px;
-  min-width:15px;
-  height:15px;
-  padding:0 3px;
-  border-radius:8px;
+  right:-2px;
+  bottom:-2px;
+  min-width:14px;
+  height:14px;
+  padding:0 2.5px;
+  border-radius:7px;
   background:#315f98;
   color:#fff;
-  font-size:9px;
-  line-height:15px;
-  text-align:center
+  font-size:8.5px;
+  line-height:14px;
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none
 }
 .audio-token-play.playing{
   background:#315f98;
@@ -237,7 +240,7 @@ button:disabled {
   height:48px;
   min-height:48px;
   padding:10px;
-  background:#fff;
+  background:var(--jet-note-type-edit-post-right-side-tool-button-background,#fff);
   display:grid;
   place-items:center
 }
@@ -311,7 +314,13 @@ button:disabled {
 }
 
 .compose-open-tools[aria-expanded="true"] {
-    background: #f5f6f7;
+    background: var(--jet-note-type-edit-post-right-side-tools-expanded-button-background,#f5f6f7);
+}
+
+.post-input-row .compose-add-image,
+.post-input-row .compose-tool-choice,
+.post-input-row .compose-open-tools {
+    color: var(--jet-note-type-body-foreground-color,#111111);
 }
 
 @keyframes compose-tool-unfold { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }

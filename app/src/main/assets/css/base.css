@@ -13,28 +13,54 @@
   --common-border-width:1px;
   --common-border-radius:14px;
   --content-horizontal-padding:8px;
-  --safe-top:env(safe-area-inset-top,0px);
-  --safe-bottom:env(safe-area-inset-bottom,0px);
-  --safe-left:env(safe-area-inset-left,0px);
-  --safe-right:env(safe-area-inset-right,0px);
+  /* Android WindowInsets is the single source of truth for system safe area.
+     Do not combine it with env(safe-area-inset-*), otherwise a cutout/status
+     inset can be applied twice or appear only after a later viewport event. */
+  --system-safe-area-top:0px;
+  --system-safe-area-right:0px;
+  --system-safe-area-bottom:0px;
+  --system-safe-area-left:0px;
+  --safe-top:var(--system-safe-area-top);
+  --safe-right:var(--system-safe-area-right);
+  --safe-bottom:var(--system-safe-area-bottom);
+  --safe-left:var(--system-safe-area-left);
   /* Fallback values for the reusable Jet Note top bar.
-     Runtime values are loaded from config.json -> top_bar by jet_topbar.js. */
-  --jet-toolbar-height:50px;
-  --jet-toolbar-control-height:36px;
-  --jet-toolbar-title-size:16px;
-  --jet-toolbar-control-size:14px;
-  --jet-toolbar-left-axis:44px;
-  --jet-toolbar-right-axis:44px;
-  --jet-toolbar-icon-width:48px;
-  --jet-toolbar-text-min-width:48px;
-  --jet-toolbar-control-radius:14px;
-  --jet-toolbar-background:#f8f9fa;
-  --jet-toolbar-border-color:#bfc1c4;
-  --jet-toolbar-divider-color:#eceef1;
-  --jet-toolbar-title-color:#202124;
-  --jet-toolbar-normal-color:#222222;
-  --jet-toolbar-primary-color:#1599e8;
-  --jet-toolbar-tool-action-color:#168a45;
+     Runtime values are loaded from config.json -> page_action_bar by page_action_bar.js. */
+  --page-action-bar-height:50px;
+  --page-action-bar-control-height:36px;
+  --page-action-bar-title-size:16px;
+  --page-action-bar-control-size:14px;
+  --page-action-bar-left-axis:44px;
+  --page-action-bar-right-axis:44px;
+  --page-action-bar-icon-width:48px;
+  --page-action-bar-text-min-width:48px;
+  --page-action-bar-control-radius:14px;
+  --page-action-bar-background:#f8f9fa;
+  --page-action-bar-border-color:#bfc1c4;
+  --page-action-bar-divider-color:#eceef1;
+  --page-action-bar-title-color:#202124;
+  --page-action-bar-normal-color:#222222;
+  --page-action-bar-primary-color:#1599e8;
+  --page-action-bar-tool-action-color:#168a45;
+  --jet-note-type-settings-background:var(--page-background);
+  --jet-note-type-edit-post-background:var(--page-background);
+  --jet-note-type-tools-background:var(--page-background);
+  --jet-note-type-page-action-bar-background:var(--page-background);
+  --jet-note-type-top-post-background:#fff;
+  --jet-note-type-post-composer-background:var(--page-background);
+  --jet-note-type-main-posts-background:#fff;
+  --jet-note-type-edit-post-right-side-tool-button-background:#fff;
+  --jet-note-type-edit-post-right-side-tools-expanded-button-background:#f5f6f7;
+  --jet-note-type-settings-backup-card-background:#fff;
+  --jet-note-type-settings-color-view-card-background:#fff;
+  --jet-note-type-body-foreground-color:#111111;
+  --jet-note-type-settings-border-color:#bfc1c4;
+  --jet-note-type-edit-post-border-color:#bfc1c4;
+  --jet-note-type-tools-border-color:#bfc1c4;
+  --jet-note-type-page-action-bar-border-color:#bfc1c4;
+  --jet-note-type-top-post-border-color:#bfc1c4;
+  --jet-note-type-post-composer-border-color:#bfc1c4;
+  --jet-note-type-main-posts-border-color:#bfc1c4;
 }
 html,body {
   margin:0;
@@ -151,7 +177,7 @@ button:focus-visible {
   min-height:76px;
   border:0;
   background:transparent;
-  padding:10px;
+  padding:0;
 }
 .tab svg {
   width:30px;
@@ -176,7 +202,7 @@ button:focus-visible {
   display:flex;
   align-items:center;
   min-height:54px;
-  background:white;
+  background:var(--jet-note-type-post-composer-background,#fff);
 }
 .feed-composer-main {
   flex:1;
@@ -205,7 +231,7 @@ button:focus-visible {
   width:100%;
   margin:0 0 6px;
   padding:12px 12px 14px;
-  background:white;
+  background:var(--jet-note-type-main-posts-background,#fff);
 }
 .post-head {
   position:relative;
@@ -302,7 +328,7 @@ button:focus-visible {
 
 /* Simplified home: no profile identity or permanent feature tabs. */
 .home-actions{width:100%;padding:8px var(--content-horizontal-padding) 8px;}
-.top-post-card{width:100%;height:auto;padding:12px;background:#fff;}
+.top-post-card{width:100%;height:auto;padding:12px;background:var(--jet-note-type-top-post-background,#fff);}
 .top-post-layout{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:stretch;}
 .top-post-empty .top-post-layout{grid-template-columns:minmax(0,1fr);}
 .top-post-default-text{grid-column:1;display:flex;align-items:center;justify-content:center;min-width:0;padding:10px 8px;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--top-post-string-color,#F06E80);font-size:var(--top-post-string-size,2em);line-height:1.35;}
@@ -327,10 +353,24 @@ button:focus-visible {
 
 
 /* Main-page border colors are independently configurable from config.json. */
-#topPostCard.common_border{border-color:var(--top-post-border-color,var(--common-border-color));}
-#postList .feed-composer.common_border{border-color:var(--write-sth-border-color,var(--common-border-color));}
-#postList article.post.common_border{border-color:var(--post-state-border-color,var(--main-posts-border-color,var(--common-border-color)));}
+#topPostCard.common_border{border-color:var(--top-post-border-color,var(--jet-note-type-top-post-border-color,var(--common-border-color)));}
+#postList .feed-composer.common_border{border-color:var(--write-sth-border-color,var(--jet-note-type-post-composer-border-color,var(--common-border-color)));}
+#postList article.post.common_border{border-color:var(--post-state-border-color,var(--main-posts-border-color,var(--jet-note-type-main-posts-border-color,var(--common-border-color))));}
 #topPostCard.top-post-super.common_border{border-color:var(--post-state-border-color,var(--top-post-border-color,var(--common-border-color)));}
+
+/* Ordinary content follows the automatic contrast color of current_body.
+   State-specific timestamps and semantic feedback colors remain independent. */
+#topPostCard,
+#postList .feed-composer,
+#postList article.post,
+#topPostCard .text-content,
+#postList article.post .text-content {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+#postList .feed-composer-main,
+#postList .feed-composer-photo {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
 
 /* Per-star-state visual settings supplied by config.json. */
 #postList article.post > .time,
@@ -345,43 +385,61 @@ button:focus-visible {
 .top-post-super .top-post-content{display:flex;flex-direction:column;}
 .top-post-super .top-post-content > .time{margin-top:auto;padding-top:var(--post-state-time-top-margin,10px);margin-bottom:var(--post-state-time-bottom-margin,3px);}
 
-/* Home top utility row: four strict, equal-width cells.
+/* Home main_status_bar: four strict, equal-width cells.
+   Its own height comes ONLY from --main-status-bar-height. system_safe_area is
+   applied separately by .phone padding and three_post_one_body has its own offset.
+   Do not use this row height as a proxy for either of those geometries.
+   Four strict, equal-width cells.
    Cell 1 = battery (centered), cell 2 = intentionally empty, cell 3 = HH:mm
    (vertically centered and right-aligned), cell 4 = Settings (centered).
    This row is normal document flow and is NOT anchored to Three Posts, One Body,
    which prevents background/resume viewport recalculation from changing its geometry. */
-.top-status-area{
+.main-status-bar{
   position:relative;
-  width:calc(100% - (2 * var(--main-page-top-status-horizontal-margin,8px)));
-  height:var(--main-page-top-status-height,52px);
-  margin:var(--main-page-top-status-top-margin,0px) var(--main-page-top-status-horizontal-margin,8px) var(--main-page-top-status-bottom-margin,0px);
+  transform:translateY(var(--main-status-bar-vertical-move,0px));
+  width:calc(100% - (2 * var(--main-status-bar-horizontal-margin,8px)));
+  height:var(--main-status-bar-height,52px);
+  box-sizing:border-box;
+  overflow:hidden;
+  margin:var(--main-status-bar-top-margin,0px) var(--main-status-bar-horizontal-margin,8px) var(--main-status-bar-bottom-margin,0px);
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));
   align-items:stretch;
-  font-size:var(--main-page-top-status-font-size,16px);
+  font-size:var(--main-status-bar-font-size,16px);
   line-height:1;
   color:#111;
 }
-.top-status-battery-region,
-.top-status-empty-region,
-.top-status-time-region,
-.top-status-settings-region{
+.main-status-bar-battery-region,
+.main-status-bar-empty-region,
+.main-status-bar-time-region,
+.main-status-bar-settings-region{
   min-width:0;
   height:100%;
   display:flex;
   align-items:center;
 }
-.top-status-battery-region{justify-content:center;gap:var(--main-page-top-status-battery-gap,7px);}
-.top-status-empty-region{justify-content:center;pointer-events:none;}
-.top-status-time-region{justify-content:flex-end;padding-right:var(--main-page-top-status-time-right-padding,0px);font-variant-numeric:tabular-nums;}
-.top-status-settings-region{justify-content:center;}
-.top-status-battery-icon{display:block;width:var(--main-page-top-status-battery-icon-size,22px);height:var(--main-page-top-status-battery-icon-size,22px);object-fit:contain;}
-.top-status-battery-percentage{display:inline-block;min-width:3.2ch;text-align:left;font-variant-numeric:tabular-nums;}
-.top-status-settings-button{
-  width:var(--main-page-top-status-settings-button-size,44px);
-  height:var(--main-page-top-status-settings-button-size,44px);
+.main-status-bar-battery-region{justify-content:center;gap:var(--main-status-bar-battery-gap,7px);}
+.main-status-bar-empty-region{justify-content:center;pointer-events:none;}
+.main-status-bar-time-region{justify-content:flex-end;padding-right:var(--main-status-bar-time-right-padding,0px);font-variant-numeric:tabular-nums;}
+.main-status-bar-settings-region{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;
+  justify-content:normal;
+}
+.main-status-bar-settings-region > .main-status-bar-settings-button{
+  grid-column:3;
+  justify-self:center;
+  align-self:center;
+}
+.main-status-bar-battery-icon{display:block;width:var(--main-status-bar-battery-icon-size,22px);height:var(--main-status-bar-battery-icon-size,22px);object-fit:contain;}
+.main-status-bar-battery-percentage{display:inline-block;min-width:3.2ch;text-align:left;font-variant-numeric:tabular-nums;}
+.main-status-bar-settings-button{
+  width:var(--main-status-bar-settings-button-size,44px);
+  height:var(--main-status-bar-settings-button-size,44px);
   margin:0;
-  padding:10px;
+  padding:0;
+  box-sizing:border-box;
   border:0;
   border-radius:10px;
   background:transparent;
@@ -391,5 +449,5 @@ button:focus-visible {
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
 }
-.top-status-settings-button svg{display:block;width:var(--main-page-top-status-settings-icon-size,24px);height:var(--main-page-top-status-settings-icon-size,24px);fill:currentColor;}
-.top-status-settings-button:active{background:rgba(98,106,115,.08);}
+.main-status-bar-settings-button svg{display:block;width:var(--main-status-bar-settings-icon-size,24px);height:var(--main-status-bar-settings-icon-size,24px);fill:currentColor;}
+.main-status-bar-settings-button:active{background:rgba(98,106,115,.08);}

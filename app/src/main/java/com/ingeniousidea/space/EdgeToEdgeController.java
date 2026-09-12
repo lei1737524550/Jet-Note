@@ -16,6 +16,7 @@ final class EdgeToEdgeController {
     private final Activity activity;
     private final WebView webView;
     private int top, right, bottom, left, keyboardViewportHeight;
+    private boolean hasInsets;
 
     EdgeToEdgeController(Activity activity, WebView webView) {
         this.activity = activity;
@@ -67,6 +68,7 @@ final class EdgeToEdgeController {
                     bottom = Math.max(bottom, insets.getDisplayCutout().getSafeInsetBottom());
                 }
             }
+            hasInsets = true;
             dispatchInsets();
             return insets;
         });
@@ -112,7 +114,22 @@ final class EdgeToEdgeController {
         window.getDecorView().setSystemUiVisibility(flags);
     }
 
+    /**
+     * Re-synchronize the cached native safe area with the frontend.
+     *
+     * WindowInsets can arrive before the dynamically-loaded frontend has defined
+     * window.applySystemInsets().  In that case the first JavaScript dispatch is
+     * intentionally harmless, but the values must be replayed once the frontend
+     * is ready.  requestApplyInsets() also refreshes the cache after immersive
+     * status-bar visibility changes.
+     */
+    void synchronizeInsets() {
+        webView.requestApplyInsets();
+        if (hasInsets) webView.post(this::dispatchInsets);
+    }
+
     void dispatchInsets() {
+        if (!hasInsets) return;
         webView.evaluateJavascript("window.applySystemInsets && window.applySystemInsets("
                 + top + "," + right + "," + bottom + "," + left + "," + keyboardViewportHeight + ")", null);
     }

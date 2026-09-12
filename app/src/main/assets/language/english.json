@@ -67,5 +67,58 @@
   "postTools": "Post tools",
   "attachmentReadFailed": "Unable to read the selected attachment.",
   "edit": "Edit",
-  "favorite": "Favorite"
+  "favorite": "Favorite",
+  "ui_strings": {
+    "common": {
+      "back": "Back",
+      "cancel": "Cancel"
+    },
+    "home": {
+      "top_post_default": "welcome to Jet Note",
+      "settings_accessibility_label": "Settings"
+    },
+    "settings": {
+      "page_title": "Settings",
+      "backup_title": "Backup",
+      "export_jnote": "Export .jnote",
+      "import_jnote": "Import .jnote",
+      "preparing": "Preparing…",
+      "color_view_title": "Color View"
+    },
+    "post_composer": {
+      "new_post_title": "New Post",
+      "edit_post_title": "Edit Post",
+      "post_action": "Post",
+      "save_action": "Save"
+    },
+    "tools": {
+      "page_title": "Tools"
+    },
+    "color_view": {
+      "preview_sample_1": "天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰",
+      "preview_sample_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "set_background": "Set Background",
+      "set_body": "Set Body",
+      "reset": "Reset",
+      "reset_accessibility_label": "Reset background, body, and color picker",
+      "format_hex": "HEX",
+      "format_decimal": "DEC",
+      "format_selector_accessibility_label": "Color number format",
+      "saved_background_color_accessibility_label": "Saved background color",
+      "saved_body_color_accessibility_label": "Saved body color",
+      "export_color": "Export Color",
+      "copy": "Copy",
+      "background_set": "Background set",
+      "body_set": "Body color set",
+      "reset_complete": "Background and body reset",
+      "copied": "Copied",
+      "copy_failed": "Copy failed",
+      "sv_field_accessibility_label": "Saturation and brightness color field",
+      "hue_accessibility_label": "Hue",
+      "rgb_values_accessibility_label": "RGB values",
+      "red_accessibility_label": "Red",
+      "green_accessibility_label": "Green",
+      "blue_accessibility_label": "Blue"
+    }
+  }
 }

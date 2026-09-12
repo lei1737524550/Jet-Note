@@ -1,33 +1,33 @@
 <!-- Settings page fragment -->
   <section class="settings-screen" id="settingsScreen">
-    <div class="settings-header">
-      <button class="settings-back" onclick="closeSettings()" aria-label="Back">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M30 9L15 24l15 15"/>
-        </svg>
-      </button>
-      <div class="settings-title" data-i18n="settings">Settings</div>
+    <div class="page-action-bar settings-header buttom-string-buttom-bar" data-buttom-string-buttom-bar-page="settings_page">
+      <button class="page-action-bar-control page-action-bar-left common_border" type="button" data-buttom-string-buttom-bar-side="left"></button>
+      <div class="page-action-bar-title settings-title" data-buttom-string-buttom-bar-title></div>
+      <button class="page-action-bar-control page-action-bar-right common_border" type="button" data-buttom-string-buttom-bar-side="right"></button>
     </div>
 
     <div class="settings-body">
       <div class="settings-card backup-card common_border" id="backupSettingsCard">
-        <div class="settings-row-title">Backup</div>
+        <div class="settings-row-title" data-ui-string="settings.backup_title">Backup</div>
         <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main">Export .jnote</span></button>
-          <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main">Import .jnote</span></button>
+          <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main" data-ui-string="settings.export_jnote">Export .jnote</span></button>
+          <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main" data-ui-string="settings.import_jnote">Import .jnote</span></button>
         </div>
         <p id="archiveStatus" role="status"></p>
-        <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel">Preparing…</span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div>
+        <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel" data-ui-string="settings.preparing">Preparing…</span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div>
       </div>
       <div class="settings-card color-view-card common_border" id="colorViewCard">
-        <div class="settings-row-title">Color View</div>
+        <div class="color-view-title-row">
+          <div class="settings-row-title" data-ui-string="settings.color_view_title">Color View</div>
+          <button class="color-view-reset-button common_border" id="colorViewResetButton" type="button" data-ui-string="color_view.reset" aria-label="Reset background, body, and color picker" data-ui-aria-label="color_view.reset_accessibility_label">Reset</button>
+        </div>
         <div class="color-view-tool common_border">
           <div class="color-view-picker-column">
-            <div class="color-view-field common_border" id="colorViewField" role="application" aria-label="Saturation and brightness color field" tabindex="0">
+            <div class="color-view-field common_border" id="colorViewField" role="application" aria-label="Saturation and brightness color field" data-ui-aria-label="color_view.sv_field_accessibility_label" tabindex="0">
               <div class="color-view-field-handle" id="colorViewFieldHandle" aria-hidden="true"></div>
             </div>
             <div class="color-view-hue-control">
-              <div class="color-view-hue common_border" id="colorViewHue" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
+              <div class="color-view-hue common_border" id="colorViewHue" role="slider" aria-label="Hue" data-ui-aria-label="color_view.hue_accessibility_label" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
                 <div class="color-view-hue-handle" id="colorViewHueHandle" aria-hidden="true"></div>
               </div>
               <div class="color-view-hue-caret" id="colorViewHueCaret" aria-hidden="true"></div>
@@ -35,23 +35,39 @@
           </div>
 
           <div class="color-view-preview-column">
-            <div class="color-view-text-preview common_border" id="colorViewTextPreview1">天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰</div>
-            <div class="color-view-text-preview color-view-text-preview-latin common_border" id="colorViewTextPreview2">ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+            <div class="color-view-text-preview common_border" id="colorViewTextPreview1" data-ui-string="color_view.preview_sample_1">天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰</div>
+            <div class="color-view-text-preview color-view-text-preview-latin common_border" id="colorViewTextPreview2" data-ui-string="color_view.preview_sample_2">ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
 
-            <div class="color-view-rgb-grid" aria-label="RGB values">
+            <div class="color-view-rgb-grid" aria-label="RGB values" data-ui-aria-label="color_view.rgb_values_accessibility_label">
               <div class="color-view-rgb-label color-view-rgb-label-r">R</div>
               <div class="color-view-rgb-label color-view-rgb-label-g">G</div>
               <div class="color-view-rgb-label color-view-rgb-label-b">B</div>
-              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="Red">
-              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Green">
-              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Blue">
+              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="Red" data-ui-aria-label="color_view.red_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Green" data-ui-aria-label="color_view.green_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Blue" data-ui-aria-label="color_view.blue_accessibility_label">
             </div>
           </div>
 
           <div class="color-view-actions">
-            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewSetBackgroundButton" type="button"></button></div>
-            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewModeToggleButton" type="button"></button></div>
-            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewExportButton" type="button"></button></div>
+            <div class="jet-note-vertical-pill common_border">
+              <button class="jet-note-pill-part color-view-action-button" id="colorViewSetBackgroundButton" type="button"></button>
+              <output class="jet-note-pill-part color-view-saved-value" id="colorViewBackgroundValue" aria-label="Saved background color" data-ui-aria-label="color_view.saved_background_color_accessibility_label"></output>
+            </div>
+            <div class="jet-note-vertical-pill common_border">
+              <button class="jet-note-pill-part color-view-action-button" id="colorViewSetBodyButton" type="button"></button>
+              <output class="jet-note-pill-part color-view-saved-value" id="colorViewBodyValue" aria-label="Saved body color" data-ui-aria-label="color_view.saved_body_color_accessibility_label"></output>
+            </div>
+            <div class="jet-note-vertical-pill common_border">
+              <button class="jet-note-pill-part color-view-action-button" id="colorViewExportButton" type="button" aria-controls="colorViewExportRow" aria-expanded="false"></button>
+              <div class="jet-note-pill-part jet-note-horizontal-pill color-view-radix-switch" id="colorViewRadixSwitch" role="group" aria-label="Color number format" data-ui-aria-label="color_view.format_selector_accessibility_label">
+                <button class="color-view-radix-option" id="colorViewHexButton" type="button" data-color-view-radix="hex" aria-pressed="false" data-ui-string="color_view.format_hex">HEX</button>
+                <button class="color-view-radix-option" id="colorViewDecimalButton" type="button" data-color-view-radix="decimal" aria-pressed="true" data-ui-string="color_view.format_decimal">DEC</button>
+              </div>
+            </div>
+          </div>
+          <div class="color-view-export-row" id="colorViewExportRow" hidden>
+            <span class="color-view-export-value" id="colorViewExportValue"></span>
+            <button class="color-view-copy-button common_border" id="colorViewCopyButton" type="button" data-ui-string="color_view.copy">Copy</button>
           </div>
           <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
         </div>

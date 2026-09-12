@@ -131,32 +131,32 @@ button:active {
   overflow: hidden;
   flex-direction: column;
   min-height: 0;
-  background: #fff;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
   transform: none !important;
 }
 
 .post-compose-screen.open {
   display: flex;
-  background: #fff;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
 }
 
 /* Reusable Jet Note top bar.
    Geometry is defined once here: the title owns the true viewport center;
    the left/right controls own mirrored side axes. Pages only provide content,
    color and click behavior. */
-.jet-topbar {
+.page-action-bar {
   position: relative;
   width: 100%;
-  height: var(--jet-toolbar-height);
-  flex: 0 0 var(--jet-toolbar-height);
+  height: var(--page-action-bar-height);
+  flex: 0 0 var(--page-action-bar-height);
   z-index: 5;
   box-sizing: border-box;
   padding: 0;
-  background: var(--jet-toolbar-background);
-  border-bottom: 1px solid var(--jet-toolbar-divider-color);
+  background: var(--jet-note-type-page-action-bar-background,var(--page-action-bar-background));
+  border-bottom: 1px solid var(--page-action-bar-divider-color);
   box-shadow: 0 2px 4px rgba(0,0,0,.10);
 }
-.jet-topbar-title {
+.page-action-bar-title {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -165,61 +165,82 @@ button:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--jet-toolbar-title-size);
+  font-size: var(--page-action-bar-title-size);
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   pointer-events: none;
-  color: var(--jet-toolbar-title-color);
+  color: var(--page-action-bar-title-color);
 }
-.jet-topbar-control {
+.page-action-bar-control {
   position: absolute;
-  top: calc((var(--jet-toolbar-height) - var(--jet-toolbar-control-height)) / 2);
-  height: var(--jet-toolbar-control-height);
-  min-height: var(--jet-toolbar-control-height);
+  top: calc((var(--page-action-bar-height) - var(--page-action-bar-control-height)) / 2);
+  height: var(--page-action-bar-control-height);
+  min-height: var(--page-action-bar-control-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0 12px;
-  min-width: var(--jet-toolbar-text-min-width);
-  background: #fff;
-  border: 1px solid var(--jet-toolbar-border-color);
-  border-radius: var(--jet-toolbar-control-radius);
-  font-size: var(--jet-toolbar-control-size);
+  min-width: var(--page-action-bar-text-min-width);
+  background: var(--jet-note-type-page-action-bar-background,var(--page-background));
+  border: 1px solid var(--jet-note-type-page-action-bar-border-color,var(--page-action-bar-border-color));
+  border-radius: var(--page-action-bar-control-radius);
+  font-size: var(--page-action-bar-control-size);
   font-weight: 400;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
 }
-.jet-topbar-left {
-  left: calc(var(--safe-left) + var(--jet-toolbar-left-axis));
+.page-action-bar-left {
+  left: calc(var(--safe-left) + var(--page-action-bar-left-axis));
   transform: translateX(-50%);
 }
-.jet-topbar-right {
-  right: calc(var(--safe-right) + var(--jet-toolbar-right-axis));
+.page-action-bar-right {
+  right: calc(var(--safe-right) + var(--page-action-bar-right-axis));
   transform: translateX(50%);
 }
-.jet-topbar-icon {
-  width: var(--jet-toolbar-icon-width);
-  min-width: var(--jet-toolbar-icon-width);
+.page-action-bar-icon {
+  width: var(--page-action-bar-icon-width);
+  min-width: var(--page-action-bar-icon-width);
   padding: 0;
 }
-.jet-topbar-icon svg {
+.page-action-bar-icon svg {
   width: 24px;
   height: 24px;
 }
 
+.page-action-bar-asset-image {
+  width:24px;
+  height:24px;
+  display:block;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+.page-action-bar-string {
+  width:auto;
+  min-width:var(--page-action-bar-text-min-width);
+  padding-inline:12px;
+}
+.buttom-string-buttom-bar [hidden] { display:none !important; }
+
 /* New Post only supplies its page-specific control width/color. Its geometry
-   comes entirely from the shared Jet Note top bar above. */
+   comes entirely from the shared Jet Note Page Action Bar above. */
 .post-compose-header { }
 .post-compose-title { }
 .post-compose-cancel,.post-compose-publish {
-  width: var(--jet-toolbar-icon-width);
-  min-width: var(--jet-toolbar-icon-width);
+  width: var(--page-action-bar-icon-width);
+  min-width: var(--page-action-bar-icon-width);
   padding: 0;
 }
-.post-compose-cancel { color:var(--jet-toolbar-normal-color); }
-.post-compose-publish { color:var(--jet-toolbar-primary-color); }
+.post-compose-cancel.page-action-bar-string,.post-compose-publish.page-action-bar-string {
+  width:auto;
+  min-width:var(--page-action-bar-text-min-width);
+  padding-inline:12px;
+}
+.post-compose-cancel { color:var(--page-action-bar-normal-color); }
+.post-compose-publish { color:var(--page-action-bar-primary-color); }
 .post-compose-cancel-icon {
   width:24px;
   height:24px;
@@ -242,7 +263,7 @@ button:active {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  background: #fff;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
   padding: 22px 20px 16px;
 }
 
@@ -265,7 +286,7 @@ button:active {
   resize: none;
   border: 0;
   outline: 0;
-  background: #fff;
+  background: transparent;
   color: #111;
   font: inherit;
   font-size: 28px;
@@ -283,11 +304,11 @@ button:active {
   width:var(--post-compose-caret-width,4px);
   min-width:var(--post-compose-caret-width,4px);
   height:1em;
-  background:#111214;
+  background:var(--post-compose-caret-color,#14A89A);
 }
 .post-compose-caret-layer{position:absolute;z-index:2;overflow:hidden;pointer-events:none}.post-compose-caret-mirror{position:absolute;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;color:transparent;pointer-events:none}
 
-/* Tools uses the same top-bar geometry as New Post instead of the older 64px
+/* Tools uses the same Page Action Bar geometry as New Post instead of the older 64px
    Settings header. The back button therefore shares New Post's left axis. */
 .tools-screen .tools-header {
   position: absolute;
@@ -296,11 +317,11 @@ button:active {
 }
 .tools-screen .tools-back {
   border: var(--common-border-width) solid var(--common-border-color);
-  border-radius: var(--jet-toolbar-control-radius);
+  border-radius: var(--page-action-bar-control-radius);
   color: #222;
 }
 .tools-screen .settings-body {
-  top: calc(var(--safe-top) + var(--jet-toolbar-height));
+  top: calc(var(--safe-top) + var(--page-action-bar-height));
 }
 
 .settings-screen {
@@ -312,7 +333,7 @@ button:active {
   z-index: 10000;
   display: none;
   overflow: hidden;
-  background: #f5f6f8;
+  background: var(--jet-note-type-settings-background,var(--page-background));
   color: #111;
 }
 
@@ -321,47 +342,18 @@ button:active {
 }
 
 .settings-header {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  border-bottom: 1px solid #eceef1;
+  position:absolute;
+  left:0;
+  width:100%;
 }
-
-.settings-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.settings-back {
-  position: absolute;
-  left: 8px;
-  top: 6px;
-  width: 52px;
-  height: 52px;
-  border: 0;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.settings-back svg {
-  width: 30px;
-  height: 30px;
-}
+.settings-title { font-weight:400; }
+.settings-header .page-action-bar-control { color:var(--page-action-bar-normal-color); }
 
 .settings-body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 64px;
+  top: var(--page-action-bar-height);
   bottom: 0;
   overflow-y: auto;
   padding: 16px var(--content-horizontal-padding);
@@ -370,9 +362,37 @@ button:active {
 .settings-card {
   width: 100%;
   background: #fff;
+  border-color:var(--jet-note-type-settings-border-color,var(--common-border-color));
   overflow: hidden;
   margin-bottom: 16px;
 }
+.backup-card { background:var(--jet-note-type-settings-backup-card-background,#fff); }
+.color-view-card { background:var(--jet-note-type-settings-color-view-card-background,#fff); }
+.backup-card .settings-choice,
+.backup-card .archive-progress {
+  background:var(--jet-note-type-settings-backup-card-background,#fff);
+}
+.color-view-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-right:18px;
+}
+.color-view-title-row .settings-row-title { min-width:0; }
+.color-view-reset-button {
+  flex:0 0 auto;
+  min-width:72px;
+  height:38px;
+  padding:6px 14px;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:13px;
+  line-height:1;
+  text-align:center;
+}
+.color-view-reset-button:active { background:rgba(0,0,0,.055); }
 
 .settings-row-title {
   padding: 18px 18px 12px;
@@ -557,7 +577,7 @@ button:active {
 .compose-add-image {
   height: 44px;
   padding: 0 12px;
-  background: #fff;
+  background: var(--jet-note-type-edit-post-right-side-tool-button-background,#fff);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -631,7 +651,7 @@ button:active {
   gap:14px;
   margin:0 12px 12px;
   padding:12px;
-  background:#f8fafb;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
 }
 .color-view-picker-column,
 .color-view-preview-column { min-width:0; }
@@ -722,8 +742,8 @@ button:active {
   height:0;
   border-left:6px solid transparent;
   border-right:6px solid transparent;
-  border-bottom:0;
-  border-top:8px solid #59636d;
+  border-top:0;
+  border-bottom:8px solid #59636d;
   transform:translateX(-50%);
   pointer-events:none;
 }
@@ -740,6 +760,8 @@ button:active {
   min-width:0;
   min-height:44px;
   padding:8px 10px;
+  /* The preview surface stays neutral so the picked text color remains visible
+     after that same color is applied to Body. */
   background:#fff;
   text-align:center;
   line-height:1.45;
@@ -771,7 +793,7 @@ button:active {
   min-width:0;
   height:36px;
   padding:0 4px;
-  background:#fff;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
   text-align:center;
   text-transform:uppercase;
   outline:0;
@@ -794,25 +816,78 @@ button:active {
   align-items:center;
   margin-top:2px;
 }
-.color-view-action-cell {
+.jet-note-vertical-pill {
+  width:100%;
   min-width:0;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  height:80px;
+  display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  overflow:hidden;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+.jet-note-pill-part {
+  min-width:0;
+  min-height:0;
+  border:0;
+  border-radius:0;
+}
+.jet-note-vertical-pill > .jet-note-pill-part + .jet-note-pill-part {
+  border-top:1px solid var(--jet-note-type-settings-border-color,var(--common-border-color));
 }
 .color-view-action-button {
   width:100%;
-  min-width:0;
-  min-height:40px;
   padding:7px 8px;
-  background:#fff;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
   color:#111;
   font:inherit;
   font-size:13px;
   line-height:1.15;
   text-align:center;
 }
+.color-view-saved-value {
+  display:grid;
+  place-items:center;
+  padding:7px 8px;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:12px;
+  line-height:1.15;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+}
 .color-view-action-button:active { background:#f0f3f5; }
+
+.color-view-export-row {
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:32px;
+}
+.color-view-export-row[hidden] { display:none; }
+.color-view-export-value {
+  color:#59636d;
+  font-size:12px;
+  line-height:1.2;
+  text-align:center;
+  word-break:break-all;
+}
+.color-view-copy-button {
+  min-width:52px;
+  min-height:30px;
+  padding:4px 10px;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
+  color:#111;
+  font:inherit;
+  font-size:12px;
+  line-height:1;
+}
+.color-view-copy-button:active { background:#f0f3f5; }
+
 .color-view-status {
   grid-column:1 / -1;
   min-height:0;
@@ -838,3 +913,93 @@ button:active {
   .color-view-action-button { min-height:38px; padding:6px 4px; font-size:11px; }
 }
 
+/* Automatic foreground contrast for ordinary controls on Body-colored
+   surfaces. Preview text, RGB labels, picker graphics, and feedback states are
+   deliberately excluded because their colors communicate function. */
+.backup-card,
+.backup-card .settings-choice,
+.color-view-card,
+.color-view-tool,
+.color-view-rgb-value,
+.color-view-action-button,
+.color-view-radix-option,
+.color-view-copy-button,
+.color-view-export-value {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+.post-input-row .compose-add-image,
+.post-input-row .compose-tool-choice,
+.post-input-row .compose-open-tools {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+
+
+/* jet_note_type: centralized page/surface appearance. */
+.tools-screen{background:var(--jet-note-type-tools-background,var(--page-background));}
+.tools-screen .settings-body{background:var(--jet-note-type-tools-background,var(--page-background));}
+.tools-screen .common_border{border-color:var(--jet-note-type-tools-border-color,var(--common-border-color));}
+.settings-screen .common_border{border-color:var(--jet-note-type-settings-border-color,var(--common-border-color));}
+.post-compose-screen .common_border{border-color:var(--jet-note-type-edit-post-border-color,var(--common-border-color));}
+.buttom-string-buttom-bar .page-action-bar-control{border-color:var(--jet-note-type-page-action-bar-border-color,var(--page-action-bar-border-color));}
+
+/* Color View radix selector ------------------------------------------------
+   One shared rounded container is split into equal HEX / DEC halves by a
+   deliberately subtle center divider. Selection uses weight + a neutral
+   surface tint rather than a semantic accent color. */
+.color-view-radix-switch {
+  position:relative;
+  width:100%;
+  min-width:0;
+  height:auto;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  overflow:hidden;
+  background:var(--jet-note-type-settings-color-view-card-background,#fff);
+}
+.color-view-radix-switch::after {
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:50%;
+  width:1px;
+  background:var(--jet-note-type-settings-border-color,var(--common-border-color));
+  transform:translateX(-.5px);
+  pointer-events:none;
+}
+.color-view-radix-option {
+  min-width:0;
+  min-height:40px;
+  padding:7px 4px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#4f5962;
+  font:inherit;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.15;
+  text-align:center;
+  appearance:none;
+  -webkit-appearance:none;
+}
+.color-view-radix-option.is-active {
+  background:rgba(0,0,0,.035);
+  color:#111;
+  font-weight:600;
+}
+.color-view-radix-option:active {
+  background:rgba(0,0,0,.055);
+}
+.color-view-radix-option:focus-visible {
+  outline:1px solid #b7bdc3;
+  outline-offset:-2px;
+}
+@media (max-width:520px) {
+  .color-view-radix-switch,
+  .color-view-saved-value,
+  .color-view-action-button,
+  .color-view-radix-option { min-height:38px; }
+  .jet-note-vertical-pill { height:76px; }
+  .color-view-radix-option { font-size:11px; }
+}
