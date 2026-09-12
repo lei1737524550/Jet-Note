@@ -16,7 +16,7 @@ const PostDraftStore = (() => {
       mode: input.mode === 'edit' ? 'edit' : 'create', postId: input.postId ?? null,
       text: String(input.text || ''), images: clone(input.images || []), attachments,
       audio: attachments.filter(item => item.type === 'audio'), video: attachments.filter(item => item.type === 'video'),
-      favorite: !!input.favorite, dirty: !!input.dirty,
+      starState: normalizeStarStateValue(input.starState), dirty: !!input.dirty,
       selectionStart: Number(input.selectionStart) || 0, selectionEnd: Number(input.selectionEnd) || 0,
       scrollTop: Number(input.scrollTop) || 0,
       ui: { toolsExpanded: false, keyboardVisible: false, activeTool: null, ...(input.ui || {}) },

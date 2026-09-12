@@ -165,7 +165,3 @@ async function pickEntryMedia(kind, type) {
   }
 }
 
-function pruneDraftImages(kind,sources){
-  const used=new Set(sources);
-  draftAttachments.post=draftAttachments.post.filter(x=>x.type!=='image'||used.has(NativeMedia.url(x)));
-}

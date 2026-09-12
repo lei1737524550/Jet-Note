@@ -62,6 +62,3 @@ function applyLanguage() {
   });
 }
 
-function setLanguage() {
-  applyLanguage();
-}

@@ -10,6 +10,7 @@ function openSettings() {
     document.body.style.overflow = 'hidden';
     applyLanguage();
     refreshAppearanceSettings?.();
+    initializeColorViewTool?.();
 }
 
 function closeSettings() {

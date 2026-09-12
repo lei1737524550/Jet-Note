@@ -1,4 +1,37 @@
 /* Post records and attachment metadata share one IndexedDB transaction. */
+
+function normalizeStarStateValue(value){
+  return value === 'super_starred' ? 'super_starred' : value === 'starred' ? 'starred' : 'none';
+}
+function normalizePostStarStateRecord(record,{allowLegacyFavorite=true}={}){
+  const result={...record};
+  let state='none';
+  if(result.starState==='super_starred'||result.starState==='starred'||result.starState==='none'){
+    state=result.starState;
+  }else if(allowLegacyFavorite&&result.favorite===true){
+    state='starred';
+  }
+  result.starState=normalizeStarStateValue(state);
+  delete result.favorite;
+  return result;
+}
+function enforceSingleSuperStar(records){
+  const list=(Array.isArray(records)?records:[]).map(item=>normalizePostStarStateRecord(item));
+  const supers=list.filter(item=>item.starState==='super_starred');
+  if(supers.length<=1)return list;
+  const score=item=>{
+    const updated=Date.parse(item.updatedAt||'');
+    if(Number.isFinite(updated))return updated;
+    const created=Date.parse(item.createdAt||'');
+    if(Number.isFinite(created))return created;
+    const id=Number(item.id);
+    return Number.isFinite(id)?id:0;
+  };
+  let winner=supers[0];
+  for(const item of supers.slice(1))if(score(item)>score(winner))winner=item;
+  for(const item of list)if(item!==winner&&item.starState==='super_starred')item.starState='none';
+  return list;
+}
 const EntryStore={
   db:null,migration:null,
   async open(){
@@ -40,7 +73,7 @@ function entryUuid(){
   const hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');return hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20);
 }
 function stableEntry(record){
-  const result={...record};
+  const result=normalizePostStarStateRecord(record);
   if(!result.uuid)result.uuid=typeof result.id==='string'?result.id:entryUuid();
   if(!Number.isSafeInteger(result.id)){result.legacyId=result.legacyId??result.id;result.id=Date.now()+stableEntry.sequence++;}
   if(result.attachments?.some(a=>a.type==='image'))result.images=[...new Set([...(result.images||[]),...result.attachments.filter(a=>a.type==='image').map(a=>NativeMedia.url(a)).filter(Boolean)])];
@@ -75,7 +108,9 @@ async function initializeEntries(){
   }
   // Remove the retired feature from current state and its former local key.
   AppStorage.removeItem('qzone_logs_v1');
+  nextPosts=enforceSingleSuperStar(nextPosts);
+  await EntryStore.commit(nextPosts);
   posts=nextPosts;entriesReady=true;
   if(window.JetNoteNative?.frontendReady)JetNoteNative.frontendReady();
 }
-async function persistEntries(media=[]){await EntryStore.commit(posts,media);}
+async function persistEntries(media=[]){posts=enforceSingleSuperStar(posts);await EntryStore.commit(posts,media);}

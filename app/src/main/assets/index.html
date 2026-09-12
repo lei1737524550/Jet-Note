@@ -36,36 +36,56 @@
 
   <section class="header"><div class="wave3"></div></section>
 
-  <div class="home-actions" aria-label="Home actions">
-    <button class="home-action-button" onclick="openSettings()" aria-label="Settings">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.31-.08.65-.08.97 0 .31.03.62.07.92l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.39 1.04.71 1.62.95l.36 2.53c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.53c.58-.24 1.12-.56 1.62-.95l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
-    </button>
-  </div>
-  <div class="composer-area" id="mainComposerArea">
-    <div class="composer common_border">
-      <button class="composer-main" type="button" data-editor-open="create" data-i18n="share" data-i18n-mode="text">Share something...</button>
-      <button class="composer-photo" onclick="openPostComposerWithVideoPicker()" aria-label="add video">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="7" y="11" width="25" height="26" rx="5"/>
-          <path d="M32 19l9-5v20l-9-5z"/>
-        </svg>
-      </button>
-      <button class="composer-photo" onclick="openPostComposerWithImagePicker()" aria-label="add image">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="7" y="7" width="34" height="34" rx="6"/>
-          <circle cx="18" cy="18" r="3.4"/>
-          <path d="M10 35l9-9 7 6 5-5 8 8"/>
-        </svg>
-      </button>
-      <button class="composer-photo" onclick="openPostComposerWithAudioPicker()" aria-label="add audio">
-        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 36V13l20-4v23"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="32" r="5"/>
-        </svg>
+  <!-- Independent home status row. It is deliberately outside Three Posts, One Body
+       so WebView resume/inset recalculation cannot move or resize it with the Post body. -->
+  <section class="top-status-area" id="topStatusArea" aria-label="Device status and settings">
+    <div class="top-status-battery-region" id="topStatusBatteryRegion">
+      <img class="top-status-battery-icon" id="topStatusBatteryIcon" src="icons/battery_75.svg" alt="">
+      <span class="top-status-battery-percentage" id="topStatusBatteryPercentage">--%</span>
+    </div>
+    <div class="top-status-empty-region" aria-hidden="true"></div>
+    <div class="top-status-time-region" id="topStatusTimeRegion">
+      <span id="topStatusTime">--:--</span>
+    </div>
+    <div class="top-status-settings-region" id="topStatusSettingsRegion">
+      <button class="top-status-settings-button" type="button" onclick="openSettings()" aria-label="Settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.31-.08.65-.08.97 0 .31.03.62.07.92l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.39 1.04.71 1.62.95l.36 2.53c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.53c.58-.24 1.12-.56 1.62-.95l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
       </button>
     </div>
-  </div>
+  </section>
 
-  <main class="feed" id="postList"></main>
+  <!-- Three Posts, One Body: move only Top Post, Post Composer and Main Posts
+       as a single unit; the independent top status row is intentionally excluded. -->
+  <div class="three-posts-one-body" id="threePostsOneBody">
+    <div class="home-actions" aria-label="Top post">
+      <section class="top-post-card common_border" id="topPostCard" aria-live="polite"></section>
+    </div>
+    <div class="composer-area" id="mainComposerArea">
+      <div class="composer common_border">
+        <button class="composer-main" type="button" data-editor-open="create" data-i18n="share" data-i18n-mode="text">Share something...</button>
+        <button class="composer-photo" onclick="openPostComposerWithVideoPicker()" aria-label="add video">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="11" width="25" height="26" rx="5"/>
+            <path d="M32 19l9-5v20l-9-5z"/>
+          </svg>
+        </button>
+        <button class="composer-photo" onclick="openPostComposerWithImagePicker()" aria-label="add image">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="7" width="34" height="34" rx="6"/>
+            <circle cx="18" cy="18" r="3.4"/>
+            <path d="M10 35l9-9 7 6 5-5 8 8"/>
+          </svg>
+        </button>
+        <button class="composer-photo" onclick="openPostComposerWithAudioPicker()" aria-label="add audio">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 36V13l20-4v23"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="32" r="5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <main class="feed" id="postList"></main>
+  </div>
 
 
 
@@ -122,6 +142,7 @@
       'js/components/image_viewer.js',
       'js/components/delete_confirm_dialog.js',
       'js/features/posts.js',
+      'js/features/top_status.js',
       'js/core/navigation.js',
       'js/features/appearance.js',
       'js/core/bootstrap.js',

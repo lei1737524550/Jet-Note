@@ -739,6 +739,11 @@ html.startup-loading-active body { overflow: hidden !important; }
     stroke: #b48a00;
 }
 
+.post-action-btn.favorite.super-active .post-action-star {
+    fill: #e23b3b;
+    stroke: #a81818;
+}
+
 /* Final compact post-menu rules. */
 #postActionPanel.post-action-panel { padding:0 !important; gap:0 !important; overflow:hidden; }
 #postActionPanel.post-action-panel .post-action-btn { margin:0 !important; }

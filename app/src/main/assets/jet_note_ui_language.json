@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "purpose": "Shared UI terminology and naming language for Jet Note development.",
+  "purpose_Zh": "Jet Note 开发过程中统一使用的 UI 术语、区域命名与层级职责说明。",
+  "regions": {
+    "top_post": {
+      "display_name": "Top Post",
+      "description": "The special post area at the top of the main page. It can show either the configured default string or the current Super Star post.",
+      "description_Zh": "主页面最上方的特殊 Post 区域。它可以显示配置中的默认字符串，也可以显示当前的 Super Star Post。"
+    },
+    "post_composer": {
+      "display_name": "Post Composer",
+      "description": "The post creation entry area containing the Write something field and the video, image, and audio entry buttons.",
+      "description_Zh": "用于创建 Post 的入口区域，包含 Write something 输入入口以及视频、图片和音频按钮。"
+    },
+    "main_posts": {
+      "display_name": "Main Posts",
+      "description": "The primary scrolling area that displays normal posts and ordinary starred posts.",
+      "description_Zh": "主页面中用于滚动显示普通 Post 和普通收藏 Post 的主要内容区域。"
+    }
+  },
+  "layout_terms": {
+    "outer_layout_container": {
+      "display_name": "Outer Layout Container",
+      "description": "The outer layer responsible for a component's position, occupied space, size, spacing, and relationship with surrounding UI. Internal visual alignment should not normally be adjusted at this layer.",
+      "description_Zh": "负责组件整体位置、占位空间、尺寸、外部间距以及与周围 UI 几何关系的外层容器。通常不应在这一层调整内部内容的视觉对齐。"
+    },
+    "inner_content_container": {
+      "display_name": "Inner Content Container",
+      "description": "The inner layer responsible for arranging and aligning the visual content inside a component without moving the component's outer layout area.",
+      "description_Zh": "负责组件内部内容排列与对齐的内层容器。调整这一层不应改变组件外层布局区域的位置。"
+    },
+    "button_group": {
+      "display_name": "Button Group",
+      "description": "A container that groups multiple related buttons and controls their internal arrangement.",
+      "description_Zh": "用于组织多个相关按钮并控制这些按钮内部排列方式的容器。"
+    },
+    "audio_outer_layout_container": {
+      "display_name": "Audio Outer Layout Container",
+      "description": "The layout container that reserves the audio component's overall area. Do not move this container when the requirement is only to reposition the speaker icons inside it.",
+      "description_Zh": "为音频组件整体预留布局空间的外层容器。如果需求只是移动内部喇叭图标，不应移动这一层。"
+    },
+    "audio_inner_button_group": {
+      "display_name": "Audio Inner Button Group",
+      "description": "The inner group containing the audio play buttons. Use this layer when the audio buttons need to move inside their existing reserved area.",
+      "description_Zh": "包含音频播放按钮的内部按钮组。当需要让喇叭按钮在原有预留区域内部移动时，应修改这一层。"
+    },
+    "audio_play_button": {
+      "display_name": "Audio Play Button",
+      "description": "An individual audio playback button containing the speaker icon and, when applicable, its index badge.",
+      "description_Zh": "单个音频播放按钮，包含喇叭图标以及存在时的序号徽标。"
+    },
+    "audio_index_badge": {
+      "display_name": "Audio Index Badge",
+      "description": "The small numbered badge attached to an audio play button to identify an audio attachment.",
+      "description_Zh": "附着在音频播放按钮上的小型数字徽标，用于标识对应的音频附件。"
+    },
+    "action_menu_button": {
+      "display_name": "Action Menu Button",
+      "description": "The three-dot button used to open the actions available for a post.",
+      "description_Zh": "用于打开 Post 操作菜单的三点按钮。"
+    },
+    "settings_button": {
+      "display_name": "Settings Button",
+      "description": "The gear button used to open Jet Note settings.",
+      "description_Zh": "用于打开 Jet Note 设置页面的齿轮按钮。"
+    },
+    "text_content_area": {
+      "display_name": "Text Content Area",
+      "description": "The layout area reserved for post text. Action controls that share the same row or column must reserve space rather than overlap this area.",
+      "description_Zh": "用于显示 Post 文本的布局区域。与文本共享行或列的操作控件必须正常预留空间，不能覆盖这一文本区域。"
+    },
+    "timestamp": {
+      "display_name": "Timestamp",
+      "description": "The displayed publication time of a post.",
+      "description_Zh": "Post 显示出来的发布时间。"
+    }
+  },
+  "naming_rules": {
+    "prefer_explicit_names": {
+      "description": "Prefer long, explicit names over short ambiguous names. A name should identify the UI region, element, and responsibility whenever practical.",
+      "description_Zh": "优先使用较长但明确的名称，而不是简短且容易混淆的名称。条件允许时，名称应同时表达所属 UI 区域、元素类型和职责。"
+    },
+    "distinguish_outer_and_inner": {
+      "description": "Always distinguish outer layout containers from inner content containers. Position changes must be applied to the layer whose responsibility matches the requested visual change.",
+      "description_Zh": "必须明确区分外层布局容器和内部内容容器。任何位置调整都应作用在与需求职责相匹配的层级上。"
+    },
+    "scope_region_specific_changes": {
+      "description": "Region-specific UI changes must use selectors or variables scoped to that region so changes to Top Post do not unintentionally affect Main Posts, and vice versa.",
+      "description_Zh": "只针对某一区域的 UI 修改必须使用限定到该区域的选择器或变量，避免修改 Top Post 时意外影响 Main Posts，反之亦然。"
+    }
+  },
+  "concepts": {
+    "three_posts_one_body": {
+      "display_name": "Three Posts, One Body",
+      "display_name_Zh": "三 Post 一体",
+      "description": "Top Post, Post Composer, and Main Posts are the three primary regions of the Jet Note main page. They form one integrated page body and should follow one coherent visual language, while each region keeps its own layout responsibility, behavior, and independently scoped styles or configuration.",
+      "description_Zh": "Top Post、Post Composer 和 Main Posts 是 Jet Note 主页面的三个核心区域。三者共同组成一个完整的一体化页面主体，视觉语言应保持统一；同时每个区域仍保留各自独立的布局职责、交互逻辑，以及独立作用域的样式和配置，修改其中一个区域时不应误伤另外两个区域。",
+      "members": [
+        "top_post",
+        "post_composer",
+        "main_posts"
+      ]
+    }
+  },
+  "visual_language": {
+    "jet_note_border_format": {
+      "display_name": "Jet Note Border Format",
+      "display_name_Zh": "Jet Note 边框格式",
+      "description": "The shared border language for Jet Note cards, tools, inputs, buttons, text preview blocks, and other box-like UI. New components should reuse the common_border class and its shared CSS variables instead of inventing unrelated border geometry.",
+      "description_Zh": "Jet Note 中卡片、工具、输入框、按钮、文本预览框及其他盒状 UI 共用的边框语言。新增组件应优先复用 common_border 类及其共享 CSS 变量，不应另造与现有界面无关的边框几何风格。",
+      "implementation": {
+        "shared_class": "common_border",
+        "border_color_variable": "--common-border-color",
+        "border_width_variable": "--common-border-width",
+        "border_radius_variable": "--common-border-radius"
+      },
+      "rules": [
+        "Use the same border color, width and corner radius family as existing Jet Note Settings cards and controls.",
+        "A component may have different dimensions, but its outline geometry must remain visually consistent with Jet Note.",
+        "Nested utility controls should reuse the same border vocabulary unless a functional reason requires otherwise.",
+        "Do not force color tools into a square shape; dimensions should follow the surrounding Jet Note layout while preserving the shared border format."
+      ],
+      "rules_Zh": [
+        "边框颜色、粗细与圆角体系应与 Jet Note 现有 Settings 卡片和控件保持一致。",
+        "组件尺寸可以不同，但外轮廓几何语言必须保持 Jet Note 的统一视觉。",
+        "工具内部的嵌套控件默认继续复用同一套边框语言，除非功能上确有必要。",
+        "颜色工具不要求强制做成正方形；尺寸应服从 Jet Note 周边布局，同时保持共享边框格式。"
+      ]
+    }
+  }
+}

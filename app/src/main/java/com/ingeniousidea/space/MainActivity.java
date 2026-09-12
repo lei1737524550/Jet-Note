@@ -490,7 +490,26 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onPause(){if(dictionaryController!=null)dictionaryController.pause();if(webView!=null)webView.onPause();super.onPause();}
-    @Override protected void onResume(){super.onResume();if(webView!=null){webView.onResume();webView.post(() -> webView.evaluateJavascript("window.dispatchEvent(new Event(\'jetnote:app-resume\'));", null));}if(dictionaryController!=null)dictionaryController.resume();}
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (edgeToEdge != null) edgeToEdge.hideStatusBar();
+        if (webView != null) {
+            webView.onResume();
+            webView.post(() -> webView.evaluateJavascript(
+                    "window.dispatchEvent(new Event('jetnote:app-resume'));", null));
+        }
+        if (dictionaryController != null) dictionaryController.resume();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        // Returning from a picker/dialog may restore the system status bar.
+        // Re-apply Jet Note's status-bar-only immersive mode when the app
+        // regains focus; the bottom navigation bar is deliberately untouched.
+        if (hasFocus && edgeToEdge != null) edgeToEdge.hideStatusBar();
+    }
 
     @Override
     protected void onDestroy() {

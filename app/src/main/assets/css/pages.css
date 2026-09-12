@@ -620,3 +620,221 @@ button:active {
 .rgb-apply { min-height: 32px; margin-top: 8px; }
 
 .rgb-editor.open{display:block;}
+
+
+/* Color View -------------------------------------------------------------
+   One unified color state drives the HSV picker, RGB/HEX editor, previews,
+   application background action, and exported color value. */
+.color-view-tool {
+  display:grid;
+  grid-template-columns:minmax(0, 1.5fr) minmax(174px, .92fr);
+  gap:14px;
+  margin:0 12px 12px;
+  padding:12px;
+  background:#f8fafb;
+}
+.color-view-picker-column,
+.color-view-preview-column { min-width:0; }
+.color-view-picker-column {
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  min-height:0;
+}
+.color-view-field {
+  position:relative;
+  flex:1 1 auto;
+  width:100%;
+  min-height:132px;
+  overflow:hidden;
+  touch-action:none;
+  cursor:crosshair;
+  background:
+    linear-gradient(to top, #000 0%, rgba(0,0,0,0) 100%),
+    linear-gradient(to right, #fff 0%, hsl(0 100% 50%) 100%);
+}
+.color-view-field-handle {
+  position:absolute;
+  pointer-events:none;
+  left:100%;
+  top:0%;
+  width:22px;
+  height:22px;
+  border:3px solid #fff;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 1px rgba(17,18,20,.52), 0 1px 4px rgba(0,0,0,.24);
+}
+.color-view-hue-control {
+  position:relative;
+  height:36px;
+  flex:0 0 36px;
+  overflow:visible;
+}
+.color-view-hue {
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:24px;
+  overflow:hidden;
+  touch-action:none;
+  cursor:ew-resize;
+  background:linear-gradient(90deg,
+    #ff0000 0%,
+    #ffff00 16.666%,
+    #00ff00 33.333%,
+    #00ffff 50%,
+    #0000ff 66.666%,
+    #ff00ff 83.333%,
+    #ff0000 100%);
+}
+/* Two high-contrast guide bars straddle the exact hue coordinate. */
+.color-view-hue-handle {
+  position:absolute;
+  pointer-events:none;
+  left:0%;
+  top:50%;
+  width:14px;
+  height:30px;
+  transform:translate(-50%,-50%);
+}
+.color-view-hue-handle::before,
+.color-view-hue-handle::after {
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:3px;
+  border-radius:2px;
+  background:#fff;
+  box-shadow:0 0 0 1px rgba(17,18,20,.45);
+}
+.color-view-hue-handle::before { left:2px; }
+.color-view-hue-handle::after { right:2px; }
+/* The caret is a separate marker below the strip; its tip sits exactly on the
+   midpoint between the two guide bars. */
+.color-view-hue-caret {
+  position:absolute;
+  left:0%;
+  top:26px;
+  width:0;
+  height:0;
+  border-left:6px solid transparent;
+  border-right:6px solid transparent;
+  border-bottom:0;
+  border-top:8px solid #59636d;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.color-view-preview-column {
+  display:grid;
+  grid-template-rows:minmax(44px,auto) minmax(44px,auto) auto;
+  align-content:stretch;
+  gap:10px;
+}
+.color-view-text-preview {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  min-height:44px;
+  padding:8px 10px;
+  background:#fff;
+  text-align:center;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  color:#ff0000;
+}
+.color-view-text-preview-latin {
+  letter-spacing:.02em;
+  font-size:13px;
+}
+.color-view-rgb-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px 8px;
+  align-items:center;
+  align-self:end;
+}
+.color-view-rgb-label {
+  text-align:center;
+  font-size:13px;
+  font-weight:700;
+}
+.color-view-rgb-label-r { color:#ff0000; }
+.color-view-rgb-label-g { color:#00a000; }
+.color-view-rgb-label-b { color:#0000ff; }
+.color-view-rgb-value {
+  width:100%;
+  min-width:0;
+  height:36px;
+  padding:0 4px;
+  background:#fff;
+  text-align:center;
+  text-transform:uppercase;
+  outline:0;
+  -moz-appearance:textfield;
+}
+.color-view-rgb-value::-webkit-outer-spin-button,
+.color-view-rgb-value::-webkit-inner-spin-button {
+  margin:0;
+  -webkit-appearance:none;
+}
+.color-view-rgb-value:focus {
+  border-color:#74b9e6;
+  box-shadow:inset 0 0 0 1px rgba(52,155,219,.12);
+}
+.color-view-actions {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  align-items:center;
+  margin-top:2px;
+}
+.color-view-action-cell {
+  min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.color-view-action-button {
+  width:100%;
+  min-width:0;
+  min-height:40px;
+  padding:7px 8px;
+  background:#fff;
+  color:#111;
+  font:inherit;
+  font-size:13px;
+  line-height:1.15;
+  text-align:center;
+}
+.color-view-action-button:active { background:#f0f3f5; }
+.color-view-status {
+  grid-column:1 / -1;
+  min-height:0;
+  margin:0;
+  color:#59636d;
+  font-size:12px;
+  text-align:center;
+}
+.color-view-status:empty { display:none; }
+@media (max-width:520px) {
+  .color-view-tool {
+    grid-template-columns:minmax(0, 1.34fr) minmax(150px, .96fr);
+    gap:10px;
+    padding:10px;
+  }
+  .color-view-field { min-height:124px; }
+  .color-view-preview-column { gap:8px; }
+  .color-view-text-preview { min-height:42px; padding:6px 7px; font-size:12px; }
+  .color-view-text-preview-latin { font-size:11px; }
+  .color-view-rgb-grid { gap:5px; }
+  .color-view-rgb-value { height:34px; font-size:13px; }
+  .color-view-actions { gap:6px; }
+  .color-view-action-button { min-height:38px; padding:6px 4px; font-size:11px; }
+}
+

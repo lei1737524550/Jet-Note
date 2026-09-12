@@ -1,19 +1,3 @@
-function isStandardHomePage() {
-  const openIds = [
-    'settingsScreen',
-    'postComposeScreen', 'imageViewer',
-    'deleteConfirmBackdrop', 'postActionPanel'
-  ];
-
-  const hasOpenLayer = openIds.some(id => {
-    const el = document.getElementById(id);
-    return el && el.classList.contains('open');
-  });
-  const editingName = false;
-  const scrolled = Math.abs(window.scrollY || document.documentElement.scrollTop || 0) > 2;
-
-  return !hasOpenLayer && !editingName && !scrolled;
-}
 
 function returnToStandardHome() {
   if (window.JetNoteNotice?.isOpen()) {

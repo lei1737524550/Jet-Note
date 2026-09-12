@@ -43,6 +43,4 @@ const ViewportManager = (() => {
   return Object.freeze({ update, requestUpdate, applySystemInsets });
 })();
 
-/* Compatibility for existing call sites while migration is in progress. */
-function syncViewport() { return ViewportManager.update().height; }
 function fit() { ViewportManager.requestUpdate(); }

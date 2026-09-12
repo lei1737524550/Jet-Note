@@ -316,3 +316,13 @@ button:disabled {
 
 @keyframes compose-tool-unfold { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 .compose-tool-unfolding { animation:compose-tool-unfold 160ms ease-out both; }
+
+/* Top Post only: keep the audio layout container in its normal position.
+   Only the speaker glyph inside each audio button receives an optical left shift.
+   This intentionally does not affect normal timeline Post audio controls. */
+.top-post-super .top-post-content > .attachment-strip{
+  justify-content:flex-end;
+}
+.top-post-super .top-post-content .audio-token-play svg{
+  transform:translateX(-2px);
+}

@@ -66,5 +66,48 @@
     "primaryTextColor": "#1599e8",
     "toolActionTextColor": "#168a45",
     "shadowElevation": 2
-  }
+  },
+  "top_post_string": "welcome to Jet Note",
+  "top_post_string_color": "F06E80",
+  "top_post_string_font_size": 2,
+  "top_post_border_color": "bfc1c4",
+  "write_sth_border_color": "bfc1c4",
+  "main_posts_border_color": "bfc1c4",
+  "main_page": {
+    "three_post_one_body_vertical_move": 40,
+    "top_status_area_height": 52,
+    "top_status_area_top_margin": 0,
+    "top_status_area_bottom_margin": 0,
+    "top_status_area_horizontal_margin": 8,
+    "top_status_font_size": 16,
+    "top_status_battery_item_gap": 7,
+    "top_status_battery_icon_size": 22,
+    "top_status_settings_button_size": 44,
+    "top_status_settings_icon_size": 24,
+    "top_status_time_right_padding": 0
+  },
+  "no_starred_post": {
+    "outer_border_color": "bfc1c4",
+    "time_stamp_color": "999da2",
+    "time_stamp_top_margin": 3,
+    "time_stamp_bottom_margin": 3
+  },
+  "starred_post": {
+    "outer_border_color": "bfc1c4",
+    "time_stamp_color": "999da2",
+    "time_stamp_top_margin": 3,
+    "time_stamp_bottom_margin": 3
+  },
+  "super_starred_post": {
+    "outer_border_color": "bfc1c4",
+    "time_stamp_color": "999da2",
+    "time_stamp_top_margin": 10,
+    "time_stamp_bottom_margin": 3
+  },
+  "colorview_string_1": "天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰",
+  "colorview_string_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "colorview_set_background_button_text": "Set Background",
+  "colorview_switch_to_hex_button_text": "HEX",
+  "colorview_switch_to_decimal_button_text": "Decimal",
+  "colorview_export_color_button_text": "Export Color"
 }

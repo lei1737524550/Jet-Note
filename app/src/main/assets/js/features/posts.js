@@ -6,6 +6,221 @@ let posts = loadPosts();
 let editingPostId = null;
 let postDraftImages = [];
 
+const TOP_POST_DEFAULT_CONFIG = Object.freeze({
+  top_post_string: 'welcome to Jet Note',
+  top_post_string_color: 'F06E80',
+  top_post_string_font_size: 2,
+  top_post_border_color: 'bfc1c4',
+  write_sth_border_color: 'bfc1c4',
+  main_posts_border_color: 'bfc1c4',
+  main_page: {
+    three_post_one_body_vertical_move: -60,
+    top_status_area_height: 52,
+    top_status_area_top_margin: 0,
+    top_status_area_bottom_margin: 0,
+    top_status_area_horizontal_margin: 8,
+    top_status_font_size: 16,
+    top_status_battery_item_gap: 7,
+    top_status_battery_icon_size: 22,
+    top_status_settings_button_size: 44,
+    top_status_settings_icon_size: 24,
+    top_status_time_right_padding: 0
+  },
+  no_starred_post: {
+    outer_border_color: 'bfc1c4',
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 3,
+    time_stamp_bottom_margin: 3
+  },
+  starred_post: {
+    outer_border_color: 'bfc1c4',
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 3,
+    time_stamp_bottom_margin: 3
+  },
+  super_starred_post: {
+    outer_border_color: 'bfc1c4',
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 10,
+    time_stamp_bottom_margin: 3
+  }
+});
+let topPostConfig = {...TOP_POST_DEFAULT_CONFIG};
+
+// Initialize home-page geometry and border variables immediately; config.json overwrites them after loading.
+applyHomeLayoutConfig();
+
+fetch('config.json', {cache: 'no-store'})
+  .then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed')))
+  .then(config => {
+    topPostConfig = {
+      ...TOP_POST_DEFAULT_CONFIG,
+      ...config,
+      main_page: {
+        ...TOP_POST_DEFAULT_CONFIG.main_page,
+        ...(config.main_page && typeof config.main_page === 'object' ? config.main_page : {}),
+        // Backward compatibility for older config.json files.
+        ...(config.three_post_one_body_vertical_move !== undefined ? {three_post_one_body_vertical_move: config.three_post_one_body_vertical_move} : {})
+      }
+    };
+    applyHomeLayoutConfig();
+    renderPosts();
+  })
+  .catch(() => { /* defaults remain active */ });
+
+function getPostStarState(post) {
+  return normalizeStarStateValue(post?.starState);
+}
+
+function setPostStarState(post, state) {
+  if (!post) return;
+  const normalized = state === 'super_starred' ? 'super_starred' : state === 'starred' ? 'starred' : 'none';
+  post.starState = normalized;
+  delete post.favorite;
+}
+
+function postPublishedAt(post) {
+  const parsed = Date.parse(post?.createdAt || '');
+  if (Number.isFinite(parsed)) return parsed;
+  const id = Number(post?.id);
+  return Number.isFinite(id) ? id : 0;
+}
+
+function getSuperStarPost() {
+  return posts.find(post => getPostStarState(post) === 'super_starred') || null;
+}
+
+function getFeedPosts() {
+  const visible = posts.filter(post => getPostStarState(post) !== 'super_starred');
+  const regular = visible.filter(post => getPostStarState(post) !== 'starred');
+  const starred = visible
+    .filter(post => getPostStarState(post) === 'starred')
+    .sort((a, b) => postPublishedAt(b) - postPublishedAt(a));
+  return starred.concat(regular);
+}
+
+
+function topPostFontSize(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '2em';
+  // config uses an em-style scale so the requested value 2 remains meaningful.
+  return `${Math.max(0.5, Math.min(number, 6))}em`;
+}
+
+function topPostColor(value) {
+  const raw = String(value || '').trim();
+  return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : '#F06E80';
+}
+
+function configBorderColor(value, fallback = '#bfc1c4') {
+  const raw = String(value || '').trim();
+  return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : fallback;
+}
+
+function configVerticalPixelOffset(value, fallback = -60) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  // Keep this as a direct CSS-pixel offset. No per-region rounding or derived
+  // arithmetic is used, so Top Post, Post Composer, and Main Posts move as one body.
+  return Math.max(-1000, Math.min(number, 1000));
+}
+
+function postVisualConfigForState(state) {
+  const key = state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post';
+  const defaults = TOP_POST_DEFAULT_CONFIG[key] || TOP_POST_DEFAULT_CONFIG.no_starred_post;
+  const configured = topPostConfig[key];
+  return {...defaults, ...(configured && typeof configured === 'object' ? configured : {})};
+}
+
+function configPixelMargin(value, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(-1000, Math.min(number, 1000));
+}
+
+function postVisualStyle(state) {
+  const config = postVisualConfigForState(state);
+  const defaults = TOP_POST_DEFAULT_CONFIG[state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post'];
+  const border = configBorderColor(config.outer_border_color, configBorderColor(defaults.outer_border_color));
+  const timeColor = configBorderColor(config.time_stamp_color, configBorderColor(defaults.time_stamp_color, '#999da2'));
+  const top = configPixelMargin(config.time_stamp_top_margin, defaults.time_stamp_top_margin);
+  const bottom = configPixelMargin(config.time_stamp_bottom_margin, defaults.time_stamp_bottom_margin);
+  return `--post-state-border-color:${border};--post-state-time-color:${timeColor};--post-state-time-top-margin:${top}px;--post-state-time-bottom-margin:${bottom}px`;
+}
+
+function applyHomeLayoutConfig() {
+  const root = document.documentElement;
+  root.style.setProperty('--top-post-border-color', configBorderColor(topPostConfig.top_post_border_color));
+  root.style.setProperty('--write-sth-border-color', configBorderColor(topPostConfig.write_sth_border_color));
+  root.style.setProperty('--main-posts-border-color', configBorderColor(topPostConfig.main_posts_border_color));
+
+  const mainPageDefaults = TOP_POST_DEFAULT_CONFIG.main_page;
+  const mainPage = topPostConfig.main_page && typeof topPostConfig.main_page === 'object'
+    ? topPostConfig.main_page
+    : mainPageDefaults;
+
+  const verticalMove = configVerticalPixelOffset(
+    mainPage.three_post_one_body_vertical_move,
+    mainPageDefaults.three_post_one_body_vertical_move
+  );
+  root.style.setProperty('--three-post-one-body-vertical-move', `${verticalMove}px`);
+
+  const px = (name, value, fallback, min = -1000, max = 1000) => {
+    const number = Number(value);
+    const safe = Number.isFinite(number) ? Math.max(min, Math.min(number, max)) : fallback;
+    root.style.setProperty(name, `${safe}px`);
+  };
+  px('--main-page-top-status-height', mainPage.top_status_area_height, mainPageDefaults.top_status_area_height, 1, 500);
+  px('--main-page-top-status-top-margin', mainPage.top_status_area_top_margin, mainPageDefaults.top_status_area_top_margin);
+  px('--main-page-top-status-bottom-margin', mainPage.top_status_area_bottom_margin, mainPageDefaults.top_status_area_bottom_margin);
+  px('--main-page-top-status-horizontal-margin', mainPage.top_status_area_horizontal_margin, mainPageDefaults.top_status_area_horizontal_margin, 0, 500);
+  px('--main-page-top-status-font-size', mainPage.top_status_font_size, mainPageDefaults.top_status_font_size, 1, 100);
+  px('--main-page-top-status-battery-gap', mainPage.top_status_battery_item_gap, mainPageDefaults.top_status_battery_item_gap, 0, 100);
+  px('--main-page-top-status-battery-icon-size', mainPage.top_status_battery_icon_size, mainPageDefaults.top_status_battery_icon_size, 1, 200);
+  px('--main-page-top-status-settings-button-size', mainPage.top_status_settings_button_size, mainPageDefaults.top_status_settings_button_size, 1, 200);
+  px('--main-page-top-status-settings-icon-size', mainPage.top_status_settings_icon_size, mainPageDefaults.top_status_settings_icon_size, 1, 200);
+  px('--main-page-top-status-time-right-padding', mainPage.top_status_time_right_padding, mainPageDefaults.top_status_time_right_padding, 0, 500);
+}
+
+function renderTopPost() {
+  const card = document.getElementById('topPostCard');
+  if (!card) return;
+  releaseAttachmentUrls(card);
+
+  const post = getSuperStarPost();
+  if (!post) {
+    const text = escapeHTML(String(topPostConfig.top_post_string ?? TOP_POST_DEFAULT_CONFIG.top_post_string));
+    card.className = 'top-post-card top-post-empty common_border';
+    card.removeAttribute('style');
+    card.innerHTML = `
+      <div class="top-post-layout">
+        <div class="top-post-default-text" style="--top-post-string-color:${topPostColor(topPostConfig.top_post_string_color)};--top-post-string-size:${topPostFontSize(topPostConfig.top_post_string_font_size)}">${text}</div>
+      </div>`;
+    return;
+  }
+
+  const postId = escapeHTML(String(post.id));
+  const images = Array.isArray(post.images) ? post.images : [];
+  card.className = 'top-post-card top-post-super common_border';
+  card.setAttribute('style', postVisualStyle('super_starred'));
+  card.innerHTML = `
+    <div class="top-post-layout">
+      <div class="top-post-content" data-post-id="${postId}">
+        ${renderAttachments(post.attachments)}
+        <div class="text-content">${escapeHTML(post.text || '')}</div>
+        <div class="post-content-clear" aria-hidden="true"></div>
+        ${renderVideoAttachmentsHTML(post.attachments)}
+        ${renderMediaHTML(images, 'post-media-grid', true)}
+        <div class="time">${escapeHTML(post.time || '')}</div>
+      </div>
+      <div class="top-post-actions">
+        ${isWorkspaceWritable() ? `<button class="more top-post-more" type="button" data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)" aria-label="更多">${moreMenuIcon()}</button>` : ''}
+      </div>
+    </div>`;
+  hydrateAttachments(card);
+  hydrateVideoAttachments(card);
+}
+
 function loadPosts() {
   try {
     const saved = AppStorage.getItem(POSTS_KEY);
@@ -69,12 +284,12 @@ function renderPosts() {
     </div>
   ` : '';
 
-  const postsHTML = posts.map((post) => {
+  const postsHTML = getFeedPosts().map((post) => {
     const images = Array.isArray(post.images) ? post.images : [];
     const postId=escapeHTML(String(post.id));
 
     return `
-      <article class="post common_border" data-post-id="${postId}">
+      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post))}">
         <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
@@ -93,11 +308,11 @@ function renderPosts() {
 
   releaseAttachmentUrls(list);
   list.innerHTML = composerHTML + postsHTML;
+  renderTopPost();
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
   requestAnimationFrame(fit);
 }
-function syncComposerViewport() { ViewportManager.requestUpdate(); }
 
 function syncPostEditorDraft() {
   if (EditorController.state === EditorController.State.EDITING || EditorController.state === EditorController.State.TOOL_ACTIVE) {
@@ -143,7 +358,7 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
       mode: postId === null ? 'create' : 'edit', postId,
       text: editDraft ? String(editDraft.text || '') : prefillText,
       images: editDraft?.images || [], attachments: editDraft?.attachments || [],
-      favorite: editDraft?.favorite
+      starState: getPostStarState(editDraft)
     });
     editingPostId = initialDraft.postId;
     const screen = document.getElementById('postComposeScreen');
@@ -405,25 +620,65 @@ function syncPostFavoriteAction() {
   if (!button) return;
 
   const post = posts.find(item => String(item.id) === String(activePostActionId));
-  const active = !!post?.favorite;
-  button.classList.toggle('active', active);
-  button.setAttribute('aria-pressed', active ? 'true' : 'false');
+  const state = getPostStarState(post);
+  button.classList.toggle('active', state === 'starred');
+  button.classList.toggle('super-active', state === 'super_starred');
+  button.setAttribute('aria-pressed', state === 'none' ? 'false' : 'true');
+  button.setAttribute('data-star-state', state);
+}
+
+async function commitStarStateChange(previous) {
+  syncPostFavoriteAction();
+  renderPosts();
+  const saved = await savePosts();
+  if (!saved) {
+    posts = previous;
+    renderPosts();
+    syncPostFavoriteAction();
+    return false;
+  }
+  return true;
 }
 
 async function toggleFavoriteActivePost() {
   if (!isWorkspaceWritable() || activePostActionId === null) return;
-
   const post = posts.find(item => String(item.id) === String(activePostActionId));
   if (!post) return;
 
-  const previous = !!post.favorite;
-  post.favorite = !previous;
-  syncPostFavoriteAction();
+  const previous = structuredClone(posts);
+  const state = getPostStarState(post);
+  setPostStarState(post, state === 'none' ? 'starred' : 'none');
+  await commitStarStateChange(previous);
+}
 
-  const saved = await savePosts();
-  if (!saved) {
-    post.favorite = previous;
-    syncPostFavoriteAction();
+async function toggleSuperStarActivePost() {
+  if (!isWorkspaceWritable() || activePostActionId === null) return;
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  if (!post) return;
+
+  const previous = structuredClone(posts);
+  // Long-press is an idempotent "make this the Super Star" action.
+  // It never cancels the current Super Star; cancellation is click-only.
+  for (const item of posts) {
+    if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
+  }
+  setPostStarState(post, 'super_starred');
+
+  // Super Star moves the post into Top Post, so the action menu anchored to the
+  // post's old screen coordinates must disappear before the list is rebuilt.
+  closePostActionPanel();
+
+  const saved = await commitStarStateChange(previous);
+  if (!saved) return;
+
+  // Reuse exactly the same home-return behavior as Android's Back button.
+  // At this point overlays are closed, so the existing navigation function
+  // naturally scrolls the main sliding page to its top.
+  if (typeof returnToStandardHome === 'function') {
+    returnToStandardHome();
+  } else {
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => fit());
   }
 }
 
@@ -484,6 +739,33 @@ function deleteActivePost() {
   openDeleteConfirm('post', postId, anchorRect);
 }
 
+let favoriteLongPressTimer = null;
+let suppressFavoriteClick = false;
+
+document.addEventListener('pointerdown', event => {
+  const button = event.target.closest('#postFavoriteAction[data-post-action="favorite"]');
+  if (!button) return;
+  suppressFavoriteClick = false;
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = setTimeout(() => {
+    suppressFavoriteClick = true;
+    if (navigator.vibrate) navigator.vibrate(28);
+    void toggleSuperStarActivePost();
+  }, 550);
+});
+
+document.addEventListener('pointerup', () => {
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = null;
+});
+document.addEventListener('pointercancel', () => {
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = null;
+});
+document.addEventListener('contextmenu', event => {
+  if (event.target.closest('#postFavoriteAction')) event.preventDefault();
+});
+
 document.addEventListener('click', event => {
   const editorOpen = event.target.closest('[data-editor-open="create"]');
   if (editorOpen) {
@@ -495,7 +777,10 @@ document.addEventListener('click', event => {
   if (action) {
     event.preventDefault();
     if (action === 'edit') void editActivePost();
-    if (action === 'favorite') void toggleFavoriteActivePost();
+    if (action === 'favorite') {
+      if (suppressFavoriteClick) { suppressFavoriteClick = false; return; }
+      void toggleFavoriteActivePost();
+    }
     if (action === 'delete') void deleteActivePost();
     return;
   }
@@ -559,7 +844,7 @@ async function commitPostDraft(draft) {
       savedPost = {
         id: nextEntryId(), uuid: entryUuid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
         attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images],
-        favorite: draft.favorite, time: formatNowForPost()
+        starState: 'none', time: formatNowForPost()
       };
       posts.unshift(savedPost);
     } else {
@@ -567,7 +852,7 @@ async function commitPostDraft(draft) {
       if (index < 0) throw Error('This post no longer exists. Please reopen it from the feed.');
       savedPost = {
         ...structuredClone(posts[index]), updatedAt: new Date().toISOString(),
-        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images], favorite: draft.favorite
+        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images], starState: normalizeStarStateValue(draft.starState)
       };
       posts[index] = savedPost;
     }

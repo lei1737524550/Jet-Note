@@ -1,6 +1,9 @@
 package com.ingeniousidea.space;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.view.HapticFeedbackConstants;
@@ -39,6 +42,22 @@ final class NativeBridge {
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
+
+    /** Returns Android's current battery percentage, or -1 if unavailable. */
+    @JavascriptInterface
+    public int getBatteryPercentage() {
+        try {
+            Intent batteryStatus = activity.registerReceiver(
+                    null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (batteryStatus == null) return -1;
+            int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            if (level < 0 || scale <= 0) return -1;
+            return Math.max(0, Math.min(100, Math.round(level * 100f / scale)));
+        } catch (Exception ignored) {
+            return -1;
+        }
+    }
 
     @JavascriptInterface
     public void hapticLongPress() {

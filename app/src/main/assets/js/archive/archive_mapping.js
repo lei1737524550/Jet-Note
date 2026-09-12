@@ -28,7 +28,7 @@ const ArchiveMapping={
     }
     return {
       ...(record.archiveFields||{
-      }),id:record.uuid,type:'post',text:record.text||'',createdAt:record.createdAt??null,updatedAt:record.updatedAt??null,attachments,extra:{
+      }),id:record.uuid,type:'post',text:record.text||'',createdAt:record.createdAt??null,updatedAt:record.updatedAt??null,starState:normalizeStarStateValue(record.starState),attachments,extra:{
         ...(record.archiveExtra||record.extra||{
         }),jetNoteRecord:raw
       }
@@ -68,13 +68,15 @@ const ArchiveMapping={
       if(Array.isArray(raw.images))raw.images=raw.images.map(ref); else raw.images=[];
       if(typeof raw.text!=='string'||raw.images.some(source=>!NativeMedia.isImage(source)))throw Error('Invalid post content');
       raw.uuid=stableId; raw.createdAt=entry.createdAt??null; raw.updatedAt=entry.updatedAt??null; raw.time=typeof raw.time==='string'?raw.time:(entry.createdAt||'');
+      if(entry.starState==='super_starred'||entry.starState==='starred'||entry.starState==='none')raw.starState=entry.starState;
+      raw=normalizePostStarStateRecord(raw,{allowLegacyFavorite:true});
       raw.archiveExtra={
         ...(entry.extra||{
         })
       }; delete raw.archiveExtra.jetNoteRecord;
       raw.archiveFields={
         ...entry
-      }; for(const key of ['id','type','text','createdAt','updatedAt','attachments','extra'])delete raw.archiveFields[key];
+      }; for(const key of ['id','type','text','createdAt','updatedAt','starState','attachments','extra'])delete raw.archiveFields[key];
       raw.attachments=attachments.map(item=>{
         const copy={
           ...item

@@ -7,6 +7,7 @@ import android.os.Build;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
@@ -30,12 +31,7 @@ final class EdgeToEdgeController {
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         window.setStatusBarColor(Color.TRANSPARENT);
         window.setNavigationBarColor(Build.VERSION.SDK_INT >= 26 ? Color.TRANSPARENT : 0x66000000);
-        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-        window.getDecorView().setSystemUiVisibility(flags);
+        applySystemBarVisibility();
         if (Build.VERSION.SDK_INT >= 28) {
             WindowManager.LayoutParams params = window.getAttributes();
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
@@ -75,6 +71,45 @@ final class EdgeToEdgeController {
             return insets;
         });
         webView.requestApplyInsets();
+    }
+
+    /** Hide only the top status bar. The navigation bar remains visible.
+     *  A swipe from the top edge may reveal the status bar transiently. */
+    @SuppressWarnings("deprecation")
+    void hideStatusBar() {
+        applySystemBarVisibility();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applySystemBarVisibility() {
+        Window window = activity.getWindow();
+        if (Build.VERSION.SDK_INT >= 30) {
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsBehavior(
+                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                controller.hide(WindowInsets.Type.statusBars());
+
+                // Keep icon appearance explicit for a light Jet Note surface.
+                int appearance = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS;
+                if (Build.VERSION.SDK_INT >= 26) {
+                    appearance |= WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                }
+                controller.setSystemBarsAppearance(appearance, appearance);
+            }
+            return;
+        }
+
+        // API 23-29 fallback: fullscreen hides the status bar only; notably,
+        // SYSTEM_UI_FLAG_HIDE_NAVIGATION is intentionally not used.
+        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if (Build.VERSION.SDK_INT >= 26) flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        window.getDecorView().setSystemUiVisibility(flags);
     }
 
     void dispatchInsets() {

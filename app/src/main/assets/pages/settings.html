@@ -19,13 +19,42 @@
         <p id="archiveStatus" role="status"></p>
         <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel">Preparing…</span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div>
       </div>
-      <div class="settings-card common_border" id="backgroundAppearanceCard">
-        <div class="settings-row-title">Background</div>
-        <div class="rgb-editor open common_border" id="backgroundRgbEditor">
-          <div class="rgb-inputs"><label>R<input class="common_border" id="backgroundR" type="number" inputmode="numeric" min="0" max="255" value="255"></label><label>G<input class="common_border" id="backgroundG" type="number" inputmode="numeric" min="0" max="255" value="255"></label><label>B<input class="common_border" id="backgroundB" type="number" inputmode="numeric" min="0" max="255" value="255"></label></div>
-          <button class="rgb-apply common_border" onclick="saveRgbBackground()">Apply</button>
+      <div class="settings-card color-view-card common_border" id="colorViewCard">
+        <div class="settings-row-title">Color View</div>
+        <div class="color-view-tool common_border">
+          <div class="color-view-picker-column">
+            <div class="color-view-field common_border" id="colorViewField" role="application" aria-label="Saturation and brightness color field" tabindex="0">
+              <div class="color-view-field-handle" id="colorViewFieldHandle" aria-hidden="true"></div>
+            </div>
+            <div class="color-view-hue-control">
+              <div class="color-view-hue common_border" id="colorViewHue" role="slider" aria-label="Hue" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
+                <div class="color-view-hue-handle" id="colorViewHueHandle" aria-hidden="true"></div>
+              </div>
+              <div class="color-view-hue-caret" id="colorViewHueCaret" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="color-view-preview-column">
+            <div class="color-view-text-preview common_border" id="colorViewTextPreview1">天地玄黄 宇宙洪荒 龟龙麟凤 日月星辰</div>
+            <div class="color-view-text-preview color-view-text-preview-latin common_border" id="colorViewTextPreview2">ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
+
+            <div class="color-view-rgb-grid" aria-label="RGB values">
+              <div class="color-view-rgb-label color-view-rgb-label-r">R</div>
+              <div class="color-view-rgb-label color-view-rgb-label-g">G</div>
+              <div class="color-view-rgb-label color-view-rgb-label-b">B</div>
+              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="Red">
+              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Green">
+              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Blue">
+            </div>
+          </div>
+
+          <div class="color-view-actions">
+            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewSetBackgroundButton" type="button"></button></div>
+            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewModeToggleButton" type="button"></button></div>
+            <div class="color-view-action-cell"><button class="color-view-action-button common_border" id="colorViewExportButton" type="button"></button></div>
+          </div>
+          <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
         </div>
-        <p class="settings-status" id="appearanceStatus" role="status"></p>
       </div>
     </div>
   </section>

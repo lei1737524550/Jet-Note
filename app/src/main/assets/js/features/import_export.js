@@ -157,8 +157,8 @@ async function importSnapshot(incoming, mode) {
   }
 
   const current = (await EntryStore.read()) || { posts: [] };
-  const localPosts = Array.isArray(current.posts) ? current.posts : [];
-  const importedPosts = Array.isArray(incoming.posts) ? incoming.posts : [];
+  const localPosts = enforceSingleSuperStar(Array.isArray(current.posts) ? current.posts : []);
+  const importedPosts = enforceSingleSuperStar(Array.isArray(incoming.posts) ? incoming.posts : []);
   const importedMedia = Array.isArray(incoming.media) ? incoming.media : [];
   const used = new Set(localPosts.map(item => item.id));
   let next = Math.max(Date.now(), ...used) + 1;
@@ -229,7 +229,7 @@ async function importSnapshot(incoming, mode) {
   }
 
   if (mode === 'replace') used.clear();
-  const nextPosts = combine(localPosts, importedPosts);
+  const nextPosts = enforceSingleSuperStar(combine(localPosts, importedPosts));
 
   /*
    * Existing media is relevant for merge/add collision protection. During a
@@ -308,7 +308,7 @@ async function exportNativeArchive(){
   setArchiveProgress({message:'Preparing export data…',percent:0});
   try{
     const state=await EntryStore.read(),payload={
-      appVersion:'3.7',posts:[]
+      appVersion:'4.0',posts:[]
     };
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
