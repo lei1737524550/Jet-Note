@@ -100,13 +100,6 @@
 .post-action-icon {
   display: block;
 }
-.post-action-label {
-  font-weight: 500;
-  color: #222;
-}
-.post-action-btn.delete .post-action-label {
-  color: #d93636;
-}
 .post-action-btn.delete .post-action-icon {
   stroke: #d93636;
 }
@@ -126,8 +119,6 @@
   width: 100%;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  border: 1px solid #dedede;
-  border-radius: 10px;
   background: #f2f2f2;
 }
 .compose-image-item img {
@@ -202,7 +193,6 @@
   position:relative;
   min-width:0;
   overflow:hidden;
-  border-radius:10px;
   background:#111;
 }
 .post-video-grid .video-attachment-item { aspect-ratio:16/9; }
@@ -249,8 +239,6 @@
   width:100%;
   aspect-ratio:1/1;
   overflow:hidden;
-  border:1px solid #dedede;
-  border-radius:10px;
   background:#111;
 }
 .compose-video-item video {
@@ -384,8 +372,6 @@
   gap: 10px;
   padding: 10px;
   background: #fff;
-  border: 1px solid rgb(155,155,155);
-  border-radius: 15px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
 .post-action-panel.open {
@@ -394,8 +380,6 @@
 .post-action-btn {
   min-height: 126px !important;
   height: 126px !important;
-  border: 1px solid rgb(155,155,155);
-  border-radius: 13px;
   background: #fff;
   display: flex;
   flex-direction: column;
@@ -408,18 +392,12 @@
   width: 32px !important;
   height: 32px !important;
 }
-.post-action-label {
-  font-size: 18px !important;
-  line-height: 1.2;
-}
 .delete-confirm-backdrop {
   z-index: 30010 !important;
 }
 .delete-confirm-panel {
   width: 286px !important;
   padding: 10px !important;
-  border: 1px solid rgb(155,155,155);
-  border-radius: 15px !important;
   background: #fff;
   box-shadow: 0 8px 24px rgba(0,0,0,.12);
 }
@@ -439,8 +417,6 @@
 .delete-confirm-btn {
   min-height: 126px !important;
   height: 126px !important;
-  border: 1px solid rgb(155,155,155);
-  border-radius: 13px !important;
   background: #fff;
   display: flex;
   flex-direction: column;
@@ -473,8 +449,6 @@
 .jet-notice{
   width:min(310px,100%);
   padding:20px 18px 16px;
-  border:1px solid rgba(70,84,99,.2);
-  border-radius:18px;
   background:#fff;
   box-shadow:0 18px 46px rgba(24,32,42,.22);
   text-align:center
@@ -522,10 +496,8 @@
   max-width:calc(100vw - 16px)!important;
   display:none!important;
   grid-template-columns:none!important;
-  gap:2px!important;
-  padding:4px!important;
-  border:1px solid #bfc1c4!important;
-  border-radius:11px!important;
+  gap:0!important;
+  padding:0!important;
   background:#fff!important;
   box-shadow:0 5px 18px rgba(21,31,42,.18)!important;
   pointer-events:auto!important
@@ -534,26 +506,20 @@
   display:flex!important
 }
 .post-action-btn{
-  width:auto!important;
+  width:36px!important;
   height:36px!important;
   min-height:36px!important;
-  padding:6px 10px!important;
-  border:0!important;
-  border-radius:8px!important;
+  padding:0!important;
   background:#fff!important;
   display:flex!important;
   flex-direction:row!important;
   align-items:center!important;
   justify-content:center!important;
-  gap:5px!important
+  gap:0!important
 }
 .post-action-icon{
   width:17px!important;
   height:17px!important
-}
-.post-action-label{
-  font-size:14px!important;
-  white-space:nowrap
 }
 .more{
   width:32px!important;
@@ -587,8 +553,6 @@
   width:max-content!important;
   max-width:calc(100vw - 16px)!important;
   padding:4px!important;
-  border:1px solid #bfc1c4!important;
-  border-radius:11px!important;
   background:#fff!important;
   box-shadow:0 5px 18px rgba(21,31,42,.18)!important
 }
@@ -608,12 +572,10 @@
   gap:2px!important
 }
 .delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn{
-  width:auto!important;
+  width:36px!important;
   height:36px!important;
   min-height:36px!important;
-  padding:6px 10px!important;
-  border:0!important;
-  border-radius:8px!important;
+  padding:0!important;
   background:#fff!important;
   display:flex!important;
   flex-direction:row!important;
@@ -635,7 +597,7 @@
   white-space:nowrap!important
 }
 
-/* V39 — stable video cards. WebView renders only a poster; Android owns playback. */
+/* Stable video cards: poster first, inline video created lazily after a tap. */
 .native-video-card {
   position:relative;
   background:#111;
@@ -645,50 +607,17 @@
 }
 .native-video-card .video-poster {
   position:relative;
-  z-index:0;
+  z-index:2;
   display:block;
   width:100%;
   height:100%;
   object-fit:cover;
   background:linear-gradient(145deg,#333,#111);
 }
+.native-video-card .video-poster[hidden] { display:none !important; }
 .native-video-card.poster-unavailable .video-poster { opacity:0; }
-.video-play {
-  z-index:3;
-  position:absolute;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  width:58px;
-  height:58px;
-  border:0;
-  border-radius:50%;
-  background:rgba(255,255,255,.9);
-  display:grid;
-  place-items:center;
-  padding:0;
-  box-shadow:0 2px 12px rgba(0,0,0,.24);
-}
-.video-play-triangle {
-  display:block;
-  width:0;
-  height:0;
-  border-top:10px solid transparent;
-  border-bottom:10px solid transparent;
-  border-left:16px solid #111;
-  margin-left:4px;
-}
-.compose-video-item .video-play {
-  width:44px;
-  height:44px;
-}
-.compose-video-item .video-play-triangle {
-  border-top-width:8px;
-  border-bottom-width:8px;
-  border-left-width:13px;
-}
 
-/* V40 — lazy inline video player. No Chromium native controls are used. */
+/* Lazy inline video player. The video surface itself toggles play/pause. */
 .native-video-card .inline-video-player {
   position:absolute;
   inset:0;
@@ -704,79 +633,17 @@
   -webkit-backface-visibility:hidden;
 }
 .native-video-card.video-loaded { cursor:default; }
-.video-inline-controls {
-  position:absolute;
-  inset:0;
-  z-index:2;
-  pointer-events:none;
-  opacity:0;
-  visibility:hidden;
-  transition:opacity .14s ease, visibility .14s ease;
+
+/* Inline posts always use Jet Note's tap and progress UI. Prevent WebKit from
+   injecting a transient native control surface when playback begins. */
+.native-video-card .inline-video-player::-webkit-media-controls,
+.native-video-card .inline-video-player::-webkit-media-controls-enclosure,
+.native-video-card .inline-video-player::-webkit-media-controls-panel,
+.native-video-card .inline-video-player::-webkit-media-controls-play-button,
+.native-video-card .inline-video-player::-webkit-media-controls-start-playback-button {
+  display:none !important;
+  -webkit-appearance:none !important;
 }
-.native-video-card.video-controls-visible .video-inline-controls {
-  opacity:1;
-  visibility:visible;
-}
-.video-inline-toggle {
-  pointer-events:auto;
-  position:absolute;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  width:58px;
-  height:58px;
-  border:0;
-  border-radius:50%;
-  padding:0;
-  background:rgba(255,255,255,.88);
-  display:grid;
-  place-items:center;
-}
-.video-pause-symbol {
-  width:18px;
-  height:23px;
-  border-left:6px solid #111;
-  border-right:6px solid #111;
-  box-sizing:border-box;
-}
-.video-inline-bottom {
-  pointer-events:auto;
-  position:absolute;
-  left:12px;
-  right:12px;
-  bottom:10px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:7px 9px;
-  border-radius:10px;
-  background:rgba(0,0,0,.5);
-}
-.video-inline-time {
-  flex:0 0 auto;
-  color:#fff;
-  font-size:12px;
-  font-variant-numeric:tabular-nums;
-  white-space:nowrap;
-}
-.video-inline-seek {
-  flex:1 1 auto;
-  min-width:0;
-  margin:0;
-  accent-color:#fff;
-}
-.compose-video-item .video-inline-toggle {
-  width:42px;
-  height:42px;
-}
-.compose-video-item .video-inline-bottom {
-  left:6px;
-  right:6px;
-  bottom:5px;
-  gap:5px;
-  padding:4px 5px;
-}
-.compose-video-item .video-inline-time { display:none; }
 
 
 /* Startup loader */
@@ -823,3 +690,150 @@
   font-variant-numeric: tabular-nums;
 }
 html.startup-loading-active body { overflow: hidden !important; }
+
+
+/* Jet Note inline video: tap the picture to play/pause; progress lives directly below. */
+.video-attachment-shell {
+    width: 100%;
+    min-width: 0;
+}
+
+.video-progress-track {
+    position: relative;
+    width: 100%;
+    height: 7px;
+    margin-top: 1px;
+    overflow: hidden;
+    background: #fff;
+    cursor: pointer;
+    touch-action: none;
+}
+
+.video-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: #111214;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.video-inline-time {
+    width: 100%;
+    margin-top: 4px;
+    color: #757a80;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+
+.post-action-btn.favorite .post-action-star {
+    fill: transparent;
+    stroke: #555;
+    transition: fill .14s ease, stroke .14s ease;
+}
+
+.post-action-btn.favorite.active .post-action-star {
+    fill: #f4c430;
+    stroke: #b48a00;
+}
+
+/* Final compact post-menu rules. */
+#postActionPanel.post-action-panel { padding:0 !important; gap:0 !important; overflow:hidden; }
+#postActionPanel.post-action-panel .post-action-btn { margin:0 !important; }
+.delete-confirm-btn .delete-confirm-x-icon,
+.delete-confirm-btn .delete-confirm-trash-icon { width:24px; height:24px; display:block; }
+.delete-confirm-btn .delete-confirm-trash-icon { object-fit:contain; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-panel { padding:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-actions { gap:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn { width:36px !important; padding:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn .delete-confirm-x-icon,
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn .delete-confirm-trash-icon { width:17px; height:17px; }
+
+/* Three-dot post actions: one generous shared surface, no circles or boxes
+   around individual icons. 19px is the former 17px icon scaled to 110%. */
+#postActionPanel.post-action-panel { border-radius: 14px; }
+#postActionPanel.post-action-panel .post-action-btn {
+  width: 50px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+#postActionPanel.post-action-panel .post-action-btn + .post-action-btn {
+  border-left: 1px solid #edf0f2 !important;
+}
+#postActionPanel.post-action-panel .post-action-icon { width: 19px !important; height: 19px !important; }
+#postActionPanel.post-action-panel .post-action-trash-icon {
+  filter: invert(22%) sepia(93%) saturate(2591%) hue-rotate(347deg) brightness(88%) contrast(90%);
+}
+
+/* The progress track directly touches the video edge—no accidental 1px seam. */
+.video-progress-track { margin-top: 0 !important; }
+
+/* Post Action Menu: normal (three actions) and delete-confirm (two actions)
+   are two states of one surface. Keep all visual metrics in this shared base. */
+.post-action-menu {
+  --post-action-menu-size: 50px;
+  --post-action-menu-icon-size: 19px;
+  --post-action-menu-divider: #edf0f2;
+  --post-action-menu-danger-filter: invert(22%) sepia(93%) saturate(2591%) hue-rotate(347deg) brightness(88%) contrast(90%);
+}
+#postActionPanel.post-action-menu,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu {
+  height: var(--post-action-menu-size) !important;
+  min-height: var(--post-action-menu-size) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: 0 5px 18px rgba(21,31,42,.18) !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-button,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button {
+  width: var(--post-action-menu-size) !important;
+  height: var(--post-action-menu-size) !important;
+  min-height: var(--post-action-menu-size) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #222 !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-button + .post-action-menu-button,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button + .post-action-menu-button {
+  border-left: 1px solid var(--post-action-menu-divider) !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-icon,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-icon {
+  display: block !important;
+  width: var(--post-action-menu-icon-size) !important;
+  height: var(--post-action-menu-icon-size) !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-actions {
+  display: flex !important;
+  height: var(--post-action-menu-size) !important;
+  gap: 0 !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button.delete {
+  color: #d93636 !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-trash-icon,
+#postActionPanel.post-action-menu .post-action-trash-icon {
+  filter: var(--post-action-menu-danger-filter) !important;
+}
+
+
+/* Jet Note custom scrollbar: 20px interaction lane, 300px track, only visible when content overflows. */
+.jet-scrollbar{position:fixed;left:0;right:auto;top:50%;transform:translateY(-50%);width:20px;height:300px;z-index:28000;pointer-events:none;display:none;align-items:stretch;justify-content:center;}
+.jet-scrollbar.visible{display:flex;}
+.jet-scrollbar-track{position:relative;width:4px;height:100%;border-radius:999px;background:rgba(120,128,136,.10);overflow:hidden;pointer-events:auto;}
+.jet-scrollbar-thumb{position:absolute;left:0;width:100%;min-height:28px;border-radius:999px;background:#8b9299;opacity:.72;transform:translateY(0);will-change:transform,height;touch-action:none;}
+.jet-scrollbar-thumb:active{opacity:.95;}

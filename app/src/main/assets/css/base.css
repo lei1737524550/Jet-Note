@@ -9,19 +9,32 @@
   --body-size:17px;
   --body-leading:1.5;
   --card-radius:14px;
+  --common-border-color:#bfc1c4;
+  --common-border-width:1px;
+  --common-border-radius:14px;
+  --content-horizontal-padding:8px;
   --safe-top:env(safe-area-inset-top,0px);
   --safe-bottom:env(safe-area-inset-bottom,0px);
   --safe-left:env(safe-area-inset-left,0px);
   --safe-right:env(safe-area-inset-right,0px);
-  /* Matches the native Dictionary / Sentence toolbar: 50dp bar, 36dp controls. */
+  /* Fallback values for the reusable Jet Note top bar.
+     Runtime values are loaded from config.json -> top_bar by jet_topbar.js. */
   --jet-toolbar-height:50px;
   --jet-toolbar-control-height:36px;
   --jet-toolbar-title-size:16px;
   --jet-toolbar-control-size:14px;
-  --jet-toolbar-control-padding-x:12px;
-  --jet-toolbar-control-radius:12px;
-  --jet-toolbar-side-slot:88px;
-  --jet-toolbar-horizontal-padding:8px;
+  --jet-toolbar-left-axis:44px;
+  --jet-toolbar-right-axis:44px;
+  --jet-toolbar-icon-width:48px;
+  --jet-toolbar-text-min-width:48px;
+  --jet-toolbar-control-radius:14px;
+  --jet-toolbar-background:#f8f9fa;
+  --jet-toolbar-border-color:#bfc1c4;
+  --jet-toolbar-divider-color:#eceef1;
+  --jet-toolbar-title-color:#202124;
+  --jet-toolbar-normal-color:#222222;
+  --jet-toolbar-primary-color:#1599e8;
+  --jet-toolbar-tool-action-color:#168a45;
 }
 html,body {
   margin:0;
@@ -40,6 +53,17 @@ body {
   background-attachment:fixed;
   overflow-x:hidden;
 }
+
+/* Hide platform/browser scrollbars without disabling scrolling. */
+html,body,.post-compose-body{ scrollbar-width:none; -ms-overflow-style:none; }
+html::-webkit-scrollbar,body::-webkit-scrollbar,.post-compose-body::-webkit-scrollbar{ width:0; height:0; display:none; }
+/* Shared rectangular boundary for Jet Note boxes and box-like controls. */
+.common_border {
+  box-sizing:border-box;
+  border:var(--common-border-width) solid var(--common-border-color);
+  border-radius:var(--common-border-radius);
+}
+
 button,input,textarea {
   font:inherit;
   color:inherit;
@@ -140,20 +164,18 @@ button:focus-visible {
 }
 .feed {
   width:100%;
-  padding:0 8px;
+  padding:0 var(--content-horizontal-padding);
 }
 .feed-composer-wrap {
-  margin:0 -2px 8px;
-  padding:8px;
-  border-radius:0 0 18px 18px;
-  background:#ffffffeb;
+  width:100%;
+  margin:0 0 8px;
+  padding:0;
+  background:transparent;
 }
 .feed-composer {
   display:flex;
   align-items:center;
   min-height:54px;
-  border:1px solid #cfd1d5;
-  border-radius:14px;
   background:white;
 }
 .feed-composer-main {
@@ -181,10 +203,8 @@ button:focus-visible {
 .post {
   position:relative;
   width:100%;
-  margin:0 0 8px;
+  margin:0 0 6px;
   padding:12px 12px 14px;
-  border:1px solid #bfc1c4;
-  border-radius:var(--card-radius);
   background:white;
 }
 .post-head {
@@ -211,13 +231,18 @@ button:focus-visible {
 }
 .text-content {
   position:relative;
-  margin-top:12px;
+  margin-top:0;
   white-space:pre-wrap;
   overflow-wrap:anywhere;
 }
+.post-content-clear {
+  clear:both;
+  height:0;
+}
 .time {
   position:relative;
-  margin-top:16px;
+  margin-top:3px;
+  margin-bottom:3px;
   color:var(--muted);
   font-size:12px;
 }
@@ -269,4 +294,16 @@ button:focus-visible {
 .home-action-button{width:38px;height:38px;border:0;background:transparent;color:#626a73;padding:7px;display:grid;place-items:center;border-radius:10px;}
 .home-action-button svg{width:24px;height:24px;display:block;fill:currentColor;}
 .home-action-button:nth-child(2) svg{fill:none;stroke:currentColor;}
-.post-head-minimal{min-height:34px;}
+.post-head-minimal{
+  position:relative;
+  z-index:5;
+  float:right;
+  width:40px;
+  min-height:34px;
+  padding-right:0;
+}
+.post-head-minimal .more{
+  z-index:6;
+  pointer-events:auto;
+}
+

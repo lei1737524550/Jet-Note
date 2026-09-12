@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.ext.SdkExtensions;
 import android.provider.MediaStore;
-import android.widget.Toast;
 import android.webkit.ValueCallback;
 
 import java.util.ArrayList;
@@ -43,7 +42,6 @@ final class ImagePickerController {
             document.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
             if (!tryLaunchImagePicker(document)) {
                 finishImageSelection(null);
-                Toast.makeText(activity, "Unable to open the file picker", Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -73,7 +71,6 @@ final class ImagePickerController {
         gallery.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultipleImages);
         if (!tryLaunchImagePicker(gallery)) {
             finishImageSelection(null);
-            Toast.makeText(activity, "No image picker is available. Install or enable a gallery app.", Toast.LENGTH_LONG).show();
         }
     }
 

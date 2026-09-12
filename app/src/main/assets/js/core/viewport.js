@@ -1,25 +1,48 @@
-/* The document uses CSS layout; this compatibility hook is used by renderers. */
-let nativeKeyboardHeight = 0;
-function fit() { syncViewport(); }
-function syncViewport() {
-  const vv = window.visualViewport;
-  const visibleHeight = vv ? vv.height : window.innerHeight;
-  const height = nativeKeyboardHeight > 0 ? Math.min(visibleHeight, nativeKeyboardHeight) : visibleHeight;
-  document.documentElement.style.setProperty('--viewport-height', height + 'px');
-  const keyboardOpen = nativeKeyboardHeight > 0 || window.innerHeight - height > 120;
-  document.documentElement.style.setProperty('--content-bottom', keyboardOpen ? '0px' : 'var(--safe-bottom)');
-  return height;
-}
-window.applySystemInsets = function(top, right, bottom, left, keyboardHeight = 0) {
-  // Native coordinates are physical pixels; CSS pixels use devicePixelRatio.
-  const ratio = window.devicePixelRatio || 1;
-  nativeKeyboardHeight = keyboardHeight / ratio;
-  for (const [name, value] of Object.entries({top,right,bottom,left})) {
-    document.documentElement.style.setProperty('--safe-' + name, Math.max(0, value / ratio) + 'px');
+/* Single owner of viewport geometry. Screens consume CSS variables only. */
+const ViewportManager = (() => {
+  let nativeKeyboardHeight = 0;
+  let scheduled = false;
+
+  function update() {
+    scheduled = false;
+    const vv = window.visualViewport;
+    const height = Math.max(1, vv ? vv.height : window.innerHeight);
+    const width = Math.max(1, vv ? vv.width : window.innerWidth);
+    const offsetTop = vv ? vv.offsetTop : 0;
+    const offsetLeft = vv ? vv.offsetLeft : 0;
+    const keyboardOpen = nativeKeyboardHeight > 0 || window.innerHeight - height > 120;
+    const root = document.documentElement.style;
+    root.setProperty('--viewport-height', `${height}px`);
+    root.setProperty('--viewport-width', `${width}px`);
+    root.setProperty('--viewport-offset-top', `${offsetTop}px`);
+    root.setProperty('--viewport-offset-left', `${offsetLeft}px`);
+    root.setProperty('--keyboard-open', keyboardOpen ? '1' : '0');
+    root.setProperty('--content-bottom', keyboardOpen ? '0px' : 'var(--safe-bottom)');
+    return { height, width, offsetTop, offsetLeft, keyboardOpen };
   }
-  syncViewport();
-  if (typeof syncComposerViewport === 'function') syncComposerViewport();
-};
-window.addEventListener('resize', syncViewport);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', syncViewport);
-syncViewport();
+  function requestUpdate() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(update);
+  }
+  function applySystemInsets(top, right, bottom, left, keyboardHeight = 0) {
+    const ratio = window.devicePixelRatio || 1;
+    nativeKeyboardHeight = Math.max(0, keyboardHeight / ratio);
+    const root = document.documentElement.style;
+    for (const [name, value] of Object.entries({ top, right, bottom, left })) {
+      root.setProperty(`--safe-${name}`, `${Math.max(0, value / ratio)}px`);
+    }
+    update();
+  }
+
+  window.addEventListener('resize', requestUpdate, { passive: true });
+  window.visualViewport?.addEventListener('resize', requestUpdate, { passive: true });
+  window.visualViewport?.addEventListener('scroll', requestUpdate, { passive: true });
+  window.applySystemInsets = applySystemInsets;
+  update();
+  return Object.freeze({ update, requestUpdate, applySystemInsets });
+})();
+
+/* Compatibility for existing call sites while migration is in progress. */
+function syncViewport() { return ViewportManager.update().height; }
+function fit() { ViewportManager.requestUpdate(); }

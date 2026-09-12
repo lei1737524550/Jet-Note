@@ -15,8 +15,6 @@
 }
 .attachment-item {
   min-width:0;
-  border:1px solid #c8cdd2;
-  border-radius:14px;
   background:#f8fafb;
   padding:10px;
 }
@@ -33,8 +31,6 @@
 .attachment-item button {
   margin-top:8px;
   padding:6px 12px;
-  border:1px solid #ddd;
-  border-radius:8px;
   background:white;
   font-size:14px;
 }
@@ -55,8 +51,6 @@
 .import-panel button {
   min-height:44px;
   padding:10px 12px;
-  border:1px solid #bfc1c4;
-  border-radius:12px;
   background:white;
   margin:4px;
   font-size:15px;
@@ -84,8 +78,6 @@
   overflow:auto;
   padding:18px;
   background:white;
-  border:1px solid #bfc1c4;
-  border-radius:14px;
 }
 .import-panel select {
   display:block;
@@ -102,6 +94,33 @@ button:disabled {
   opacity:.45;
 }
 /* Compact post audio: one source icon per independent attachment. */
+/* Timeline audio participates in the same upper-right flow as the ⋯ menu.
+   Each audio source remains an independent control; multiple sources wrap as a
+   compact group while post text flows into the remaining space. */
+.post > .attachment-strip{
+  float:right;
+  width:auto;
+  max-width:calc(100% - 44px);
+  min-height:32px;
+  margin:-3px 4px 4px 0;
+  gap:4px;
+  justify-content:flex-end;
+  position:relative;
+  z-index:4;
+}
+.post > .attachment-strip .audio-token-play{
+  width:32px;
+  height:32px;
+  padding:6px;
+}
+.post > .attachment-strip .audio-token-play svg{
+  width:18px;
+  height:18px;
+  /* The speaker glyph is visually left-heavy inside its 24x24 viewBox.
+     A small optical correction keeps it centered in the 32px button. */
+  transform:translateX(1.5px);
+}
+
 .attachment-strip{
   display:flex;
   justify-content:flex-end;
@@ -128,8 +147,6 @@ button:disabled {
   width:34px;
   height:34px;
   padding:7px;
-  border:1px solid #cbd2d9;
-  border-radius:11px;
   background:#f8fafc;
   color:#315f98;
   display:grid;
@@ -138,7 +155,7 @@ button:disabled {
 .audio-token-play svg{
   width:19px;
   height:19px;
-  transform:translateX(-4px)
+  transform:translateX(0)
 }
 .audio-token-play sub{
   position:absolute;
@@ -191,16 +208,15 @@ button:disabled {
 }
 .attachment-unknown{
   padding:6px 9px;
-  border:1px solid #d7dce0;
-  border-radius:10px;
   background:#fafbfc;
   font-size:11px
 }
 .post-input-row{
   display:grid;
-  grid-template-columns:minmax(0,1fr) 54px;
+  grid-template-columns:minmax(0,1fr) 48px;
   gap:10px;
-  align-items:start
+  align-items:stretch;
+  min-height:min(320px,100%)
 }
 .post-input-row #postComposerText{
   min-width:0
@@ -219,8 +235,6 @@ button:disabled {
   height:48px;
   min-height:48px;
   padding:10px;
-  border:1px solid #d4d9de;
-  border-radius:14px;
   background:#fff;
   display:grid;
   place-items:center
@@ -228,6 +242,11 @@ button:disabled {
 .post-input-row .compose-add-image svg{
   width:24px;
   height:24px
+}
+.post-input-row .compose-add-image .compose-tool-unfold-icon{
+  width:24px;
+  height:24px;
+  display:block;
 }
 .post-input-row .compose-add-image span{
   position:absolute;
@@ -246,8 +265,6 @@ button:disabled {
 .archive-progress {
   margin: 4px 14px 14px;
   padding: 12px 13px;
-  border: 1px solid #d8dde2;
-  border-radius: 14px;
   background: #fbfcfd;
 }
 .archive-progress[hidden] { display: none !important; }
@@ -284,3 +301,16 @@ button:disabled {
 
 .archive-progress.error { border-color: #efb7b7; background: #fff8f8; }
 .archive-progress.error .archive-progress-fill { background: #d95c5c; }
+
+
+/* Inline tool choices extend the Post Composer toolbar without leaving the editor. */
+.compose-tool-choice[hidden] {
+    display: none !important;
+}
+
+.compose-open-tools[aria-expanded="true"] {
+    background: #f5f6f7;
+}
+
+@keyframes compose-tool-unfold { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.compose-tool-unfolding { animation:compose-tool-unfold 160ms ease-out both; }

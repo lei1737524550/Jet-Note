@@ -1,0 +1,8 @@
+Jet Note 3.9.4 — New Post icon controls
+
+- New Post left action changed from the Cancel text label to the same X vector language used by the post delete-confirm cancel action.
+- New Post right action changed from the Post text label to the supplied send-svgrepo-com.svg artwork.
+- Both controls keep the shared JetTopBar geometry, axes, border, radius, height and hit target.
+- The send icon inherits Jet Note's configured primary action color through a CSS mask.
+- Publishing behavior is unchanged.
+- Edit mode keeps the send icon and changes only its accessible label from Post to Save.

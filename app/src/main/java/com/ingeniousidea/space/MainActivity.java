@@ -50,6 +50,8 @@ public class MainActivity extends Activity {
 
         root = new FrameLayout(this);
         webView = new WebView(this);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
         webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
         webView.setBackgroundColor(Color.rgb(255, 255, 255));
         root.addView(webView, new FrameLayout.LayoutParams(
@@ -61,7 +63,7 @@ public class MainActivity extends Activity {
         imagePicker = new ImagePickerController(this);
         edgeToEdge = new EdgeToEdgeController(this, webView);
         edgeToEdge.install();
-        dictionaryController = new DictionaryController(this, root);
+        dictionaryController = new DictionaryController(this, root, webView, attachmentStore);
         attachmentPicker = new AttachmentPickerController(this, webView, attachmentStore);
         archiveController = new JetNoteArchiveController(this, webView, attachmentStore);
         nativeVideoPlayer = new NativeVideoPlayer(this, root, attachmentStore);
@@ -488,7 +490,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onPause(){if(dictionaryController!=null)dictionaryController.pause();if(webView!=null)webView.onPause();super.onPause();}
-    @Override protected void onResume(){super.onResume();if(webView!=null)webView.onResume();if(dictionaryController!=null)dictionaryController.resume();}
+    @Override protected void onResume(){super.onResume();if(webView!=null){webView.onResume();webView.post(() -> webView.evaluateJavascript("window.dispatchEvent(new Event(\'jetnote:app-resume\'));", null));}if(dictionaryController!=null)dictionaryController.resume();}
 
     @Override
     protected void onDestroy() {

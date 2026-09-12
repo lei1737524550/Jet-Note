@@ -92,14 +92,6 @@ function clearArchiveProgress(delay=0){
   if(delay>0)archiveProgressHideTimer=setTimeout(()=>{box.hidden=true;},delay);
   else box.hidden=true;
 }
-function openDictionary(){
-  if(window.JetNoteNative?.openDictionary)JetNoteNative.openDictionary('en');
-  else window.open('https://www.merriam-webster.com/','_blank','noopener');
-}
-function openSentences(){
-  if(window.JetNoteNative?.openSentences)JetNoteNative.openSentences('en');
-  else window.open('https://soundoftext.com/','_blank','noopener');
-}
 async function exportArchive(){
   if (!isWorkspaceWritable()) return;
   if(!entriesReady||entriesBusy)return;

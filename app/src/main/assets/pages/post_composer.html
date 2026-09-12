@@ -1,0 +1,38 @@
+<!-- New Post page fragment -->
+  <section class="post-compose-screen" id="postComposeScreen">
+    <div class="jet-topbar post-compose-header">
+      <button class="jet-topbar-control jet-topbar-left jet-topbar-icon post-compose-cancel common_border" type="button" data-editor-action="cancel" aria-label="Cancel" data-i18n-aria-label="cancel">
+        <svg class="post-compose-cancel-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+      <div class="jet-topbar-title post-compose-title" data-i18n="writePost">New Post</div>
+      <button class="jet-topbar-control jet-topbar-right jet-topbar-icon post-compose-publish common_border" type="button" data-editor-action="publish" aria-label="Post" data-i18n-aria-label="publish">
+        <span class="post-compose-send-icon" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="post-compose-body">
+      <div class="post-input-row">
+        <textarea id="postComposerText" maxlength="5000" placeholder="Share something..." data-i18n-placeholder="share" oninput="updatePostCount()"></textarea>
+        <!-- Rendered from config.json so order and expanded tools stay configurable. -->
+        <div class="compose-media-toolbar" id="postComposerToolbar" aria-label="Post tools" data-i18n-aria-label="postTools"></div>
+      </div>
+      <div id="postAudioDraft"></div>
+      <div class="compose-image-preview post-compose-images" id="postImagePreview"></div>
+      <div class="compose-video-preview post-compose-videos" id="postVideoPreview"></div>
+
+      <div class="post-compose-count"><span id="postCharCount">0</span>/5000</div>
+    </div>
+  </section>
+  <input id="postAudioPicker" type="file" accept="audio/*,.mp3" multiple hidden onchange="handleAudioFiles(event,'post')">
+  <input id="postImagePicker"
+         type="file"
+         accept="image/*"
+         multiple
+         style="display:none"
+         onchange="handlePostImages(event)">
+  <input id="postVideoPicker"
+         type="file"
+         accept="video/*"
+         multiple
+         style="display:none"
+         onchange="handlePostVideos(event)">

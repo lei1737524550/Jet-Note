@@ -1,0 +1,1 @@
+(function(){'use strict';function apply({expanded,buttons}){buttons.forEach(button=>{button.classList.remove('compose-tool-unfolding');if(!expanded)return;void button.offsetWidth;button.classList.add('compose-tool-unfolding');});}window.JetNoteToolUnfoldAnimation=Object.freeze({apply});})();

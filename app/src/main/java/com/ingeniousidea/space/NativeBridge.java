@@ -42,13 +42,11 @@ final class NativeBridge {
 
 
     @JavascriptInterface
-    public void openDictionary(String language) {
-        dictionary.open("https://www.merriam-webster.com/", "Dictionary", "en");
-    }
-
-    @JavascriptInterface
-    public void openSentences(String language) {
-        dictionary.open("https://soundoftext.com/", "Sentences", "en");
+    public void openTool(String url, String title, String language) {
+        if (url == null || !url.startsWith("https://")) return;
+        String safeTitle = title == null || title.trim().isEmpty() ? "Tool" : title.trim();
+        String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+        dictionary.open(url, safeTitle, safeLanguage);
     }
 
     @JavascriptInterface

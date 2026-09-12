@@ -15,7 +15,7 @@ Jet Note supports text, images, audio, and video, together with a
 built-in dictionary, sentence collection, album, appearance settings,
 Demo mode, web-cache management, and portable `.jnote` backups.
 
-**Current version:** 3.7\
+**Current version:** 3.8\
 **Android package:** `com.ingeniousidea.space`\
 **Minimum Android version:** Android 6.0 (API 23)\
 **Target API:** 34
@@ -430,34 +430,18 @@ Their corresponding license files are included in the project.
 
 Licensing information for the included Feather icons is also retained.
 
-## Build-Time Icon Generation
+## Android Icons
 
-Jet Note can automatically generate its rounded Android application icon
-during the Gradle build.
-
-The generation rules are stored in:
-
-``` text
-app/src/main/res/drawable-nodpi/make_round_png.json
-```
-
-The source image is:
+Jet Note now uses static Android resources directly from the standard resource tree:
 
 ``` text
 app/src/main/res/drawable/icon.png
+app/src/main/res/drawable/icon_rounded.png
 ```
 
-The `generateJetNoteResources` task in `app/build.gradle`:
+`AndroidManifest.xml` references these files through `android:icon` and `android:roundIcon`.
 
-1.  Reads the JSON configuration.
-2.  Loads the source icon.
-3.  Resizes it according to the configuration.
-4.  Applies rounded-corner clipping.
-5.  Generates `icon_rounded.png`.
-6.  Makes the generated resource available to the Android build system.
-
-The rounded icon should therefore be treated as a reproducible generated
-resource rather than the primary source artwork.
+The project no longer generates the rounded icon during the Gradle build and no longer creates an intermediate `build/generated/jetnote-res` resource mirror. This keeps the Android resource pipeline direct and avoids custom generation tasks interfering with resource merging.
 
 ## Data Model
 

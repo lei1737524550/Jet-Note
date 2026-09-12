@@ -1,0 +1,32 @@
+<!-- Settings page fragment -->
+  <section class="settings-screen" id="settingsScreen">
+    <div class="settings-header">
+      <button class="settings-back" onclick="closeSettings()" aria-label="Back">
+        <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M30 9L15 24l15 15"/>
+        </svg>
+      </button>
+      <div class="settings-title" data-i18n="settings">Settings</div>
+    </div>
+
+    <div class="settings-body">
+      <div class="settings-card backup-card common_border" id="backupSettingsCard">
+        <div class="settings-row-title">Backup</div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main">Export .jnote</span></button>
+          <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main">Import .jnote</span></button>
+        </div>
+        <p id="archiveStatus" role="status"></p>
+        <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel">Preparing…</span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div>
+      </div>
+      <div class="settings-card common_border" id="backgroundAppearanceCard">
+        <div class="settings-row-title">Background</div>
+        <div class="rgb-editor open common_border" id="backgroundRgbEditor">
+          <div class="rgb-inputs"><label>R<input class="common_border" id="backgroundR" type="number" inputmode="numeric" min="0" max="255" value="255"></label><label>G<input class="common_border" id="backgroundG" type="number" inputmode="numeric" min="0" max="255" value="255"></label><label>B<input class="common_border" id="backgroundB" type="number" inputmode="numeric" min="0" max="255" value="255"></label></div>
+          <button class="rgb-apply common_border" onclick="saveRgbBackground()">Apply</button>
+        </div>
+        <p class="settings-status" id="appearanceStatus" role="status"></p>
+      </div>
+    </div>
+  </section>
+  <input id="archivePicker" type="file" accept=".jnote,.jet-note,application/vnd.jnote+zip,application/vnd.jet-note+zip,application/zip,application/octet-stream" hidden onchange="selectArchive(event)">

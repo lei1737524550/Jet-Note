@@ -363,32 +363,18 @@ Jet Note 主界面的 HTML 入口。
 
 图标目录中也保留了 Feather 图标许可证。
 
-## 图标生成
+## Android 图标
 
-Jet Note 的 Android 图标支持在构建时自动生成圆角版本。
-
-规则位于：
-
-``` text
-app/src/main/res/drawable-nodpi/make_round_png.json
-```
-
-源图片：
+Jet Note 现在直接使用标准 Android 资源目录中的静态图标：
 
 ``` text
 app/src/main/res/drawable/icon.png
+app/src/main/res/drawable/icon_rounded.png
 ```
 
-`app/build.gradle` 中的 `generateJetNoteResources` 任务会：
+`AndroidManifest.xml` 分别通过 `android:icon` 和 `android:roundIcon` 引用这两个文件。
 
-1.  读取 JSON 规则；
-2.  加载原始图标；
-3.  按配置缩放；
-4.  裁剪圆角；
-5.  生成 Android 最终使用的 `icon_rounded.png`；
-6.  将处理后的资源目录交给 Android 构建系统。
-
-因此圆角图标属于可重新生成的构建资源。
+项目不再在 Gradle 构建过程中动态生成圆角图标，也不再使用中间的 `build/generated/jetnote-res` 资源镜像。这样资源调用链更直接，并避免自定义资源生成任务影响正常的 Android 资源合并。
 
 ## 构建
 

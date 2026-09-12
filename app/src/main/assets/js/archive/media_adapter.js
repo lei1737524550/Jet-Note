@@ -77,7 +77,7 @@ window.JetNoteNativeCallbacks={
   onAttachmentPickError(id,message){
     const p=nativePickResolvers.get(id);
     nativePickResolvers.delete(id);
-    p?.reject(Error(message));
+    p?.reject(Error(message || 'attachment-read-failed'));
   }
 };
 function pickNativeAttachments(type) {
@@ -119,6 +119,8 @@ async function pickEntryMedia(kind, type) {
       : null;
   const button = selector ? document.querySelector(selector) : null;
   if (button?.disabled) return;
+  if (postDraftMediaLoading) return;
+  postDraftMediaLoading = true;
   if (button) button.disabled = true;
 
   try {
@@ -152,9 +154,13 @@ async function pickEntryMedia(kind, type) {
     }
 
     renderAudioDraft(kind);
+    if (typeof syncPostEditorDraft === 'function') syncPostEditorDraft();
   } catch (error) {
-    alert(error.message);
+    const code = String(error?.message || '');
+    const key = code === 'attachment-read-failed' ? 'attachmentReadFailed' : 'attachmentReadFailed';
+    alert(t(key));
   } finally {
+    postDraftMediaLoading = false;
     if (button) button.disabled = false;
   }
 }

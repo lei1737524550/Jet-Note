@@ -81,6 +81,65 @@ final class AttachmentStore {
                 hex(digest.digest()), destination);
     }
 
+    JSONObject importFromStream(
+            InputStream raw, String mimeType, String originalName,
+            String requestedType, long maxBytes
+    ) throws IOException, JSONException {
+        if (raw == null) throw new IOException("Unable to open attachment stream");
+
+        String resolvedName = originalName == null || originalName.trim().isEmpty()
+                ? "attachment"
+                : originalName.trim();
+        String resolvedMime = mimeType == null || mimeType.trim().isEmpty()
+                ? guessMimeFromName(resolvedName)
+                : mimeType.trim();
+        if (resolvedName.toLowerCase(Locale.US).endsWith(".mp3")) resolvedMime = "audio/mpeg";
+
+        if (("audio".equals(requestedType) && !resolvedMime.startsWith("audio/"))
+                || ("image".equals(requestedType) && !resolvedMime.startsWith("image/"))
+                || ("video".equals(requestedType) && !resolvedMime.startsWith("video/"))) {
+            throw new IOException("Attachment has an unsupported media type");
+        }
+
+        String type = normalizeType(requestedType, resolvedMime);
+        String extension = safeExtension(resolvedName, resolvedMime);
+        String id = UUID.randomUUID().toString();
+        String fileName = id + extension;
+        File destination = new File(mediaDir, fileName);
+        MessageDigest digest = sha256Digest();
+        long size = 0L;
+
+        try (DigestInputStream in = new DigestInputStream(raw, digest);
+             FileOutputStream out = new FileOutputStream(destination)) {
+            byte[] buffer = new byte[64 * 1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                size += read;
+                if (maxBytes > 0 && size > maxBytes) {
+                    throw new IOException("Attachment exceeds the size limit");
+                }
+                out.write(buffer, 0, read);
+            }
+        } catch (IOException error) {
+            //noinspection ResultOfMethodCallIgnored
+            destination.delete();
+            throw error;
+        }
+
+        return buildMetadata(
+                id, type, resolvedMime, resolvedName, fileName, size,
+                hex(digest.digest()), destination
+        );
+    }
+
+    void deleteArchivePath(String archivePath) {
+        File file = fileForArchivePath(archivePath);
+        if (file != null && file.isFile()) {
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+        }
+    }
+
     /** One-time compatibility path for old versions that stored compressed data: images in localStorage. */
     JSONObject importLegacyDataUrl(String dataUrl, String originalName) throws IOException, JSONException {
         if (dataUrl == null || !dataUrl.startsWith("data:") || !dataUrl.contains(",")) {

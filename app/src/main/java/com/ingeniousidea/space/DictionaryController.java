@@ -38,11 +38,17 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.HashMap;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -50,7 +56,7 @@ import org.json.JSONObject;
 /** Hosts Jet Note web tools in an isolated WebView with audio discovery and downloads. */
 final class DictionaryController {
     private static final String DOWNLOAD_SCHEME = "jetnote-download";
-    private static final int TOOLBAR_HEIGHT_DP = 50;
+    private final JetTopBarSpec topBarSpec;
 
     /*
      * Keeps the original resource-discovery logic, but routes result taps back to native code.
@@ -60,6 +66,9 @@ final class DictionaryController {
     private final Activity activity;
     private final AudioSaveController audioSaver;
     private final FrameLayout root;
+    private final WebView mainWebView;
+    private final AttachmentStore attachmentStore;
+    private final ExecutorService audioImportExecutor = Executors.newSingleThreadExecutor();
     private final Map<Long, String> activeDownloads = new HashMap<>();
     private final Set<String> observedAudioUrls = new LinkedHashSet<>();
     private final BroadcastReceiver downloadReceiver = new BroadcastReceiver() {
@@ -83,17 +92,22 @@ final class DictionaryController {
     private ProgressBar loadSpinner;
     private boolean pageFailed;
     private boolean receiverRegistered;
-    private String pageUrl="https://www.merriam-webster.com/";
-    private String pageTitle="Dictionary";
+    private String pageUrl="about:blank";
+    private String pageTitle="Tool";
     private String pageLanguage="en";
     private final Runnable hideStatusRunnable = () -> {
         if (downloadStatus != null) downloadStatus.setVisibility(View.GONE);
     };
 
-    DictionaryController(Activity activity, FrameLayout root) {
+    DictionaryController(
+            Activity activity, FrameLayout root, WebView mainWebView, AttachmentStore attachmentStore
+    ) {
         this.activity = activity;
-        this.audioSaver=new AudioSaveController(activity);
+        this.topBarSpec = JetTopBarSpec.load(activity);
+        this.audioSaver = new AudioSaveController(activity);
         this.root = root;
+        this.mainWebView = mainWebView;
+        this.attachmentStore = attachmentStore;
     }
 
     void open(String url, String title, String language) {
@@ -102,7 +116,7 @@ final class DictionaryController {
             if (overlay != null) close();
             pageUrl = url;
             pageTitle = title;
-            pageLanguage = "en";
+            pageLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
             observedAudioUrls.clear();
             openOnUiThread();
         });
@@ -117,16 +131,18 @@ final class DictionaryController {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         dictionaryWebView = new WebView(activity);
+        dictionaryWebView.setVerticalScrollBarEnabled(false);
+        dictionaryWebView.setHorizontalScrollBarEnabled(false);
         dictionaryWebView.setBackgroundColor(Color.WHITE);
         configure(dictionaryWebView);
         FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        webParams.topMargin = dp(TOOLBAR_HEIGHT_DP);
+        webParams.topMargin = dp(topBarSpec.height);
         overlay.addView(dictionaryWebView, webParams);
 
         toolbar = createToolbar();
         FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(TOOLBAR_HEIGHT_DP), Gravity.TOP);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(topBarSpec.height), Gravity.TOP);
         overlay.addView(toolbar, toolbarParams);
 
         downloadStatus = createStatusBanner();
@@ -140,7 +156,7 @@ final class DictionaryController {
         loadStatePanel = createLoadStatePanel();
         FrameLayout.LayoutParams stateParams = new FrameLayout.LayoutParams(
                 dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        stateParams.topMargin = dp(TOOLBAR_HEIGHT_DP / 2);
+        stateParams.topMargin = dp(topBarSpec.height / 2);
         overlay.addView(loadStatePanel, stateParams);
         showLoadingState();
 
@@ -171,7 +187,7 @@ final class DictionaryController {
                 toolbar.setLayoutParams(tp);
 
                 FrameLayout.LayoutParams wp = (FrameLayout.LayoutParams) dictionaryWebView.getLayoutParams();
-                wp.topMargin = top + dp(TOOLBAR_HEIGHT_DP);
+                wp.topMargin = top + dp(topBarSpec.height);
                 wp.leftMargin = left;
                 wp.rightMargin = right;
                 dictionaryWebView.setLayoutParams(wp);
@@ -194,14 +210,14 @@ final class DictionaryController {
     }
 
     void handleBack() {
-        if (dictionaryWebView != null && dictionaryWebView.canGoBack()) dictionaryWebView.goBack();
-        else close();
+        close();
     }
 
     void close() {
         if (overlay == null) return;
         applyCachePolicyOnToolClose();
         root.removeView(overlay);
+        mainWebView.evaluateJavascript("if(window.EditorController&&window.EditorController.resume){if(window.EditorController.resume()){window.dispatchEvent(new CustomEvent('jetnote:editor-resume'));}}", null);
         if (downloadStatus != null) downloadStatus.removeCallbacks(hideStatusRunnable);
         if (dictionaryWebView != null) {
             dictionaryWebView.stopLoading();
@@ -261,43 +277,52 @@ final class DictionaryController {
         close();
         unregisterDownloadReceiver();
         activeDownloads.clear();
+        audioImportExecutor.shutdownNow();
     }
 
     private View createToolbar() {
         FrameLayout bar = new FrameLayout(activity);
-        bar.setPadding(dp(8), dp(5), dp(8), dp(5));
-        bar.setBackgroundColor(0xfff8f9fa);
-        bar.setElevation(dp(3));
+        bar.setPadding(0, 0, 0, 0);
+        bar.setBackgroundColor(topBarSpec.backgroundColor);
+        bar.setElevation(dp(topBarSpec.shadowElevation));
 
         ImageButton back = createBackButton();
         back.setContentDescription("en".equals(pageLanguage) ? "Back" : "Back");
-        back.setOnClickListener(v -> {
-            if (dictionaryWebView != null && dictionaryWebView.canGoBack()) dictionaryWebView.goBack();
-            else close();
-        });
+        back.setOnClickListener(v -> close());
         TextView title = new TextView(activity);
         title.setText(pageTitle);
-        title.setTextColor(0xff202124);
-        title.setTextSize(16);
+        title.setTextColor(topBarSpec.titleColor);
+        title.setTextSize(topBarSpec.titleSize);
         title.setGravity(Gravity.CENTER);
         // Keep the title at the true toolbar center, regardless of the side button widths.
         FrameLayout.LayoutParams titleParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(36), Gravity.CENTER);
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(topBarSpec.controlHeight), Gravity.CENTER);
         bar.addView(title, titleParams);
 
         FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(
-                dp(40), dp(36), Gravity.START | Gravity.CENTER_VERTICAL);
+                dp(topBarSpec.iconButtonWidth), dp(topBarSpec.controlHeight), Gravity.START | Gravity.CENTER_VERTICAL);
+        backParams.leftMargin = dp(topBarSpec.leftAxis - topBarSpec.iconButtonWidth / 2);
         bar.addView(back, backParams);
 
-        TextView get = createToolbarButton("en".equals(pageLanguage) ? "Get Audio" : "Get Audio", 0xff168a45, true);
-        get.setTextSize(14);
-        get.setContentDescription("en".equals(pageLanguage) ? "Get page audio" : "Get page audio");
+        ImageButton get = createToolbarIconButton(
+                com.ingeniousidea.space.R.drawable.ic_audio_action,
+                topBarSpec.toolActionTextColor);
+        get.setContentDescription("Get page audio");
         get.setOnClickListener(v -> runGetScript());
         // Long press is a compact refresh shortcut; it no longer creates an in-page button.
         get.setOnLongClickListener(v -> { reloadCurrentPage(); return true; });
         FrameLayout.LayoutParams getParams = new FrameLayout.LayoutParams(
-                dp(88), dp(36), Gravity.END | Gravity.CENTER_VERTICAL);
+                dp(topBarSpec.iconButtonWidth), dp(topBarSpec.controlHeight), Gravity.END | Gravity.CENTER_VERTICAL);
+        // Use the same right-side center axis as New Post's send action.
+        getParams.rightMargin = dp(topBarSpec.rightAxis - topBarSpec.iconButtonWidth / 2);
         bar.addView(get, getParams);
+
+        // Same 1px bottom divider used by the HTML .jet-topbar.
+        View divider = new View(activity);
+        divider.setBackgroundColor(topBarSpec.dividerColor);
+        FrameLayout.LayoutParams dividerParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1), Gravity.BOTTOM);
+        bar.addView(divider, dividerParams);
 
         return bar;
     }
@@ -307,14 +332,31 @@ final class DictionaryController {
         button.setImageResource(com.ingeniousidea.space.R.drawable.ic_back_chevron);
         button.setScaleType(android.widget.ImageView.ScaleType.CENTER);
         button.setPadding(0, 0, 0, 0);
-        button.setColorFilter(0xff222222);
+        button.setColorFilter(topBarSpec.normalTextColor);
         button.setClickable(true);
         button.setFocusable(true);
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(12));
-        background.setStroke(dp(1), 0xffd6d8dc);
+        background.setCornerRadius(dp(topBarSpec.controlRadius));
+        background.setStroke(dp(1), topBarSpec.borderColor);
+        button.setBackground(background);
+        return button;
+    }
+
+    private ImageButton createToolbarIconButton(int drawableRes, int tintColor) {
+        ImageButton button = new ImageButton(activity);
+        button.setImageResource(drawableRes);
+        button.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        button.setPadding(dp(8), dp(6), dp(8), dp(6));
+        button.setColorFilter(tintColor);
+        button.setClickable(true);
+        button.setFocusable(true);
+
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.WHITE);
+        background.setCornerRadius(dp(topBarSpec.controlRadius));
+        background.setStroke(dp(1), topBarSpec.borderColor);
         button.setBackground(background);
         return button;
     }
@@ -329,9 +371,8 @@ final class DictionaryController {
 
         GradientDrawable background = new GradientDrawable();
         background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(12));
-        if (outlined) background.setStroke(dp(1), 0xffc8cbd0);
-        else background.setStroke(dp(1), 0xffd6d8dc);
+        background.setCornerRadius(dp(topBarSpec.controlRadius));
+        background.setStroke(dp(1), topBarSpec.borderColor);
         button.setBackground(background);
         return button;
     }
@@ -431,13 +472,13 @@ final class DictionaryController {
 
     private void runGetScript() {
         if (dictionaryWebView == null) return;
-        try(java.io.InputStream input=activity.getAssets().open("js/dictionary-get.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
+        try(java.io.InputStream input=activity.getAssets().open("js/dictionary_get.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
             byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);
             String script = "window.JET_NOTE_UI_LANGUAGE='" + pageLanguage + "';\n"
                     + "window.JET_NOTE_NATIVE_AUDIO_URLS=" + new JSONArray(observedAudioUrls).toString() + ";\n"
                     + new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
             dictionaryWebView.evaluateJavascript(script,null);
-        }catch(java.io.IOException e){showDownloadStatus("Unable to load the Get Audio script",false);}
+        }catch(java.io.IOException e){showDownloadStatus("Unable to load the audio capture script",false);}
     }
 
     private void injectAudioObserver() {
@@ -572,15 +613,118 @@ final class DictionaryController {
         }
     }
 
-    private void offerDownload(String url,String userAgent,String disposition,String mime) {
-        if(url==null||!url.startsWith("https://")){showDownloadStatus("Unsupported audio URL",false);return;}
-        final String resolved=mime==null||mime.isEmpty()?mimeFromUrl(url):mime;
-        final String name=safeDownloadName(URLUtil.guessFileName(url,disposition,resolved));
-        new android.app.AlertDialog.Builder(activity).setTitle("Save audio")
-            .setItems(new String[]{"Download to Downloads (system notification)","Save as… (choose location)"},(dialog,which)->{
-                if(which==0)startDownload(url,userAgent,disposition,resolved);
-                else audioSaver.choose(url,dictionaryWebView,name,resolved);
-            }).setNegativeButton("Cancel",null).show();
+    private void offerDownload(String url, String userAgent, String disposition, String mime) {
+        if (url == null || !url.startsWith("https://")) {
+            showDownloadStatus("Unsupported audio URL", false);
+            return;
+        }
+
+        final String resolvedMime = mime == null || mime.isEmpty() ? mimeFromUrl(url) : mime;
+        final String guessedName = safeDownloadName(URLUtil.guessFileName(url, disposition, resolvedMime));
+        final String requestUserAgent = (userAgent == null || userAgent.isEmpty())
+                ? (dictionaryWebView == null ? null : dictionaryWebView.getSettings().getUserAgentString())
+                : userAgent;
+        final String requestCookie = CookieManager.getInstance().getCookie(url);
+        final String requestReferer = dictionaryWebView == null ? null : dictionaryWebView.getUrl();
+        showDownloadStatus("Adding audio to post…", true);
+
+        audioImportExecutor.execute(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(url).openConnection();
+                connection.setInstanceFollowRedirects(true);
+                connection.setConnectTimeout(15000);
+                connection.setReadTimeout(30000);
+                connection.setRequestProperty("Accept", "audio/*,*/*;q=0.8");
+
+                if (requestUserAgent != null && !requestUserAgent.isEmpty()) {
+                    connection.setRequestProperty("User-Agent", requestUserAgent);
+                }
+                if (requestCookie != null && !requestCookie.isEmpty()) {
+                    connection.setRequestProperty("Cookie", requestCookie);
+                }
+                if (requestReferer != null && !requestReferer.isEmpty()) {
+                    connection.setRequestProperty("Referer", requestReferer);
+                }
+
+                int code = connection.getResponseCode();
+                if (code < 200 || code >= 300) throw new java.io.IOException("HTTP " + code);
+
+                String responseMime = connection.getContentType();
+                if (responseMime != null) {
+                    int semicolon = responseMime.indexOf(';');
+                    if (semicolon >= 0) responseMime = responseMime.substring(0, semicolon);
+                    responseMime = responseMime.trim();
+                }
+                if (responseMime == null || responseMime.isEmpty()
+                        || "application/octet-stream".equalsIgnoreCase(responseMime)) {
+                    responseMime = resolvedMime;
+                }
+                if (responseMime == null || !responseMime.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+                    String fromUrl = mimeFromUrl(connection.getURL().toString());
+                    if (fromUrl.startsWith("audio/")) responseMime = fromUrl;
+                }
+                if (responseMime == null || !responseMime.toLowerCase(Locale.ROOT).startsWith("audio/")) {
+                    throw new java.io.IOException("Selected resource is not recognized as audio");
+                }
+
+                String responseDisposition = connection.getHeaderField("Content-Disposition");
+                String finalName = safeDownloadName(URLUtil.guessFileName(
+                        connection.getURL().toString(),
+                        responseDisposition == null ? disposition : responseDisposition,
+                        responseMime
+                ));
+                if (finalName == null || finalName.trim().isEmpty()) finalName = guessedName;
+
+                JSONObject metadata;
+                try (InputStream input = new BufferedInputStream(connection.getInputStream())) {
+                    metadata = attachmentStore.importFromStream(
+                            input, responseMime, finalName, "audio", 64L * 1024L * 1024L
+                    );
+                }
+
+                final JSONObject addedMetadata = metadata;
+                final String promptName = finalName;
+                final String promptMime = responseMime;
+                activity.runOnUiThread(() -> mainWebView.evaluateJavascript(
+                        "(window.addToolAudioToPost ? window.addToolAudioToPost("
+                                + addedMetadata.toString() + ") : 'missing-handler')",
+                        result -> {
+                            if ("\"added\"".equals(result) || "\"duplicate\"".equals(result)) {
+                                showDownloadStatus("Audio added to post: " + promptName, true);
+                                showOptionalLocalSaveDialog(url, userAgent, disposition, promptMime, promptName);
+                            } else {
+                                String path = addedMetadata.optString("path", "");
+                                if (!path.isEmpty()) attachmentStore.deleteArchivePath(path);
+                                showDownloadStatus("Could not add audio to the current post", false);
+                            }
+                        }
+                ));
+            } catch (Exception error) {
+                showDownloadStatus(
+                        "Unable to add audio to post: "
+                                + (error.getMessage() == null ? "download failed" : error.getMessage()),
+                        false
+                );
+            } finally {
+                if (connection != null) connection.disconnect();
+            }
+        });
+    }
+
+    private void showOptionalLocalSaveDialog(
+            String url, String userAgent, String disposition, String mime, String fileName
+    ) {
+        if (activity.isFinishing()) return;
+        new android.app.AlertDialog.Builder(activity)
+                .setTitle("Audio added to post")
+                .setMessage("Also save " + fileName + " to local storage?")
+                .setPositiveButton("Download", (dialog, which) ->
+                        startDownload(url, userAgent, disposition, mime))
+                .setNeutralButton("Save as…", (dialog, which) ->
+                        audioSaver.choose(url, dictionaryWebView, fileName, mime))
+                .setNegativeButton("Not now", null)
+                .show();
     }
 
     private void startDownload(String url, String userAgent, String contentDisposition, String mimeType) {

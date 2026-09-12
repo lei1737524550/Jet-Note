@@ -1,0 +1,68 @@
+{
+  "videoPlayback": {
+    "maxConcurrentPlayingVideos": 1
+  },
+  "edit_post_tool_1": "video",
+  "edit_post_tool_2": "photo",
+  "edit_post_tool_3": "sound",
+  "edit_post_tool_4": "tools",
+  "tools_unfold_tool": [
+    "config_tool_1",
+    "config_tool_2"
+  ],
+  "tools_unfold_anim": "js/features/tools_unfold_animation.js",
+  "tools_unfold_icon": "icons/is_unfold.svg",
+  "edit_post_tool_5": "tools_unfold_tool[0]",
+  "edit_post_tool_6": "tools_unfold_tool[1]",
+  "post_tool_definitions": {
+    "video": {
+      "action": "video",
+      "icon": "video",
+      "labelKey": "addVideo"
+    },
+    "photo": {
+      "action": "photo",
+      "icon": "photo",
+      "labelKey": "addImage"
+    },
+    "sound": {
+      "action": "sound",
+      "icon": "sound",
+      "labelKey": "addAudio"
+    },
+    "tools": {
+      "action": "tools",
+      "icon": "tools",
+      "labelKey": "tools"
+    }
+  },
+  "config_tool_1": {
+    "url": "https://www.merriam-webster.com/",
+    "icon": "dictionary",
+    "labelKey": "config_tool_1"
+  },
+  "config_tool_2": {
+    "url": "https://soundoftext.com/",
+    "icon": "sentence",
+    "labelKey": "config_tool_2"
+  },
+  "top_bar": {
+    "height": 50,
+    "controlHeight": 36,
+    "titleSize": 16,
+    "controlTextSize": 14,
+    "leftAxis": 44,
+    "rightAxis": 44,
+    "iconButtonWidth": 48,
+    "textButtonMinWidth": 48,
+    "controlRadius": 14,
+    "background": "#f8f9fa",
+    "borderColor": "#bfc1c4",
+    "dividerColor": "#eceef1",
+    "titleColor": "#202124",
+    "normalTextColor": "#222222",
+    "primaryTextColor": "#1599e8",
+    "toolActionTextColor": "#168a45",
+    "shadowElevation": 2
+  }
+}

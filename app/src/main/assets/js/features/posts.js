@@ -31,18 +31,18 @@ function renderPosts() {
 
   const composerHTML = isWorkspaceWritable() ? `
     <div class="feed-composer-wrap">
-      <div class="feed-composer">
+      <div class="feed-composer common_border">
         <button class="feed-composer-main"
-                onclick="openPostComposer()"
+                type="button"
+                data-editor-open="create"
                 data-i18n="share">${escapeHTML(t('share'))}</button>
 
-        <button class="feed-composer-photo feed-composer-audio"
-                onclick="openPostComposerWithAudioPicker()"
-                aria-label="add audio">
+        <button class="feed-composer-photo"
+                onclick="openPostComposerWithVideoPicker()"
+                aria-label="add video">
           <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 36V13l20-4v23"/>
-            <circle cx="14" cy="36" r="5"/>
-            <circle cx="34" cy="32" r="5"/>
+            <rect x="7" y="11" width="25" height="26" rx="5"/>
+            <path d="M32 19l9-5v20l-9-5z"/>
           </svg>
         </button>
 
@@ -56,12 +56,13 @@ function renderPosts() {
           </svg>
         </button>
 
-        <button class="feed-composer-photo"
-                onclick="openPostComposerWithVideoPicker()"
-                aria-label="add video">
+        <button class="feed-composer-photo feed-composer-audio"
+                onclick="openPostComposerWithAudioPicker()"
+                aria-label="add audio">
           <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="11" width="25" height="26" rx="5"/>
-            <path d="M32 19l9-5v20l-9-5z"/>
+            <path d="M19 36V13l20-4v23"/>
+            <circle cx="14" cy="36" r="5"/>
+            <circle cx="34" cy="32" r="5"/>
           </svg>
         </button>
       </div>
@@ -73,15 +74,16 @@ function renderPosts() {
     const postId=escapeHTML(String(post.id));
 
     return `
-      <article class="post" data-post-id="${postId}">
+      <article class="post common_border" data-post-id="${postId}">
         <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
                   aria-label="更多">${moreMenuIcon()}</button>` : ''}
         </div>
 
-        <div class="text-content">${escapeHTML(post.text || '')}</div>
         ${renderAttachments(post.attachments)}
+        <div class="text-content">${escapeHTML(post.text || '')}</div>
+        <div class="post-content-clear" aria-hidden="true"></div>
         ${renderVideoAttachmentsHTML(post.attachments)}
         ${renderMediaHTML(images, 'post-media-grid', true)}
         <div class="time">${escapeHTML(post.time)}</div>
@@ -95,83 +97,106 @@ function renderPosts() {
   hydrateVideoAttachments(list);
   requestAnimationFrame(fit);
 }
-function syncComposerViewport() {
-  const screen = document.getElementById('postComposeScreen');
-  if (!screen || !screen.classList.contains('open')) return;
+function syncComposerViewport() { ViewportManager.requestUpdate(); }
 
-  if (window.visualViewport) {
-    const vv = window.visualViewport;
-    screen.style.left = vv.offsetLeft + 'px';
-    screen.style.top = vv.offsetTop + 'px';
-    screen.style.width = vv.width + 'px';
-    screen.style.height = syncViewport() + 'px';
-  } else {
-    screen.style.left = '0px';
-    screen.style.top = '0px';
-    screen.style.width = '100vw';
-    screen.style.height = syncViewport() + 'px';
+function syncPostEditorDraft() {
+  if (EditorController.state === EditorController.State.EDITING || EditorController.state === EditorController.State.TOOL_ACTIVE) {
+    EditorController.setMedia({ images: postDraftImages, attachments: draftAttachments.post });
+    EditorController.syncFromComposer();
   }
 }
 
-function openPostComposer(prefillText = '', postId = null, sourcePost = null) {
-  if(!isWorkspaceWritable()||!entriesReady||entriesBusy)return;
-  closePostActionPanel();
-  editingPostId = postId;
-
-  // Editing starts from a detached copy, so rebuilding the draft never mutates
-  // the live feed before the user explicitly saves it.
-  const editDraft = sourcePost
-      ? structuredClone(sourcePost)
-      : (postId === null ? null : structuredClone(posts.find(item => String(item.id) === String(postId)) || null));
-
+function initializePostComposerControls() {
   const screen = document.getElementById('postComposeScreen');
-  const textarea = document.getElementById('postComposerText');
-  const title = screen.querySelector('.post-compose-title');
-  const publishBtn = screen.querySelector('.post-compose-publish');
+  if (!screen || screen.dataset.editorControlsBound === 'true') return;
+  // The Composer is mounted once and then only shown/hidden.  No opening flow
+  // recreates its DOM, so focus, toolbar bindings and draft restoration stay stable.
+  if (screen.parentElement !== document.body) document.body.appendChild(screen);
+  screen.dataset.editorControlsBound = 'true';
+  screen.addEventListener('click', event => {
+    const action = event.target.closest('[data-editor-action]')?.dataset.editorAction;
+    if (action === 'cancel') closePostComposer();
+    if (action === 'publish') publishTextPost();
+  });
+  EditorController.bindTextarea(document.getElementById('postComposerText'));
+}
 
-  if (screen.parentElement !== document.body) {
-    document.body.appendChild(screen);
+async function openPostComposer(prefillText = '', postId = null, sourcePost = null) {
+  if (!isWorkspaceWritable() || !entriesReady || entriesBusy) {
+    console.warn('[Editor] opening is unavailable', { writable: isWorkspaceWritable(), entriesReady, entriesBusy });
+    return false;
   }
+  if (EditorController.state !== EditorController.State.CLOSED) return false;
+  initializePostComposerControls();
+  closePostActionPanel();
 
-  title.textContent = postId === null ? t('writePost') : t('editPost');
-  publishBtn.textContent = postId === null ? t('publish') : t('save');
+  try {
+    // Editing starts from a detached copy, so rebuilding the draft never mutates
+    // the live feed before the user explicitly saves it.
+    const editDraft = sourcePost
+        ? structuredClone(sourcePost)
+        : (postId === null ? null : structuredClone(posts.find(item => String(item.id) === String(postId)) || null));
 
-  textarea.value = editDraft ? String(editDraft.text || '') : prefillText;
+    const initialDraft = await EditorController.begin({
+      mode: postId === null ? 'create' : 'edit', postId,
+      text: editDraft ? String(editDraft.text || '') : prefillText,
+      images: editDraft?.images || [], attachments: editDraft?.attachments || [],
+      favorite: editDraft?.favorite
+    });
+    editingPostId = initialDraft.postId;
+    const screen = document.getElementById('postComposeScreen');
+    const textarea = document.getElementById('postComposerText');
+    const title = screen?.querySelector('.post-compose-title');
+    const publishBtn = screen?.querySelector('.post-compose-publish');
+    const body = screen?.querySelector('.post-compose-body');
+    if (!screen || !textarea || !title || !publishBtn || !body) throw new Error('Composer view is incomplete');
+    initializePostComposerTools?.();
 
-  if (postId === null) {
-    postDraftImages = [];
-  } else {
-    postDraftImages = editDraft && Array.isArray(editDraft.images) ? [...editDraft.images] : [];
+    title.textContent = postId === null ? t('writePost') : t('editPost');
+    // Keep the reusable icon control intact. Only its accessible label changes
+    // between create and edit mode; replacing textContent would delete the SVG icon.
+    const publishLabel = postId === null ? t('publish') : t('save');
+    publishBtn.setAttribute('aria-label', publishLabel);
+    publishBtn.setAttribute('title', publishLabel);
+
+    textarea.value = initialDraft.text;
+
+    postDraftImages = [...initialDraft.images];
+
+    initAudioDraft('post', { attachments: initialDraft.attachments });
+    renderPostImagePreview();
+    renderPostVideoPreview();
+
+    closePostToolChoices?.();
+    body.scrollTop = 0;
+    screen.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    updatePostCount();
+    ViewportManager.update();
+
+    // The composer was opened from a user gesture: focus immediately and then
+    // once more after layout so Android WebView also raises the soft keyboard.
+    const focusComposer = () => {
+      textarea.focus({preventScroll:true});
+      const end = textarea.value.length;
+      try { textarea.setSelectionRange(end, end); } catch (_) {}
+    };
+    focusComposer();
+    setTimeout(focusComposer, 80);
+    return true;
+  } catch (error) {
+    console.error('[Editor] open failed', error);
+    EditorController.abortOpen?.();
+    editingPostId = null;
+    return false;
   }
-
-  initAudioDraft('post', editDraft);
-  renderPostImagePreview();
-  renderPostVideoPreview();
-
-  screen.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  updatePostCount();
-  syncComposerViewport();
-
-  // The composer was opened from a user gesture: focus immediately and then
-  // once more after layout so Android WebView also raises the soft keyboard.
-  const focusComposer = () => {
-    textarea.focus({preventScroll:true});
-    const end = textarea.value.length;
-    try { textarea.setSelectionRange(end, end); } catch (_) {}
-  };
-  focusComposer();
-  setTimeout(focusComposer, 80);
 }
 function closePostComposer() {
   if(entriesBusy)return;
+  closePostToolChoices?.();
   initAudioDraft('post',null);
   const screen = document.getElementById('postComposeScreen');
   screen.classList.remove('open');
-  screen.style.left = '';
-  screen.style.top = '';
-  screen.style.width = '';
-  screen.style.height = '';
   document.body.style.overflow = '';
   document.getElementById('postComposerText').value = '';
   editingPostId = null;
@@ -179,6 +204,7 @@ function closePostComposer() {
   renderPostImagePreview();
   renderPostVideoPreview();
   updatePostCount();
+  void EditorController.discard();
 }
 
 function hasDraftVideos() {
@@ -211,23 +237,23 @@ function pickPostVideos() {
   document.getElementById('postVideoPicker').click();
 }
 
-function openPostComposerWithImagePicker() {
+async function openPostComposerWithImagePicker() {
   if (!isWorkspaceWritable()) return;
-  openPostComposer();
+  if (!await openPostComposer()) return;
 
   // Wait until the composer is mounted in body before opening the system picker.
   setTimeout(() => pickPostImages(), 60);
 }
 
-function openPostComposerWithAudioPicker() {
+async function openPostComposerWithAudioPicker() {
   if (!isWorkspaceWritable()) return;
-  openPostComposer();
+  if (!await openPostComposer()) return;
   setTimeout(() => pickEntryAudio('post'), 60);
 }
 
-function openPostComposerWithVideoPicker() {
+async function openPostComposerWithVideoPicker() {
   if (!isWorkspaceWritable()) return;
-  openPostComposer();
+  if (!await openPostComposer()) return;
   setTimeout(() => pickPostVideos(), 60);
 }
 
@@ -257,11 +283,13 @@ async function handlePostImages(event) {
 
   picker.value = '';
   renderPostImagePreview();
+  syncPostEditorDraft();
 }
 
 function removePostDraftImage(index) {
   postDraftImages.splice(index, 1);
   renderPostImagePreview();
+  syncPostEditorDraft();
 }
 
 function renderPostImagePreview() {
@@ -269,7 +297,7 @@ function renderPostImagePreview() {
   if (!box) return;
 
   box.innerHTML = postDraftImages.map((src, index) => `
-    <div class="compose-image-item">
+    <div class="compose-image-item common_border">
       <img src="${src}"
            alt=""
            onclick="openImageViewer(this.src)">
@@ -322,6 +350,7 @@ async function handlePostVideos(event) {
     }
     renderPostVideoPreview();
     renderAudioDraft('post');
+    syncPostEditorDraft();
   } catch (error) {
     alert(error.message);
   }
@@ -332,6 +361,7 @@ function removePostDraftVideo(id) {
   draftMedia.post.delete(String(id));
   renderPostVideoPreview();
   renderAudioDraft('post');
+  syncPostEditorDraft();
 }
 
 function renderPostVideoPreview() {
@@ -341,12 +371,18 @@ function renderPostVideoPreview() {
   releaseVideoAttachmentUrls(box);
   const videos = draftAttachments.post.filter(item => item.type === 'video');
   box.innerHTML = videos.map(item => `
-    <div class="compose-video-item video-attachment-item native-video-card" data-media-id="${escapeHTML(item.id)}">
-      <img class="video-poster" alt="" draggable="false">
-      <button class="compose-image-remove"
-              type="button"
-              onclick="event.stopPropagation(); removePostDraftVideo('${escapeHTML(item.id)}')"
-              aria-label="${escapeHTML(t('remove'))}">×</button>
+    <div class="video-attachment-shell compose-video-shell">
+      <div class="compose-video-item video-attachment-item native-video-card common_border" data-media-id="${escapeHTML(item.id)}">
+        <img class="video-poster" alt="" draggable="false">
+        <button class="compose-image-remove"
+                type="button"
+                onclick="event.stopPropagation(); removePostDraftVideo('${escapeHTML(item.id)}')"
+                aria-label="${escapeHTML(t('remove'))}">×</button>
+      </div>
+      <div class="video-progress-track common_border" role="slider" aria-label="video position" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0">
+        <div class="video-progress-fill"></div>
+      </div>
+      <div class="video-inline-time">0:00 / 0:00</div>
     </div>
   `).join('');
 
@@ -386,6 +422,33 @@ function closePostActionPanel() {
   activePostActionAnchor = null;
 }
 
+function syncPostFavoriteAction() {
+  const button = document.getElementById('postFavoriteAction');
+  if (!button) return;
+
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  const active = !!post?.favorite;
+  button.classList.toggle('active', active);
+  button.setAttribute('aria-pressed', active ? 'true' : 'false');
+}
+
+async function toggleFavoriteActivePost() {
+  if (!isWorkspaceWritable() || activePostActionId === null) return;
+
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  if (!post) return;
+
+  const previous = !!post.favorite;
+  post.favorite = !previous;
+  syncPostFavoriteAction();
+
+  const saved = await savePosts();
+  if (!saved) {
+    post.favorite = previous;
+    syncPostFavoriteAction();
+  }
+}
+
 function openPostActionPanel(event, postId) {
   if (!isWorkspaceWritable()) return;
   event.preventDefault();
@@ -416,6 +479,7 @@ function openPostActionPanel(event, postId) {
     width: rect.width, height: rect.height
   };
   panel.classList.add('open');
+  syncPostFavoriteAction();
   positionMenuLeftOfAnchor(panel, activePostActionAnchor);
 }
 
@@ -443,27 +507,36 @@ function deleteActivePost() {
 }
 
 document.addEventListener('click', event => {
+  const editorOpen = event.target.closest('[data-editor-open="create"]');
+  if (editorOpen) {
+    event.preventDefault();
+    void openPostComposer();
+    return;
+  }
+  const action = event.target.closest('#postActionPanel [data-post-action]')?.dataset.postAction;
+  if (action) {
+    event.preventDefault();
+    if (action === 'edit') void editActivePost();
+    if (action === 'favorite') void toggleFavoriteActivePost();
+    if (action === 'delete') void deleteActivePost();
+    return;
+  }
   if (!event.target.closest('#postActionPanel') && !event.target.closest('.more')) {
     closePostActionPanel();
   }
 });
 
-const composerTextarea = document.getElementById('postComposerText');
-
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', syncComposerViewport);
-  window.visualViewport.addEventListener('scroll', syncComposerViewport);
-}
-
-window.addEventListener('resize', syncComposerViewport);
-
-if (composerTextarea) {
-  composerTextarea.addEventListener('focus', () => {
-    requestAnimationFrame(syncComposerViewport);
-    setTimeout(syncComposerViewport, 120);
-    setTimeout(syncComposerViewport, 300);
-  });
-}
+initializePostComposerControls();
+document.getElementById('postComposerText')?.addEventListener('input', updatePostCount);
+window.addEventListener('jetnote:editor-resume', () => {
+  const screen = document.getElementById('postComposeScreen');
+  if (!screen?.classList.contains('open')) return;
+  renderPostImagePreview();
+  renderPostVideoPreview();
+  renderAudioDraft();
+  updatePostCount();
+  ViewportManager.requestUpdate();
+});
 
 function updatePostCount() {
   const textarea = document.getElementById('postComposerText');
@@ -477,67 +550,89 @@ function formatNowForPost() {
   return `Today ${hh}:${mm}`;
 }
 
-async function publishTextPost() {
-  if(!isWorkspaceWritable()||!entriesReady||entriesBusy||document.querySelector('[data-add-audio="post"]').disabled)return;
-  const textarea = document.getElementById('postComposerText');
-  const content = textarea.value.trim();
+function addToolAudioToPost(meta) {
+  const composer = document.getElementById('postComposeScreen');
+  if (!composer?.classList.contains('open')) return 'composer-not-open';
+  if (!meta || meta.type !== 'audio' || !meta.id || !meta.path) return 'invalid-audio';
 
-  if (postDraftImages.length > 0 && hasDraftVideos()) {
-    alert(t('imageVideoExclusive'));
-    return;
+  if (draftAttachments.post.some(item => String(item.id) === String(meta.id))) {
+    return 'duplicate';
+  }
+  if (draftAttachments.post.filter(item => item.type === 'audio').length >= 20) {
+    alert(t('attachmentLimit'));
+    return 'limit';
   }
 
-  if (!content && postDraftImages.length === 0 && draftAttachments.post.length === 0) {
-    alert(t('emptyPost'));
-    return;
-  }
+  draftAttachments.post.push(meta);
+  draftMedia.post.set(meta.id, meta);
+  renderAudioDraft();
+  syncPostEditorDraft();
+  return 'added';
+}
 
-  pruneDraftImages('post',postDraftImages);
-  entriesBusy=true;
-  const wasEditing = editingPostId !== null;
-  const previous = JSON.parse(JSON.stringify(posts));
+window.addToolAudioToPost = addToolAudioToPost;
+
+function attachmentsForPostDraft(draft) {
+  const imageSources = new Set(draft.images || []);
+  return (draft.attachments || []).filter(item => item.type !== 'image' || imageSources.has(NativeMedia.url(item)));
+}
+
+async function commitPostDraft(draft) {
+  const previous = structuredClone(posts);
+  const wasEditing = draft.mode === 'edit';
+  const attachments = attachmentsForPostDraft(draft);
   let savedPost = null;
-
-  if (!wasEditing) {
-    const newPost = {
-      id: nextEntryId(),
-      uuid:entryUuid(), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString(),
-      attachments:structuredClone(draftAttachments.post),
-      text: content,
-      images: [...postDraftImages],
-      time: formatNowForPost()
-    };
-    posts.unshift(newPost);
-    savedPost = newPost;
-  } else {
-    const postIndex = posts.findIndex(item => String(item.id) === String(editingPostId));
-    if (postIndex >= 0) {
-      const rebuiltPost = {
-        ...structuredClone(posts[postIndex]),
-        updatedAt: new Date().toISOString(),
-        attachments: structuredClone(draftAttachments.post),
-        text: content,
-        images: [...postDraftImages]
+  entriesBusy = true;
+  try {
+    if (!wasEditing) {
+      savedPost = {
+        id: nextEntryId(), uuid: entryUuid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images],
+        favorite: draft.favorite, time: formatNowForPost()
       };
-      posts[postIndex] = rebuiltPost;
-      savedPost = rebuiltPost;
+      posts.unshift(savedPost);
+    } else {
+      const index = posts.findIndex(item => String(item.id) === String(draft.postId));
+      if (index < 0) throw Error('This post no longer exists. Please reopen it from the feed.');
+      savedPost = {
+        ...structuredClone(posts[index]), updatedAt: new Date().toISOString(),
+        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images], favorite: draft.favorite
+      };
+      posts[index] = savedPost;
     }
-  }
-
-  if (!await savePosts()) {
-    entriesBusy=false;
+    if (!await savePosts()) throw Error(t('storageFull'));
+    renderPosts();
+    return { wasEditing, savedPost };
+  } catch (error) {
     posts = previous;
-    return;
+    throw error;
+  } finally {
+    entriesBusy = false;
   }
+}
 
-
-  entriesBusy=false;
-  renderPosts();
-  closePostComposer();
-
-  if (!wasEditing) {
-    const feed = document.getElementById('postList');
-    if (feed) feed.scrollTop = 0;
+let postPublishInFlight = false;
+async function publishTextPost() {
+  // Publishing is governed by PostDraftStore, never by a toolbar element.
+  if (postPublishInFlight || !isWorkspaceWritable() || !entriesReady || entriesBusy || isPostDraftMediaLoading()) return;
+  postPublishInFlight = true;
+  const publishButton = document.querySelector('#postComposeScreen [data-editor-action="publish"]');
+  if (publishButton) publishButton.disabled = true;
+  syncPostEditorDraft();
+  let commitResult = null;
+  const result = await EditorController.publish(async draft => { commitResult = await commitPostDraft(draft); });
+  try {
+    if (!result.ok) {
+      if (result.code === 'empty-post') alert(t('emptyPost'));
+      else if (result.code === 'image-video-exclusive') alert(t('imageVideoExclusive'));
+      else if (result.code === 'save-failed') alert(result.error?.message || t('storageFull'));
+      return;
+    }
+    closePostComposer();
+    if (!commitResult.wasEditing) document.getElementById('postList')?.scrollTo({ top: 0 });
+  } finally {
+    postPublishInFlight = false;
+    if (publishButton?.isConnected) publishButton.disabled = false;
   }
 }
 

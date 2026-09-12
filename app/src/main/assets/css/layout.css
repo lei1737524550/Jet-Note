@@ -3,10 +3,14 @@
 .more{ position:absolute; top:0; right:0; width:44px; height:44px; padding:10px; display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; background:transparent; font-size:0; line-height:1; letter-spacing:0; }
 .more svg{ display:block; width:24px; height:24px; fill:currentColor; }
 /* Every full-screen route reserves its own safe content area. */
-.settings-screen,.post-compose-screen,.crop-screen { height:var(--viewport-height,100dvh); padding-left:var(--safe-left); padding-right:var(--safe-right); }
-.settings-header,.post-compose-header { top:var(--safe-top); }
+.settings-screen,.crop-screen { height:var(--viewport-height,100dvh); padding-left:var(--safe-left); padding-right:var(--safe-right); }
+.post-compose-screen {
+  height:var(--viewport-height,100dvh);
+  padding:var(--safe-top) var(--safe-right) var(--content-bottom,var(--safe-bottom)) var(--safe-left);
+}
+.settings-header { top:var(--safe-top); }
+.post-compose-header { top:0; }
 .settings-body { top:calc(var(--safe-top) + 64px); bottom:var(--content-bottom,var(--safe-bottom)); }
-.post-compose-body { top:calc(var(--safe-top) + var(--jet-toolbar-height)); bottom:var(--content-bottom,var(--safe-bottom)); }
 .settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:white; }
 #postComposerText{ font-size:var(--body-size); line-height:var(--body-leading); }
 .image-viewer-close { top:calc(var(--safe-top) + 8px); }
