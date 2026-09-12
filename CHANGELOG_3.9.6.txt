@@ -1,7 +1,0 @@
-Jet Note 3.9.6
-
-- Reclaimed the previously empty Post header area for text content.
-- The three-dot action button now occupies only a small floated top-right region; text can flow through the remaining top area and automatically use the full width below the button.
-- Added an explicit clear boundary after text so media attachments always start below the floating action region when necessary.
-- Reduced the text-to-timestamp spacing by 12px by changing the timestamp top margin from 16px to 4px.
-- Kept card padding, media layout, action behavior, and timestamp styling otherwise unchanged.

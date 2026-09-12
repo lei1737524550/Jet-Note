@@ -91,7 +91,7 @@ public class MainActivity extends Activity {
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(this, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
+                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;dispatchPendingImport();})),
                 "JetNoteNative");
 
         webView.setWebViewClient(new WebViewClient() {

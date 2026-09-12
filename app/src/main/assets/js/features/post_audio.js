@@ -246,11 +246,18 @@ function bindInlineVideoProgress(item, video) {
   renderProgress();
 }
 
-function createInlineVideo(item, record) {
+function inlineVideoSource(record, refreshToken = '') {
+  const base = NativeMedia.url(record);
+  if (!base || !refreshToken) return base;
+  const joiner = base.includes('?') ? '&' : '?';
+  return `${base}${joiner}jet_refresh=${encodeURIComponent(refreshToken)}`;
+}
+
+function createInlineVideo(item, record, options = {}) {
   const existing = item?.querySelector('video.inline-video-player');
   if (existing) return existing;
   if (!item || !record || !record.path) return null;
-  const src = NativeMedia.url(record);
+  const src = inlineVideoSource(record, options.refreshToken || '');
   if (!src) return null;
 
   const poster = item.querySelector('.video-poster');
@@ -281,6 +288,9 @@ function createInlineVideo(item, record) {
   video.addEventListener('pause', () => item.classList.remove('video-playing'));
 
   video.addEventListener('error', () => {
+    // removeAttribute('src') + load() is also used for intentional teardown.
+    // Do not turn that controlled abort into a user-visible playback error.
+    if (video.__jetDisposing) return;
     console.warn('Jet Note inline video error', {
       code: video.error?.code || 0,
       message: video.error?.message || '',
@@ -296,52 +306,76 @@ function createInlineVideo(item, record) {
   return video;
 }
 
-function refreshInlineVideo(item, options = {}) {
-  if (!item || !item.__jetVideoRecord) return null;
+function destroyInlineVideoElement(item, {rememberPosition = false} = {}) {
+  if (!item) return {time: 0, wasPlaying: false};
 
-  const oldVideo = item.querySelector('video.inline-video-player');
-  const preserveTime = options.preserveTime !== false;
-  const previousTime = preserveTime && oldVideo && Number.isFinite(oldVideo.currentTime)
-    ? oldVideo.currentTime
-    : 0;
-  const shouldResume = options.resumePlayback === true ||
-    (options.resumePlayback !== false && oldVideo && !oldVideo.paused && !oldVideo.ended);
+  const video = item.querySelector('video.inline-video-player');
+  const state = {
+    time: video && Number.isFinite(video.currentTime) ? video.currentTime : 0,
+    wasPlaying: !!(video && !video.paused && !video.ended)
+  };
 
-  if (oldVideo) {
-    try { oldVideo.pause(); } catch (_) {}
-    try { oldVideo.removeAttribute('src'); oldVideo.load(); } catch (_) {}
-    oldVideo.remove();
+  if (rememberPosition && state.time > 0) item.__jetPendingResumeTime = state.time;
+
+  if (video) {
+    video.__jetDisposing = true;
+    try { video.pause(); } catch (_) {}
+    // Do not let the next player inherit Chromium/WebView's stale media
+    // pipeline. Clearing src + load() releases the old resource/surface before
+    // removing the HTMLMediaElement itself.
+    try {
+      video.removeAttribute('src');
+      video.load();
+    } catch (_) {}
+    video.remove();
   }
+
   removeInlinePlayerEntry(item);
   item.classList.remove('video-loaded', 'video-playing', 'video-first-frame-ready');
   resetInlineVideoProgress(item);
   const poster = item.querySelector('.video-poster');
   if (poster) poster.hidden = false;
+  return state;
+}
 
-  const video = createInlineVideo(item, item.__jetVideoRecord);
-  if (!video) return null;
+function restorePendingInlineVideoPosition(item, video) {
+  const requested = Number(item?.__jetPendingResumeTime || 0);
+  item.__jetPendingResumeTime = 0;
+  if (!requested || !video) return;
 
-  const restore = () => {
-    if (previousTime > 0 && Number.isFinite(video.duration) && video.duration > 0) {
-      try { video.currentTime = Math.min(previousTime, Math.max(0, video.duration - 0.05)); } catch (_) {}
-    }
-    if (shouldResume) {
-      const limit = cachedVideoPlaybackConfig.maxConcurrentPlayingVideos;
-      if (limit !== 0) {
-        reclaimVideoSlots(limit, item);
-        try {
-          const playResult = video.play();
-          if (playResult?.catch) playResult.catch(error => console.warn('Jet Note refreshed video play rejected', error));
-        } catch (error) {
-          console.warn('Jet Note refreshed video play rejected', error);
-        }
-      }
-    }
+  const apply = () => {
+    if (!video.isConnected || !Number.isFinite(video.duration) || video.duration <= 0) return;
+    const target = Math.min(Math.max(0, requested), Math.max(0, video.duration - 0.05));
+    try { video.currentTime = target; } catch (_) {}
   };
 
-  if (video.readyState >= 1) restore();
-  else video.addEventListener('loadedmetadata', restore, {once:true});
-  return video;
+  if (video.readyState >= 1) apply();
+  else video.addEventListener('loadedmetadata', apply, {once:true});
+}
+
+/**
+ * Return one feed video to the same cold/unplayed state it has immediately
+ * after page hydration.  Long-press is deliberately a RESET only: it releases
+ * the current HTMLMediaElement and media pipeline, but does not create another
+ * player and does not call play().  The next ordinary user tap creates a brand
+ * new <video> through startInlineVideo(), matching the reliable first-play path
+ * after a fresh app/page start.
+ */
+function resetInlineVideoToColdState(item) {
+  if (!item || !item.isConnected) return;
+
+  // A manual reset means "start over", unlike background recovery where we
+  // intentionally remember the previous position for the next tap.
+  item.__jetPendingResumeTime = 0;
+  destroyInlineVideoElement(item, {rememberPosition:false});
+
+  // Keep the attachment card itself and its bindings intact.  Only the media
+  // object is retired.  This avoids immediately creating a second decoder /
+  // Surface while Chromium/WebView may still be releasing the first one.
+  item.classList.remove('video-loaded', 'video-playing', 'video-first-frame-ready');
+  const poster = item.querySelector('.video-poster');
+  if (poster) poster.hidden = false;
+  resetInlineVideoProgress(item);
 }
 
 function bindInlineVideoLongPress(item) {
@@ -352,45 +386,98 @@ function bindInlineVideoLongPress(item) {
   let startX = 0;
   let startY = 0;
   let pointerId = null;
-  let longPressed = false;
+  let longPressReady = false;
+  let suppressClick = false;
   const HOLD_MS = 550;
   const MOVE_TOLERANCE = 12;
 
-  const clear = () => {
+  const suppressNativeVideoLongPressHaptic = suppressed => {
+    try {
+      window.JetNoteNative?.setVideoDefaultHapticSuppressed?.(!!suppressed);
+    } catch (_) { }
+  };
+
+  const cancelTimer = () => {
     if (timer != null) clearTimeout(timer);
     timer = null;
+  };
+  const resetPointer = () => {
+    cancelTimer();
     pointerId = null;
   };
 
   item.addEventListener('pointerdown', event => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    clear();
-    longPressed = false;
+    // A fresh pointerdown is a brand-new user gesture. Android WebView does
+    // not always emit the synthetic click that normally follows a long press,
+    // so never let the old suppression flag eat this next real tap.
+    suppressClick = false;
+    resetPointer();
+    longPressReady = false;
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
+    // Disable only WebView's built-in haptic for this video gesture.
+    // Jet Note's own confirmation haptic below remains active.
+    suppressNativeVideoLongPressHaptic(true);
     timer = setTimeout(() => {
       timer = null;
-      longPressed = true;
-      refreshInlineVideo(item, {preserveTime:true});
+      longPressReady = true;
+      suppressClick = true;
+      // Give immediate tactile confirmation at the exact moment the existing
+      // 550 ms / 12 px long-press condition has been satisfied. This does not
+      // alter the gesture decision or start the reset early; the cold reset
+      // still runs only on pointerup.
+      try {
+        if (window.JetNoteNative?.hapticLongPress) {
+          window.JetNoteNative.hapticLongPress();
+        } else if (navigator.vibrate) {
+          navigator.vibrate(30);
+        }
+      } catch (_) { }
+      // Do not touch the media element from the timer callback.  The actual
+      // reset happens on pointerup; most importantly, no new player is created
+      // as part of this long-press gesture.
     }, HOLD_MS);
   });
+
   item.addEventListener('pointermove', event => {
     if (event.pointerId !== pointerId || timer == null) return;
-    if (Math.hypot(event.clientX - startX, event.clientY - startY) > MOVE_TOLERANCE) clear();
+    if (Math.hypot(event.clientX - startX, event.clientY - startY) > MOVE_TOLERANCE) {
+      cancelTimer();
+      pointerId = null;
+      suppressNativeVideoLongPressHaptic(false);
+    }
   });
+
   item.addEventListener('pointerup', event => {
-    if (event.pointerId === pointerId) clear();
+    if (event.pointerId !== pointerId) return;
+    const shouldReset = longPressReady;
+    resetPointer();
+    suppressNativeVideoLongPressHaptic(false);
+    longPressReady = false;
+    if (shouldReset) {
+      event.preventDefault();
+      event.stopPropagation();
+      resetInlineVideoToColdState(item);
+    }
   });
-  item.addEventListener('pointercancel', clear);
+
+  item.addEventListener('pointercancel', () => {
+    resetPointer();
+    suppressNativeVideoLongPressHaptic(false);
+    longPressReady = false;
+  });
+
   item.addEventListener('contextmenu', event => {
+    // Android may emit contextmenu after a touch long-press. The pointerup path
+    // above is the authoritative cold-reset path, so only suppress the menu here.
     event.preventDefault();
-    if (!longPressed) refreshInlineVideo(item, {preserveTime:true});
-    longPressed = true;
   });
+
   item.addEventListener('click', event => {
-    if (!longPressed) return;
-    longPressed = false;
+    if (!suppressClick) return;
+    suppressClick = false;
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);
@@ -403,9 +490,11 @@ function recoverInlineVideosAfterResume() {
     videoResumeRecoveryTimer = null;
     activeInlineVideoPlayers.slice().forEach(({item, video}) => {
       if (!item?.isConnected || !video?.isConnected) return;
-      // Android WebView can resume with a stale decoder/surface after backgrounding.
-      // Recreate only videos that were actually instantiated by the user.
-      refreshInlineVideo(item, {preserveTime:true, resumePlayback:false});
+      // A backgrounded Android WebView may return with a dead decoder/surface.
+      // Do not attempt an async auto-play/reload here. Retire that media element
+      // and remember the position; the next real user tap creates + plays a new
+      // element inside the click gesture, mirroring the reliable Edit Post path.
+      destroyInlineVideoElement(item, {rememberPosition:true});
     });
   }, 120);
 }
@@ -416,26 +505,64 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function startInlineVideo(item) {
-  // First tap creates the persistent player; every later tap only toggles it.
+  // First tap after hydration/resume creates a genuinely fresh HTMLMediaElement
+  // and calls play() in the same user gesture. This avoids reusing a media
+  // surface that Android WebView may have invalidated in the background.
   let video = item?.querySelector('video.inline-video-player');
-  if (!video) video = createInlineVideo(item, item?.__jetVideoRecord);
+  if (!video) {
+    const refreshToken = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    video = createInlineVideo(item, item?.__jetVideoRecord, {refreshToken});
+    if (video) restorePendingInlineVideoPosition(item, video);
+  }
   if (!video) return;
+
   if (!video.paused && !video.ended) {
     video.pause();
     return;
   }
+
   const limit = cachedVideoPlaybackConfig.maxConcurrentPlayingVideos;
   if (limit === 0) return;
   reclaimVideoSlots(limit, item);
   if (video.ended) {
     try { video.currentTime = 0; } catch (_) {}
   }
-  try {
-    const playResult = video.play();
-    if (playResult?.catch) playResult.catch(error => console.warn('Jet Note video play rejected', error));
-  } catch (error) {
-    console.warn('Jet Note video play rejected', error);
-  }
+
+  const tryPlay = () => {
+    if (!video?.isConnected || item.querySelector('video.inline-video-player') !== video) return;
+    try {
+      const playResult = video.play();
+      if (playResult?.catch) {
+        playResult.catch(error => {
+          console.warn('Jet Note video play rejected', error);
+          // A newly-created WebView video can briefly reject play() before its
+          // resource reaches a playable state. Keep the user's first-tap intent
+          // and retry once when media readiness advances instead of requiring a
+          // second physical tap.
+          if (!video.__jetPlayRetryArmed && video.readyState < 2) {
+            video.__jetPlayRetryArmed = true;
+            const retry = () => {
+              video.__jetPlayRetryArmed = false;
+              if (!video.isConnected || !video.paused || video.ended) return;
+              try {
+                const retryResult = video.play();
+                if (retryResult?.catch) retryResult.catch(retryError => console.warn('Jet Note video retry play rejected', retryError));
+              } catch (retryError) {
+                console.warn('Jet Note video retry play rejected', retryError);
+              }
+            };
+            video.addEventListener('loadeddata', retry, {once:true});
+            video.addEventListener('canplay', retry, {once:true});
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('Jet Note video play rejected', error);
+    }
+  };
+
+  // First attempt stays directly inside the real user click.
+  tryPlay();
 }
 
 async function hydrateVideoAttachments(container, staged = new Map()) {

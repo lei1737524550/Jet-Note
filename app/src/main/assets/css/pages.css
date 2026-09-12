@@ -251,14 +251,16 @@ button:active {
   grid-template-columns: minmax(0, 1fr) 54px;
   gap: 10px;
   align-items: stretch;
-  min-height: min(320px, 100%);
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 #postComposerText {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 320px;
+  min-height: 0;
   scroll-margin-top: 70px;
   resize: none;
   border: 0;
@@ -268,22 +270,22 @@ button:active {
   font: inherit;
   font-size: 28px;
   line-height: 1.55;
+  caret-color: transparent;
 }
 
 #postComposerText::placeholder {
   color: #a5a8ad;
 }
-
-.post-compose-count {
-  position: sticky;
-  align-self: flex-end;
-  bottom: 0;
-  margin-top: 12px;
-  padding: 4px 0 0 10px;
-  background: #fff;
-  color: #a3a6aa;
-  font-size: 18px;
+#postComposerText::selection { background:var(--cursor-drop-color,#14A89A); color:#fff; }
+.post-compose-caret {
+  display:inline-block;
+  box-sizing:border-box;
+  width:var(--post-compose-caret-width,4px);
+  min-width:var(--post-compose-caret-width,4px);
+  height:1em;
+  background:#111214;
 }
+.post-compose-caret-layer{position:absolute;z-index:2;overflow:hidden;pointer-events:none}.post-compose-caret-mirror{position:absolute;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;color:transparent;pointer-events:none}
 
 /* Tools uses the same top-bar geometry as New Post instead of the older 64px
    Settings header. The back button therefore shares New Post's left axis. */

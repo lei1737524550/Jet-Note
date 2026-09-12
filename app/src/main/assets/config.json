@@ -1,4 +1,6 @@
 {
+  "caret_width": 2,
+  "cursor_drop_color": "#14A89A",
   "videoPlayback": {
     "maxConcurrentPlayingVideos": 1
   },

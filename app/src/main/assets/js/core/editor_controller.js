@@ -42,7 +42,7 @@ const EditorView = (() => {
     const screen = document.getElementById('postComposeScreen');
     refs = Object.freeze({
       screen, body: screen?.querySelector('.post-compose-body') || null,
-      textarea: document.getElementById('postComposerText'), counter: document.getElementById('postCharCount'),
+      textarea: document.getElementById('postComposerText'),
       title: screen?.querySelector('.post-compose-title') || null,
       publish: screen?.querySelector('[data-editor-action="publish"]') || null,
       toolbar: document.getElementById('postComposerToolbar')
@@ -50,13 +50,43 @@ const EditorView = (() => {
     return refs;
   }
   function setText(text) { const { textarea } = get(); if (textarea) textarea.value = text; }
-  function setCounter(length) { const { counter } = get(); if (counter) counter.textContent = String(length); }
   function restoreSelection(draft) {
     const { textarea, body } = get();
     if (textarea) { try { textarea.setSelectionRange(draft.selectionStart, draft.selectionEnd); } catch (_) {} }
     if (body) body.scrollTop = draft.scrollTop || 0;
   }
-  return Object.freeze({ get, setText, setCounter, restoreSelection });
+  return Object.freeze({ get, setText, restoreSelection });
+})();
+
+const ComposerCaret = (() => {
+  let input, layer, mirror;
+  function refresh() {
+    requestAnimationFrame(() => {
+      if (!input || !layer || document.activeElement !== input || input.selectionStart !== input.selectionEnd) { if (layer) layer.hidden = true; return; }
+      const s=getComputedStyle(input), p=input.selectionStart;
+      for (const k of ['font','fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','paddingTop','paddingRight','paddingBottom','paddingLeft','boxSizing']) mirror.style[k]=s[k];
+      layer.hidden=false; layer.style.left=`${input.offsetLeft}px`; layer.style.top=`${input.offsetTop}px`; layer.style.width=`${input.clientWidth}px`; layer.style.height=`${input.clientHeight}px`;
+      mirror.style.width=`${input.clientWidth}px`; mirror.style.transform=`translate(${-input.scrollLeft}px,${-input.scrollTop}px)`;
+      const caret=document.createElement('span'); caret.className='post-compose-caret';
+      // config.json -> JetEditorAppearance -> this concrete element. The CSS
+      // custom property remains only as a fallback for startup/error cases.
+      const configuredWidth=Number(window.JetEditorAppearance?.caretWidth);
+      const caretWidth=Number.isFinite(configuredWidth)&&configuredWidth>=1
+        ? Math.round(configuredWidth)
+        : Math.max(1,parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--post-compose-caret-width'))||4);
+      caret.style.width=`${caretWidth}px`;
+      caret.style.minWidth=`${caretWidth}px`;
+      mirror.replaceChildren(document.createTextNode(input.value.slice(0,p)),caret,document.createTextNode(input.value.slice(p)));
+    });
+  }
+  function bind(textarea) {
+    if (!textarea || textarea.dataset.composerCaretBound) return;
+    input=textarea; input.dataset.composerCaretBound='1'; const row=input.closest('.post-input-row'); if(!row)return;
+    layer=document.createElement('div'); layer.className='post-compose-caret-layer'; mirror=document.createElement('div'); mirror.className='post-compose-caret-mirror'; layer.appendChild(mirror); row.appendChild(layer);
+    for(const type of ['input','select','keyup','click','focus','blur','scroll']) input.addEventListener(type,refresh,{passive:type==='scroll'});
+    window.addEventListener('jetnote:editor-appearance-changed',refresh);
+  }
+  return {bind,refresh};
 })();
 
 const EditorController = (() => {
@@ -100,7 +130,7 @@ const EditorController = (() => {
   function setText(text, selectionStart, selectionEnd) {
     if (state === State.CLOSED) return;
     PostDraftStore.update({ text: String(text || ''), selectionStart, selectionEnd });
-    EditorView.setCounter(String(text || '').length); scheduleSnapshot('text-change');
+    scheduleSnapshot('text-change');
   }
   async function begin(initial) {
     if (state !== State.CLOSED) throw new Error(`Editor cannot open from ${state}`);
@@ -108,12 +138,12 @@ const EditorController = (() => {
     const restored = await loadCompatibleSnapshot(initial), draft = PostDraftStore.replace(restored || initial);
     hydrateRuntimeMedia(draft); state = State.EDITING;
     await queueSnapshot(restored ? 'restore' : 'open');
-    console.debug('[Editor] opened', draft.mode, draft.postId, restored ? 'restored' : 'fresh');
     return PostDraftStore.get();
   }
   function bindTextarea(textarea) {
     if (!textarea || textarea === boundTextarea) return;
     boundTextarea = textarea;
+    ComposerCaret.bind(textarea);
     textarea.addEventListener('input', () => setText(textarea.value, textarea.selectionStart || 0, textarea.selectionEnd || 0));
     textarea.addEventListener('select', syncFromView);
     textarea.addEventListener('scroll', () => { if (state === State.EDITING) scheduleSnapshot('text-scroll'); }, { passive: true });
@@ -121,13 +151,13 @@ const EditorController = (() => {
   async function suspend(toolId = 'background') {
     if (state !== State.EDITING) return;
     syncFromView(); markUi({ activeTool: toolId }); state = State.TOOL_ACTIVE;
-    await queueSnapshot('suspend'); console.debug('[Editor] suspended', toolId);
+    await queueSnapshot('suspend');
   }
   function resume() {
     if (state !== State.TOOL_ACTIVE) return null;
     markUi({ activeTool: null }); state = State.EDITING;
-    const draft = PostDraftStore.get(); EditorView.setText(draft.text); EditorView.setCounter(draft.text.length); EditorView.restoreSelection(draft);
-    console.debug('[Editor] resumed', draft.postId); return draft;
+    const draft = PostDraftStore.get(); EditorView.setText(draft.text); EditorView.restoreSelection(draft);
+    return draft;
   }
   function validate() {
     const draft = PostDraftStore.get();

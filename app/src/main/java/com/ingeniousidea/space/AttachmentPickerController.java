@@ -55,15 +55,12 @@ final class AttachmentPickerController {
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
 
         if ("image".equals(this.requestedType)) {
-            if(android.os.Build.VERSION.SDK_INT>=33 || (android.os.Build.VERSION.SDK_INT>=30 && android.os.ext.SdkExtensions.getExtensionVersion(android.os.Build.VERSION_CODES.R)>=2)) {
-                intent.setAction(android.provider.MediaStore.ACTION_PICK_IMAGES);
-                intent.removeCategory(Intent.CATEGORY_OPENABLE);
-                if(multiple)intent.putExtra(android.provider.MediaStore.EXTRA_PICK_IMAGES_MAX,Math.min(9,android.provider.MediaStore.getPickImagesMaxLimit()));
-            }else{
-                intent.setAction(Intent.ACTION_PICK);intent.removeCategory(Intent.CATEGORY_OPENABLE);
-                intent.setData(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-            }
-            intent.setType("image/*");
+            // Deliberately do not advertise an image-only MIME filter here. On
+            // Android/HyperOS an ACTION_OPEN_DOCUMENT request with image/* may be
+            // presented as the photo/gallery surface even though the action is SAF.
+            // */* keeps this on the directory/file browser surface. AttachmentStore
+            // validates the selected URI as an image afterwards, including .svg.
+            intent.setType("*/*");
         } else if ("audio".equals(this.requestedType)) {
             intent.setType("*/*");
             intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"audio/*","application/octet-stream"});

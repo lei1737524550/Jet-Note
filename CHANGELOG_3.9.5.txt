@@ -1,7 +1,0 @@
-Jet Note 3.9.5
-
-- Replaced the Dictionary/Sentences native top-bar "Get Audio" text action with the supplied audio SVG icon.
-- Converted the supplied SVG to an Android VectorDrawable for the native toolbar while retaining the original SVG under assets/icons.
-- Kept the existing Get Audio click and long-press behavior unchanged.
-- The audio action now uses the same fixed right-side icon-button geometry and center axis as the shared JetTopBar spec.
-- Updated the no-audio hint to refer to the audio button instead of the removed text label.

@@ -12,7 +12,7 @@
 
     <div class="post-compose-body">
       <div class="post-input-row">
-        <textarea id="postComposerText" maxlength="5000" placeholder="Share something..." data-i18n-placeholder="share" oninput="updatePostCount()"></textarea>
+        <textarea id="postComposerText" placeholder="Share something..." data-i18n-placeholder="share"></textarea>
         <!-- Rendered from config.json so order and expanded tools stay configurable. -->
         <div class="compose-media-toolbar" id="postComposerToolbar" aria-label="Post tools" data-i18n-aria-label="postTools"></div>
       </div>
@@ -20,16 +20,9 @@
       <div class="compose-image-preview post-compose-images" id="postImagePreview"></div>
       <div class="compose-video-preview post-compose-videos" id="postVideoPreview"></div>
 
-      <div class="post-compose-count"><span id="postCharCount">0</span>/5000</div>
     </div>
   </section>
   <input id="postAudioPicker" type="file" accept="audio/*,.mp3" multiple hidden onchange="handleAudioFiles(event,'post')">
-  <input id="postImagePicker"
-         type="file"
-         accept="image/*"
-         multiple
-         style="display:none"
-         onchange="handlePostImages(event)">
   <input id="postVideoPicker"
          type="file"
          accept="video/*"

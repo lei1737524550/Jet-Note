@@ -35,16 +35,35 @@
     root.setProperty('--jet-toolbar-primary-color', spec.primaryTextColor || '#1599e8');
     root.setProperty('--jet-toolbar-tool-action-color', spec.toolActionTextColor || '#168a45');
   }
+  function applyEditorAppearance(config) {
+    const root = document.documentElement.style;
+    const requestedWidth = Number(config?.caret_width);
+    const caretWidth = Number.isFinite(requestedWidth) && requestedWidth >= 1
+      ? Math.round(requestedWidth)
+      : 4;
+    const cursorDropColor = config?.cursor_drop_color || '#14A89A';
+
+    // Keep one normalized runtime value as the source of truth. ComposerCaret
+    // applies this value directly to the real caret element it creates, so a
+    // later stylesheet/default cannot silently replace config.json.
+    window.JetEditorAppearance = Object.freeze({ caretWidth, cursorDropColor });
+    root.setProperty('--post-compose-caret-width', `${caretWidth}px`);
+    root.setProperty('--cursor-drop-color', cursorDropColor);
+    window.dispatchEvent(new CustomEvent('jetnote:editor-appearance-changed', {
+      detail: window.JetEditorAppearance
+    }));
+  }
 
   async function initialize() {
     try {
       const config = await loadConfig();
       apply(config.top_bar);
+      applyEditorAppearance(config);
     } catch (error) {
       console.error('Jet Note: top bar config failed', error);
     }
   }
 
-  window.JetTopBar = { initialize, apply };
+  window.JetTopBar = { initialize, apply, applyEditorAppearance, loadConfig };
   initialize();
 })();

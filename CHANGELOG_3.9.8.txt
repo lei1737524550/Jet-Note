@@ -1,9 +1,0 @@
-Jet Note 3.9.8
-
-- Replace timeline audio's detached 32px icon group with real per-audio progress controls.
-- Keep timeline audio controls inside each Post while aligning their right border to the Post right border.
-- Use one right-side media container per Post so multiple audio progress controls share one right edge and stack without overlap.
-- Keep text wrapping local to the side-media controls instead of adding permanent Post right padding.
-- Add audio seek interaction and live progress fill for each independent audio attachment.
-- Keep composer/draft audio controls unchanged.
-- Preserve the three-dot action menu above media controls and make the side-media wrapper pointer-transparent outside visible controls.

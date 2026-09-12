@@ -1,7 +1,0 @@
-Jet Note 3.9.2 - Reusable Top Bar
-
-- Extracted New Post header geometry into a reusable Jet Note top-bar CSS component.
-- New Post now supplies only page-specific text, colors and actions; the shared component owns height and left/center/right axes.
-- Tools page now uses the same 50px top bar and left-button axis as New Post.
-- Dictionary / Sentences native WebView toolbar geometry now mirrors New Post: 50dp bar, 36dp controls, true-centered title, 44dp left/right action axes.
-- Existing New Post horizontal alignment is preserved.

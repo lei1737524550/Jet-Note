@@ -2,12 +2,22 @@ const MAX_MEDIA_IMAGES = 9;
 
 function compressImageFile(file, maxSide = 1280, quality = 0.82) {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type || !file.type.startsWith('image/')) {
+    const isSvg = !!file && (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name || ''));
+    if (!file || (!isSvg && (!file.type || !file.type.startsWith('image/')))) {
       reject(new Error('not-image'));
       return;
     }
 
     const reader = new FileReader();
+
+    // SVG is already compact/vector. Keep the original bytes instead of drawing it
+    // to canvas, which would turn it into a raster JPEG and lose vector quality.
+    if (isSvg) {
+      reader.onerror = () => reject(new Error('read-failed'));
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+      return;
+    }
 
     reader.onerror = () => reject(new Error('read-failed'));
 

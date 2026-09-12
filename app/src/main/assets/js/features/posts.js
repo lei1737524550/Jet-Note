@@ -102,7 +102,9 @@ function syncComposerViewport() { ViewportManager.requestUpdate(); }
 function syncPostEditorDraft() {
   if (EditorController.state === EditorController.State.EDITING || EditorController.state === EditorController.State.TOOL_ACTIVE) {
     EditorController.setMedia({ images: postDraftImages, attachments: draftAttachments.post });
-    EditorController.syncFromComposer();
+    // syncFromComposer was retired; calling it aborted publishing after the
+    // button had already been disabled. Synchronize through the current API.
+    EditorController.syncFromView();
   }
 }
 
@@ -171,7 +173,6 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
     body.scrollTop = 0;
     screen.classList.add('open');
     document.body.style.overflow = 'hidden';
-    updatePostCount();
     ViewportManager.update();
 
     // The composer was opened from a user gesture: focus immediately and then
@@ -203,7 +204,6 @@ function closePostComposer() {
   postDraftImages = [];
   renderPostImagePreview();
   renderPostVideoPreview();
-  updatePostCount();
   void EditorController.discard();
 }
 
@@ -217,11 +217,18 @@ function pickPostImages() {
     alert(t('imageVideoExclusive'));
     return;
   }
-  if (NativeMedia.available()) {
-    pickEntryMedia('post', 'image');
+
+  // Image picking in the Android app must never go through an HTML
+  // <input type="file">. WebView/Chromium is allowed to translate an
+  // image-accepting file input into the platform photo/gallery picker, which
+  // is exactly the UI Jet Note does not want here. Route the button directly
+  // to the native SAF attachment picker, just like the native media path.
+  if (!window.JetNoteNative || typeof JetNoteNative.pickAttachments !== 'function') {
+    console.error('Jet Note native attachment picker is unavailable');
+    alert(t('attachmentReadFailed'));
     return;
   }
-  document.getElementById('postImagePicker').click();
+  void pickEntryMedia('post', 'image');
 }
 
 function pickPostVideos() {
@@ -255,35 +262,6 @@ async function openPostComposerWithVideoPicker() {
   if (!isWorkspaceWritable()) return;
   if (!await openPostComposer()) return;
   setTimeout(() => pickPostVideos(), 60);
-}
-
-async function handlePostImages(event) {
-  const picker = event.target;
-  if (!isWorkspaceWritable()) { picker.value = ''; return; }
-  if (hasDraftVideos()) {
-    alert(t('imageVideoExclusive'));
-    picker.value = '';
-    return;
-  }
-  const remaining = MAX_MEDIA_IMAGES - postDraftImages.length;
-
-  if (remaining <= 0) {
-    alert(t('imageLimit'));
-    picker.value = '';
-    return;
-  }
-
-  const selectedCount = (picker.files || []).length;
-  const images = await filesToCompressedImages(picker.files, remaining);
-  postDraftImages.push(...images);
-
-  if (selectedCount > remaining) {
-    alert(t('imageLimit'));
-  }
-
-  picker.value = '';
-  renderPostImagePreview();
-  syncPostEditorDraft();
 }
 
 function removePostDraftImage(index) {
@@ -527,21 +505,14 @@ document.addEventListener('click', event => {
 });
 
 initializePostComposerControls();
-document.getElementById('postComposerText')?.addEventListener('input', updatePostCount);
 window.addEventListener('jetnote:editor-resume', () => {
   const screen = document.getElementById('postComposeScreen');
   if (!screen?.classList.contains('open')) return;
   renderPostImagePreview();
   renderPostVideoPreview();
   renderAudioDraft();
-  updatePostCount();
   ViewportManager.requestUpdate();
 });
-
-function updatePostCount() {
-  const textarea = document.getElementById('postComposerText');
-  document.getElementById('postCharCount').textContent = textarea.value.length;
-}
 
 function formatNowForPost() {
   const now = new Date();

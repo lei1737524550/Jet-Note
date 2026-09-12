@@ -50,7 +50,8 @@ final class AttachmentStore {
         String originalName = queryDisplayName(resolver, uri);
         if (originalName == null || originalName.trim().isEmpty()) originalName = "attachment";
         if (mimeType == null || mimeType.trim().isEmpty() || "application/octet-stream".equals(mimeType)) mimeType = guessMimeFromName(originalName);
-        if(originalName.toLowerCase(Locale.US).endsWith(".mp3"))mimeType="audio/mpeg";
+        if(originalName.toLowerCase(Locale.US).endsWith(".mp3")) mimeType="audio/mpeg";
+        if(originalName.toLowerCase(Locale.US).endsWith(".svg")) mimeType="image/svg+xml";
         if (("audio".equals(requestedType) && !mimeType.startsWith("audio/"))
                 || ("image".equals(requestedType) && !mimeType.startsWith("image/"))
                 || ("video".equals(requestedType) && !mimeType.startsWith("video/"))) {
@@ -94,6 +95,7 @@ final class AttachmentStore {
                 ? guessMimeFromName(resolvedName)
                 : mimeType.trim();
         if (resolvedName.toLowerCase(Locale.US).endsWith(".mp3")) resolvedMime = "audio/mpeg";
+        if (resolvedName.toLowerCase(Locale.US).endsWith(".svg")) resolvedMime = "image/svg+xml";
 
         if (("audio".equals(requestedType) && !resolvedMime.startsWith("audio/"))
                 || ("image".equals(requestedType) && !resolvedMime.startsWith("image/"))
@@ -345,6 +347,7 @@ final class AttachmentStore {
         if ("image/png".equals(mime)) return ".png";
         if ("image/webp".equals(mime)) return ".webp";
         if ("image/gif".equals(mime)) return ".gif";
+        if ("image/svg+xml".equals(mime)) return ".svg";
         if ("audio/mpeg".equals(mime)) return ".mp3";
         if ("audio/ogg".equals(mime)) return ".ogg";
         if ("audio/wav".equals(mime) || "audio/x-wav".equals(mime)) return ".wav";
@@ -371,6 +374,7 @@ final class AttachmentStore {
         if (lower.endsWith(".png")) return "image/png";
         if (lower.endsWith(".webp")) return "image/webp";
         if (lower.endsWith(".gif")) return "image/gif";
+        if (lower.endsWith(".svg")) return "image/svg+xml";
         if (lower.endsWith(".mp3")) return "audio/mpeg";
         if (lower.endsWith(".wav")) return "audio/wav";
         if (lower.endsWith(".ogg") || lower.endsWith(".oga")) return "audio/ogg";

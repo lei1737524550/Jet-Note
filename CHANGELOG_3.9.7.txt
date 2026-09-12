@@ -1,7 +1,0 @@
-Jet Note 3.9.7
-
-- Set post timestamp top margin to 0.
-- Move timeline audio controls into the same upper-right flow used by the three-dot action button so text can share the row.
-- Keep every audio attachment independently playable; multiple audio controls remain visible and wrap as a compact group when needed.
-- Raise the three-dot action control above wrapped text to restore reliable tapping after the compact post-layout change.
-- No change to post-action business logic or audio playback data model.

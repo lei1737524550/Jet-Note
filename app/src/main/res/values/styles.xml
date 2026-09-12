@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.JetNote" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <!-- Native/WebView selection handle accent: turquoise. -->
+        <item name="android:colorControlActivated">#14A89A</item>
+        <item name="android:colorAccent">#14A89A</item>
+    </style>
+</resources>

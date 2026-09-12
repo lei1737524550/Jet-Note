@@ -2,6 +2,8 @@ package com.ingeniousidea.space;
 
 import android.app.Activity;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
+import android.view.HapticFeedbackConstants;
 
 import org.json.JSONObject;
 
@@ -9,6 +11,8 @@ import org.json.JSONObject;
 /** Narrow JavaScript bridge exposed only to Jet Note's bundled local page. */
 final class NativeBridge {
     private final Activity activity;
+    private final WebView webView;
+    private int videoHapticGuardGeneration = 0;
     private final DictionaryController dictionary;
     private final MediaWriteController mediaWriter;
     private final Runnable ready;
@@ -19,12 +23,14 @@ final class NativeBridge {
 
     NativeBridge(
             Activity activity,
+            WebView webView,
             DictionaryController dictionary,
             AttachmentPickerController picker,
             AttachmentStore store,
             JetNoteArchiveController archive, MediaWriteController mediaWriter, NativeVideoPlayer videoPlayer, Runnable ready
     ) {
         this.activity = activity;
+        this.webView = webView;
         this.dictionary = dictionary;this.mediaWriter=mediaWriter;this.ready=ready;
         this.picker = picker;
         this.store = store;
@@ -33,6 +39,33 @@ final class NativeBridge {
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
+
+    @JavascriptInterface
+    public void hapticLongPress() {
+        activity.runOnUiThread(() ->
+                activity.getWindow().getDecorView().performHapticFeedback(HapticFeedbackConstants.LONG_PRESS));
+    }
+
+    /**
+     * Temporarily suppress WebView's built-in long-press haptic only while a
+     * video gesture is in progress. Other WebView interactions keep their
+     * normal Android haptic behaviour. The generation guard plus timeout makes
+     * sure an interrupted gesture cannot leave haptics disabled globally.
+     */
+    @JavascriptInterface
+    public void setVideoDefaultHapticSuppressed(boolean suppressed) {
+        activity.runOnUiThread(() -> {
+            final int generation = ++videoHapticGuardGeneration;
+            webView.setHapticFeedbackEnabled(!suppressed);
+            if (suppressed) {
+                webView.postDelayed(() -> {
+                    if (generation == videoHapticGuardGeneration) {
+                        webView.setHapticFeedbackEnabled(true);
+                    }
+                }, 2000L);
+            }
+        });
+    }
 
     @JavascriptInterface public String beginMedia(String path){return mediaWriter.begin(path);}
     @JavascriptInterface public boolean appendMedia(String token,String data){return mediaWriter.append(token,data);}
