@@ -1,0 +1,283 @@
+.tabs {
+  display:flex;
+}
+.tabs .tab {
+  flex:1 1 0;
+  min-width:0;
+}
+.tab-label {
+  font-size:14px;
+}
+.attachment-list {
+  display:grid;
+  gap:8px;
+  margin:12px 0;
+}
+.attachment-item {
+  min-width:0;
+  background:#f8fafb;
+  padding:10px;
+}
+.attachment-name {
+  font-size:14px;
+  overflow-wrap:anywhere;
+  margin-bottom:8px;
+}
+.attachment-item audio {
+  display:block;
+  width:100%;
+  height:44px;
+}
+.attachment-item button {
+  margin-top:8px;
+  padding:6px 12px;
+  background:white;
+  font-size:14px;
+}
+.attachment-item small {
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  color:#925000;
+}
+#postEditorTools.tools {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+#postEditorTools.tools > .tool {
+  min-height:44px;
+}
+.import-panel button {
+  min-height:44px;
+  padding:10px 12px;
+  background:white;
+  margin:4px;
+  font-size:15px;
+}
+#archiveStatus {
+  font-size:14px;
+  overflow-wrap:anywhere;
+}
+.import-preview {
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:45000;
+  background:#0006;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+}
+.import-preview.open {
+  display:flex;
+}
+.import-panel {
+  width:min(440px,100%);
+  max-height:calc(100dvh - 60px);
+  overflow:auto;
+  padding:18px;
+  background:white;
+}
+.import-panel select {
+  display:block;
+  width:100%;
+  min-height:44px;
+  margin:12px 0;
+  font:inherit;
+}
+.import-panel p {
+  font-size:14px;
+  line-height:1.5;
+}
+button:disabled {
+  opacity:.45;
+}
+/* Compact post audio: one source icon per independent attachment. */
+/* Timeline audio participates in the same upper-right flow as the ⋯ menu.
+   Each audio source remains an independent control; multiple sources wrap as a
+   compact group while post text flows into the remaining space. */
+.post > .attachment-strip{
+  float:right;
+  width:auto;
+  max-width:calc(100% - 44px);
+  min-height:32px;
+  margin:-3px 4px 4px 0;
+  gap:4px;
+  justify-content:flex-end;
+  position:relative;
+  z-index:4;
+}
+.post > .attachment-strip .audio-token-play{
+  width:32px;
+  height:32px;
+  padding:6px;
+}
+.post > .attachment-strip .audio-token-play svg{
+  width:18px;
+  height:18px;
+  /* The speaker glyph is visually left-heavy inside its 24x24 viewBox.
+     A small optical correction keeps it centered in the 32px button. */
+  transform:translateX(1.5px);
+}
+
+.attachment-strip{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:9px 2px 4px;
+  min-height:34px
+}
+.attachment-strip .audio-token{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent
+}
+.audio-token audio{
+  display:none
+}
+.audio-token-play{
+  position:relative;
+  width:34px;
+  height:34px;
+  padding:7px;
+  background:#f8fafc;
+  color:#315f98;
+  display:grid;
+  place-items:center
+}
+.audio-token-play svg{
+  width:19px;
+  height:19px;
+  transform:translateX(0)
+}
+.audio-token-play sub{
+  position:absolute;
+  right:-2px;
+  bottom:-2px;
+  min-width:14px;
+  height:14px;
+  padding:0 2.5px;
+  border-radius:7px;
+  background:#315f98;
+  color:#fff;
+  font-size:8.5px;
+  line-height:14px;
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-select:none
+}
+.audio-token-play.playing{
+  background:#315f98;
+  color:#fff;
+  box-shadow:0 0 0 3px rgba(49,95,152,.14)
+}
+.audio-token-play.unavailable{
+  opacity:.45
+}
+.audio-token-remove{
+  position:absolute;
+  right:-7px;
+  top:-8px;
+  width:18px;
+  height:18px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:#d8dde2;
+  color:#333;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box
+}
+.audio-token-remove svg{
+  display:block;
+  width:10px;
+  height:10px;
+  flex:0 0 10px;
+  overflow:visible;
+  stroke:currentColor;
+  stroke-width:3;
+  stroke-linecap:round;
+  fill:none
+}
+.attachment-unknown{
+  padding:6px 9px;
+  background:#fafbfc;
+  font-size:11px
+}
+.post-input-row #postComposerText{
+  min-width:0
+}
+.post-input-row .tools{
+  display:flex;
+  flex-direction:row;
+  flex-wrap:nowrap;
+  align-items:center;
+  /* Keep tool_* anchored at the same X positions used by the fully expanded row.
+     toolbox_tool_* only grows to the right; opening/closing the toolbox must not
+     recenter or shift the primary tools. --tools-expanded-row-width is set by tools.js. */
+  justify-content:flex-start;
+  gap:8px;
+  width:100%;
+  min-height:48px;
+  margin:0;
+  padding:0 0 0 max(0px, calc((100% - var(--tools-expanded-row-width, 328px)) / 2));
+  box-sizing:border-box;
+  border:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch
+}
+.post-input-row .tools::-webkit-scrollbar{
+  display:none
+}
+.post-input-row .tool{
+  width:48px;
+  height:48px;
+  min-height:48px;
+  padding:10px;
+  background:var(--jet-note-type-edit-post-right-side-tool-button-background,#fff);
+  display:grid;
+  place-items:center
+}
+.post-input-row .tool svg{
+  width:24px;
+  height:24px
+}
+.post-input-row .tool .toolbox-unfold-icon{
+  width:24px;
+  height:24px;
+  display:block;
+}
+.post-input-row .tool span{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  clip-path:inset(50%)
+}
+#postAudioDraft .attachment-strip{
+  justify-content:flex-end;
+  margin:10px 0 4px
+}
+
+
+/* Top Post only: keep the audio layout container in its normal position.
+   Only the speaker glyph inside each audio button receives an optical left shift.
+   This intentionally does not affect normal timeline Post audio controls. */
+.top-post-super .top-post-content > .attachment-strip{
+  justify-content:flex-end;
+}
+.top-post-super .top-post-content .audio-token-play svg{
+  transform:translateX(-2px);
+}

@@ -1,0 +1,464 @@
+:root {
+  color-scheme: light;
+  --ink:#111214;
+  --muted:#999da2;
+  --blue:#315f98;
+  --page-background:rgb(255,255,255);
+  --page-background-image:none;
+  --feed:var(--page-background);
+  --body-size:17px;
+  --body-leading:1.5;
+  --card-radius:14px;
+  --common-border-color:#bfc1c4;
+  --common-border-width:1px;
+  --common-border-radius:14px;
+  --content-horizontal-padding:8px;
+  /* Android WindowInsets is the single source of truth for system safe area.
+     Do not combine it with env(safe-area-inset-*), otherwise a cutout/status
+     inset can be applied twice or appear only after a later viewport event. */
+  --system-safe-area-top:0px;
+  --system-safe-area-right:0px;
+  --system-safe-area-bottom:0px;
+  --system-safe-area-left:0px;
+  --safe-top:var(--system-safe-area-top);
+  --safe-right:var(--system-safe-area-right);
+  --safe-bottom:var(--system-safe-area-bottom);
+  --safe-left:var(--system-safe-area-left);
+  /* Fallback values for the reusable Jet Note top bar.
+     Runtime values are loaded from config.json -> page_action_bar by page_action_bar.js. */
+  --page-action-bar-height:50px;
+  --page-action-bar-control-height:36px;
+  --page-action-bar-title-size:16px;
+  --page-action-bar-control-size:14px;
+  --page-action-bar-left-axis:44px;
+  --page-action-bar-right-axis:44px;
+  --page-action-bar-icon-width:48px;
+  --page-action-bar-text-min-width:48px;
+  --page-action-bar-control-radius:14px;
+  --page-action-bar-background:#f8f9fa;
+  --page-action-bar-border-color:#bfc1c4;
+  --page-action-bar-divider-color:#eceef1;
+  --page-action-bar-title-color:#202124;
+  --page-action-bar-normal-color:#222222;
+  --page-action-bar-primary-color:#1599e8;
+  --page-action-bar-tool-action-color:#168a45;
+  --jet-note-type-settings-background:var(--page-background);
+  --jet-note-type-edit-post-background:var(--page-background);
+  --jet-note-type-tools-background:var(--page-background);
+  --jet-note-type-page-action-bar-background:var(--page-background);
+  --jet-note-type-top-post-background:#fff;
+  --jet-note-type-post-composer-background:var(--page-background);
+  --jet-note-type-main-posts-background:#fff;
+  --jet-note-type-edit-post-right-side-tool-button-background:#fff;
+  --jet-note-type-edit-post-right-side-tools-expanded-button-background:#f5f6f7;
+  --jet-note-type-settings-backup-card-background:#fff;
+  --jet-note-type-settings-color-view-card-background:#fff;
+  --jet-note-type-body-foreground-color:#111111;
+  --jet-note-type-settings-border-color:#bfc1c4;
+  --jet-note-type-edit-post-border-color:#bfc1c4;
+  --jet-note-type-tools-border-color:#bfc1c4;
+  --jet-note-type-page-action-bar-border-color:#bfc1c4;
+  --jet-note-type-top-post-border-color:#bfc1c4;
+  --jet-note-type-post-composer-border-color:#bfc1c4;
+  --jet-note-type-main-posts-border-color:#bfc1c4;
+}
+html,body {
+  margin:0;
+  min-height:100%;
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+}
+* {
+  box-sizing:border-box;
+}
+body {
+  background-color:var(--page-background);
+  background-image:var(--page-background-image);
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+
+/* Hide platform/browser scrollbars without disabling scrolling. */
+html,body,.post-compose-body{ scrollbar-width:none; -ms-overflow-style:none; }
+html::-webkit-scrollbar,body::-webkit-scrollbar,.post-compose-body::-webkit-scrollbar{ width:0; height:0; display:none; }
+/* Shared rectangular boundary for Jet Note boxes and box-like controls. */
+.common_border {
+  box-sizing:border-box;
+  border:var(--common-border-width) solid var(--common-border-color);
+  border-radius:var(--common-border-radius);
+}
+
+button,input,textarea {
+  font:inherit;
+  color:inherit;
+}
+button {
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+button:focus-visible {
+  outline:2px solid #1599e8;
+  outline-offset:2px;
+}
+#stage {
+  width:100%;
+  margin:auto;
+}
+.phone {
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  min-height:100dvh;
+  padding:calc(var(--safe-top) + 14px) var(--safe-right) calc(var(--safe-bottom) + 16px) var(--safe-left);
+}
+.header,.ghost-line,.wave3,.composer-area {
+  display:none;
+}
+.profile {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 10px 8px;
+  padding:12px 48px 12px 14px;
+  min-height:92px;
+  border-radius:22px;
+  background:linear-gradient(#ffffffeb,#eff7fbe6);
+}
+.avatar {
+  display:block;
+  width:70px;
+  height:70px;
+  flex-shrink:0;
+  border-radius:50%;
+  object-fit:cover;
+  cursor:pointer;
+}
+.name {
+  min-width:0;
+  font-size:clamp(19px,5.2vw,26px);
+  font-weight:500;
+  overflow-wrap:anywhere;
+  outline:none;
+}
+.settings {
+  position:absolute;
+  top:9px;
+  right:8px;
+  border:0;
+  border-radius:50%;
+  width:36px;
+  height:36px;
+  padding:8px;
+  background:#a7b0ba66;
+  display:grid;
+  place-items:center;
+}
+.settings svg {
+  width:22px;
+  height:22px;
+}
+.tabs {
+  display:flex;
+  margin:0 10px;
+  border-radius:0;
+  overflow:visible;
+  background:transparent;
+}
+.tab {
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:76px;
+  border:0;
+  background:transparent;
+  padding:0;
+}
+.tab svg {
+  width:30px;
+  height:30px;
+}
+.tab-label {
+  margin-top:6px;
+  font-size:16px;
+  line-height:1.1;
+}
+.feed {
+  width:100%;
+  padding:0 var(--content-horizontal-padding);
+}
+.feed-composer-wrap {
+  width:100%;
+  margin:0 0 8px;
+  padding:0;
+  background:transparent;
+}
+.feed-composer {
+  display:flex;
+  align-items:center;
+  min-height:54px;
+  background:var(--jet-note-type-post-composer-background,#fff);
+}
+.feed-composer-main {
+  flex:1;
+  min-width:0;
+  min-height:52px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:10px 14px;
+  color:#9da0a4;
+  font-size:16px;
+}
+.feed-composer-photo {
+  width:48px;
+  height:48px;
+  border:0;
+  background:transparent;
+  padding:10px;
+}
+.feed-composer-photo svg {
+  width:26px;
+  height:26px;
+}
+.post {
+  /* Keep the published-post padding explicit so full-width media can opt out
+     without duplicating an unexplained 12px magic number elsewhere. */
+  --published-post-horizontal-padding:12px;
+  position:relative;
+  width:100%;
+  margin:0 0 6px;
+  padding:12px var(--published-post-horizontal-padding) 14px;
+  background:var(--jet-note-type-main-posts-background,#fff);
+}
+.post-head {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:42px;
+  padding-right:44px;
+}
+.mini-avatar {
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.post-name {
+  color:var(--blue);
+  font-size:16px;
+  font-weight:600;
+  overflow-wrap:anywhere;
+  min-width:0;
+}
+.text-content {
+  position:relative;
+  margin-top:0;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.post-content-clear {
+  clear:both;
+  height:0;
+}
+.time {
+  position:relative;
+  margin-top:3px;
+  margin-bottom:3px;
+  color:var(--muted);
+  font-size:12px;
+}
+@media(min-width:720px) {
+  .profile,.tabs,.feed {
+    max-width:700px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+/* Keep settings near the top while moving the avatar/name down. The 8px
+   profile bottom padding plus the tab's 10px top padding keeps the avatar
+   bottom about 18px from the feature icon row, safely below the 60px limit. */
+.profile{
+  background:transparent;
+  border-radius:0;
+  padding:36px 44px 8px 4px;
+  min-height:114px;
+  margin-bottom:0
+}
+.tabs{
+  background:transparent;
+  border-radius:0;
+  overflow:visible
+}
+.feed-composer-wrap{
+  background:transparent;
+  border-radius:0
+}
+.settings{
+  background:rgba(255,255,255,.48);
+  color:#48515b
+}
+.settings path{
+  fill:currentColor!important
+}
+:root[data-avatar-shape="round"] .avatar,:root[data-avatar-shape="round"] .mini-avatar{
+  border-radius:50%
+}
+:root[data-avatar-shape="square"] .avatar{
+  border-radius:12px
+}
+:root[data-avatar-shape="square"] .mini-avatar{
+  border-radius:7px
+}
+
+/* Three Posts, One Body vertical geometry.
+   The exact signed CSS-pixel offset comes from config.json:
+   three_post_one_body_vertical_move. Negative values move the unified body up;
+   positive values move it down. The same value is used for top and the matching
+   flow compensation so Top Post, Post Composer, and Main Posts never drift apart. */
+.three-posts-one-body{
+  position:relative;
+  top:var(--three-post-one-body-vertical-move,-60px);
+  margin-bottom:var(--three-post-one-body-vertical-move,-60px);
+}
+
+/* Simplified home: no profile identity or permanent feature tabs. */
+.home-actions{width:100%;padding:8px var(--content-horizontal-padding) 8px;}
+.top-post-card{width:100%;height:auto;padding:12px;background:var(--jet-note-type-top-post-background,#fff);}
+.top-post-layout{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:stretch;}
+.top-post-empty .top-post-layout{grid-template-columns:minmax(0,1fr);}
+.top-post-default-text{grid-column:1;display:flex;align-items:center;justify-content:center;min-width:0;padding:10px 8px;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--top-post-string-color,#F06E80);font-size:var(--top-post-string-size,2em);line-height:1.35;}
+.top-post-content{grid-column:1;min-width:0;padding:2px 6px 2px 8px;align-self:start;}
+.top-post-content .text-content{margin-top:0;}
+.top-post-content .time{margin-top:var(--post-state-time-top-margin,10px);margin-bottom:var(--post-state-time-bottom-margin,3px);}
+.top-post-actions{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:44px;}
+.top-post-actions .more{position:static!important;width:44px;height:44px;min-width:44px;min-height:44px;margin:0;padding:10px;border:0;border-radius:10px;background:transparent;display:grid;place-items:center;color:#626a73;pointer-events:auto;z-index:auto;}
+.top-post-actions .more svg{width:24px;height:24px;display:block;fill:currentColor;}
+.post-head-minimal{
+  position:relative;
+  z-index:5;
+  float:right;
+  width:40px;
+  min-height:34px;
+  padding-right:0;
+}
+.post-head-minimal .more{
+  z-index:6;
+  pointer-events:auto;
+}
+
+
+/* Main-page border colors are independently configurable from config.json. */
+#topPostCard.common_border{border-color:var(--top-post-border-color,var(--jet-note-type-top-post-border-color,var(--common-border-color)));}
+#postList .feed-composer.common_border{border-color:var(--write-sth-border-color,var(--jet-note-type-post-composer-border-color,var(--common-border-color)));}
+#postList article.post.common_border{border-color:var(--post-state-border-color,var(--main-posts-border-color,var(--jet-note-type-main-posts-border-color,var(--common-border-color))));}
+#topPostCard.top-post-super.common_border{border-color:var(--post-state-border-color,var(--top-post-border-color,var(--common-border-color)));}
+
+/* Ordinary content follows the automatic contrast color of current_body.
+   State-specific timestamps and semantic feedback colors remain independent. */
+#topPostCard,
+#postList .feed-composer,
+#postList article.post,
+#topPostCard .text-content,
+#postList article.post .text-content {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+#postList .feed-composer-main,
+#postList .feed-composer-photo {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+
+/* Per-star-state visual settings supplied by config.json. */
+#postList article.post > .time,
+#postList article.post > .post-footer-row > .time,
+#topPostCard.top-post-super .top-post-content > .time{
+  color:var(--post-state-time-color,var(--muted));
+  margin-top:var(--post-state-time-top-margin,3px);
+  margin-bottom:var(--post-state-time-bottom-margin,3px);
+}
+
+/* Super Star: keep a short post's timestamp at the lower-left of its content column.
+   This remains normal flow: longer content grows the card and pushes the time down. */
+.top-post-super .top-post-content{display:flex;flex-direction:column;}
+.top-post-super .top-post-content > .time{margin-top:auto;padding-top:var(--post-state-time-top-margin,10px);margin-bottom:var(--post-state-time-bottom-margin,3px);}
+
+/* Home main_status_bar: four strict, equal-width cells.
+   Its own height comes ONLY from --main-status-bar-height. system_safe_area is
+   applied separately by .phone padding and three_post_one_body has its own offset.
+   Do not use this row height as a proxy for either of those geometries.
+   Four strict, equal-width cells.
+   Cell 1 = battery (centered), cell 2 = intentionally empty, cell 3 = HH:mm
+   (vertically centered and right-aligned), cell 4 = Settings. The Settings
+   region is conceptually split into three equal sub-cells: the gear is centered
+   in the middle sub-cell, while the clickable hit area covers all three.
+   This row is normal document flow and is NOT anchored to Three Posts, One Body,
+   which prevents background/resume viewport recalculation from changing its geometry. */
+.main-status-bar{
+  position:relative;
+  transform:translateY(var(--main-status-bar-vertical-move,0px));
+  width:calc(100% - (2 * var(--main-status-bar-horizontal-margin,8px)));
+  height:var(--main-status-bar-height,52px);
+  box-sizing:border-box;
+  overflow:hidden;
+  margin:var(--main-status-bar-top-margin,0px) var(--main-status-bar-horizontal-margin,8px) var(--main-status-bar-bottom-margin,0px);
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  align-items:stretch;
+  font-size:var(--main-status-bar-font-size,16px);
+  line-height:1;
+  color:#111;
+}
+.main-status-bar-battery-region,
+.main-status-bar-empty-region,
+.main-status-bar-time-region,
+.main-status-bar-settings-region{
+  min-width:0;
+  height:100%;
+  display:flex;
+  align-items:center;
+}
+.main-status-bar-battery-region{justify-content:center;gap:var(--main-status-bar-battery-gap,7px);}
+.main-status-bar-empty-region{justify-content:center;pointer-events:none;}
+.main-status-bar-time-region{justify-content:flex-end;padding-right:var(--main-status-bar-time-right-padding,0px);font-variant-numeric:tabular-nums;}
+.main-status-bar-settings-region{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:stretch;
+  justify-content:normal;
+}
+.main-status-bar-settings-region > .main-status-bar-settings-button{
+  /* The whole fourth main cell is the Settings hit target. Because the button
+     spans all three internal sub-cells, its visual center is exactly the center
+     of sub-cell 2. */
+  grid-column:1 / -1;
+  justify-self:stretch;
+  align-self:stretch;
+  width:100%;
+  height:100%;
+}
+.main-status-bar-battery-icon{display:block;width:var(--main-status-bar-battery-icon-size,22px);height:var(--main-status-bar-battery-icon-size,22px);object-fit:contain;}
+.main-status-bar-battery-percentage{display:inline-block;min-width:3.2ch;text-align:left;font-variant-numeric:tabular-nums;}
+.main-status-bar-settings-button{
+  width:var(--main-status-bar-settings-button-size,44px);
+  height:var(--main-status-bar-settings-button-size,44px);
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#626a73;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.main-status-bar-settings-button svg{display:block;width:var(--main-status-bar-settings-icon-size,24px);height:var(--main-status-bar-settings-icon-size,24px);fill:currentColor;}
+.main-status-bar-settings-button:active{background:rgba(98,106,115,.08);}

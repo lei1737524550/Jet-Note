@@ -481,9 +481,25 @@ final class DictionaryController {
 
     private void runGetScript() {
         if (dictionaryWebView == null) return;
-        try(java.io.InputStream input=activity.getAssets().open("js/dictionary_get.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
+        try(java.io.InputStream input=activity.getAssets().open("app/dictionary/dictionary.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
             byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);
+            JSONObject dictionaryStrings = new JSONObject();
+            try (java.io.InputStream languageInput = activity.getAssets().open("language/english.json");
+                 java.io.ByteArrayOutputStream languageOut = new java.io.ByteArrayOutputStream()) {
+                byte[] languageBuffer = new byte[4096];
+                int languageRead;
+                while ((languageRead = languageInput.read(languageBuffer)) != -1) languageOut.write(languageBuffer, 0, languageRead);
+                JSONObject language = new JSONObject(new String(languageOut.toByteArray(), java.nio.charset.StandardCharsets.UTF_8));
+                dictionaryStrings.put("noAudio", language.optString("dictionaryNoAudio", "No audio was found. Play the pronunciation once, then tap the audio button."));
+                dictionaryStrings.put("playAudio", language.optString("dictionaryPlayAudio", "Play audio"));
+                dictionaryStrings.put("pauseAudio", language.optString("dictionaryPauseAudio", "Pause audio"));
+                dictionaryStrings.put("close", language.optString("dictionaryClose", "Close"));
+                dictionaryStrings.put("foundCandidates", language.optString("dictionaryFoundCandidates", "Found {count} candidate resource(s). Audio resources are listed first."));
+                dictionaryStrings.put("nonAudio", language.optString("dictionaryNonAudio", " (non-audio resource)"));
+                dictionaryStrings.put("previewFailed", language.optString("dictionaryPreviewFailed", "Audio preview failed. Try saving the file and playing it locally."));
+            } catch (Exception ignored) { }
             String script = "window.JET_NOTE_UI_LANGUAGE='" + pageLanguage + "';\n"
+                    + "window.JET_NOTE_DICTIONARY_STRINGS=" + dictionaryStrings.toString() + ";\n"
                     + "window.JET_NOTE_NATIVE_AUDIO_URLS=" + new JSONArray(observedAudioUrls).toString() + ";\n"
                     + new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
             dictionaryWebView.evaluateJavascript(script,null);

@@ -1,0 +1,985 @@
+const POSTS_KEY = 'qzone_text_posts_v1';
+
+const DEFAULT_POSTS = [];
+
+let posts = loadPosts();
+let editingPostId = null;
+let postDraftImages = [];
+
+const TOP_POST_DEFAULT_STRING = 'welcome to Jet Note';
+let topPostDefaultString = TOP_POST_DEFAULT_STRING;
+
+const TOP_POST_DEFAULT_CONFIG = Object.freeze({
+  top_post_string_color: 'F06E80',
+  top_post_string_font_size: 2,
+  three_post_one_body_font_size: 17,
+  top_post_border_color: 'bfc1c4',
+  write_sth_border_color: 'bfc1c4',
+  main_posts_border_color: 'bfc1c4',
+  main_page: {
+    three_post_one_body_vertical_move: -60
+  },
+  no_starred_post: {
+    outer_border_color: 'bfc1c4',
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 3,
+    time_stamp_bottom_margin: 3
+  },
+  starred_post: {
+    outer_border_color: 'bfc1c4',
+    star_activation_transition_border_color: '34A853',
+    star_activation_transition_border_color_display_duration_ms: 250,
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 3,
+    time_stamp_bottom_margin: 3
+  },
+  super_starred_post: {
+    outer_border_color: 'bfc1c4',
+    super_star_activation_transition_border_color: '34A853',
+    super_star_activation_transition_border_color_display_duration_ms: 250,
+    time_stamp_color: '999da2',
+    time_stamp_top_margin: 10,
+    time_stamp_bottom_margin: 3
+  }
+});
+let topPostConfig = {...TOP_POST_DEFAULT_CONFIG};
+const postStarBorderTransitionUntil = new Map();
+
+function activatePostStarBorderTransition(post, state) {
+  if (!post || (state !== 'starred' && state !== 'super_starred')) return;
+  const config = postVisualConfigForState(state);
+  const durationKey = state === 'super_starred'
+    ? 'super_star_activation_transition_border_color_display_duration_ms'
+    : 'star_activation_transition_border_color_display_duration_ms';
+  const duration = Math.max(0, Number(config[durationKey]) || 250);
+  const id = String(post.id);
+  const expiresAt = Date.now() + duration;
+  postStarBorderTransitionUntil.set(id, { state, expiresAt });
+  setTimeout(() => {
+    const active = postStarBorderTransitionUntil.get(id);
+    if (!active || active.expiresAt !== expiresAt) return;
+    postStarBorderTransitionUntil.delete(id);
+    renderPosts();
+  }, duration);
+}
+
+function transientPostBorderColor(postId, state) {
+  const id = String(postId ?? '');
+  const active = postStarBorderTransitionUntil.get(id);
+  if (!active || active.state !== state || active.expiresAt <= Date.now()) {
+    if (active && active.expiresAt <= Date.now()) postStarBorderTransitionUntil.delete(id);
+    return null;
+  }
+  const config = postVisualConfigForState(state);
+  const colorKey = state === 'super_starred'
+    ? 'super_star_activation_transition_border_color'
+    : 'star_activation_transition_border_color';
+  return configBorderColor(config[colorKey], '#34A853');
+}
+
+// Initialize home-page geometry and border variables immediately; config.json overwrites them after loading.
+applyHomeLayoutConfig();
+
+Promise.all([
+  fetch('config.json', {cache: 'no-store'}).then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed'))),
+  window.JetNoteUiLanguage?.get
+    ? window.JetNoteUiLanguage.get('home.top_post_default', TOP_POST_DEFAULT_STRING)
+    : Promise.resolve(TOP_POST_DEFAULT_STRING)
+]).then(([config, defaultString]) => {
+    topPostDefaultString = defaultString || TOP_POST_DEFAULT_STRING;
+    topPostConfig = {
+      ...TOP_POST_DEFAULT_CONFIG,
+      ...config,
+      main_page: {
+        ...TOP_POST_DEFAULT_CONFIG.main_page,
+        ...(config.main_page && typeof config.main_page === 'object' ? config.main_page : {}),
+        // Backward compatibility for older config.json files.
+        ...(config.three_post_one_body_vertical_move !== undefined ? {three_post_one_body_vertical_move: config.three_post_one_body_vertical_move} : {})
+      }
+    };
+    applyHomeLayoutConfig();
+    renderPosts();
+  })
+  .catch(() => { /* defaults remain active */ });
+
+function getPostStarState(post) {
+  return normalizeStarStateValue(post?.starState);
+}
+
+function setPostStarState(post, state) {
+  if (!post) return;
+  const normalized = state === 'super_starred' ? 'super_starred' : state === 'starred' ? 'starred' : 'none';
+  post.starState = normalized;
+  delete post.favorite;
+}
+
+function postPublishedAt(post) {
+  const parsed = Date.parse(post?.createdAt || '');
+  if (Number.isFinite(parsed)) return parsed;
+  const id = Number(post?.id);
+  return Number.isFinite(id) ? id : 0;
+}
+
+function getSuperStarPost() {
+  return posts.find(post => getPostStarState(post) === 'super_starred') || null;
+}
+
+function getFeedPosts() {
+  const visible = posts.filter(post => getPostStarState(post) !== 'super_starred');
+  const regular = visible.filter(post => getPostStarState(post) !== 'starred');
+  const starred = visible
+    .filter(post => getPostStarState(post) === 'starred')
+    .sort((a, b) => postPublishedAt(b) - postPublishedAt(a));
+  return starred.concat(regular);
+}
+
+
+function topPostFontSize(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '2em';
+  // config uses an em-style scale so the requested value 2 remains meaningful.
+  return `${Math.max(0.5, Math.min(number, 6))}em`;
+}
+
+function topPostColor(value) {
+  const raw = String(value || '').trim();
+  return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : '#F06E80';
+}
+
+function configBorderColor(value, fallback = '#bfc1c4') {
+  const raw = String(value || '').trim();
+  return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : fallback;
+}
+
+function configVerticalPixelOffset(value, fallback = -60) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  // Keep this as a direct CSS-pixel offset. No per-region rounding or derived
+  // arithmetic is used, so Top Post, Post Composer, and Main Posts move as one body.
+  return Math.max(-1000, Math.min(number, 1000));
+}
+
+function configFontSize(value, fallback = 17) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(10, Math.min(number, 48));
+}
+
+function postVisualConfigForState(state) {
+  const key = state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post';
+  const defaults = TOP_POST_DEFAULT_CONFIG[key] || TOP_POST_DEFAULT_CONFIG.no_starred_post;
+  const configured = topPostConfig[key];
+  return {...defaults, ...(configured && typeof configured === 'object' ? configured : {})};
+}
+
+function configPixelMargin(value, fallback = 0) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(-1000, Math.min(number, 1000));
+}
+
+function postVisualStyle(state, postId = null) {
+  const config = postVisualConfigForState(state);
+  const defaults = TOP_POST_DEFAULT_CONFIG[state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post'];
+  const border = transientPostBorderColor(postId, state) || configBorderColor(config.outer_border_color, configBorderColor(defaults.outer_border_color));
+  const timeColor = configBorderColor(config.time_stamp_color, configBorderColor(defaults.time_stamp_color, '#999da2'));
+  const top = configPixelMargin(config.time_stamp_top_margin, defaults.time_stamp_top_margin);
+  const bottom = configPixelMargin(config.time_stamp_bottom_margin, defaults.time_stamp_bottom_margin);
+  return `--post-state-border-color:${border};--post-state-time-color:${timeColor};--post-state-time-top-margin:${top}px;--post-state-time-bottom-margin:${bottom}px`;
+}
+
+function applyHomeLayoutConfig() {
+  const root = document.documentElement;
+  root.style.setProperty('--top-post-border-color', configBorderColor(topPostConfig.top_post_border_color));
+  root.style.setProperty('--write-sth-border-color', configBorderColor(topPostConfig.write_sth_border_color));
+  root.style.setProperty('--main-posts-border-color', configBorderColor(topPostConfig.main_posts_border_color));
+  root.style.setProperty(
+    '--three-post-one-body-font-size',
+    `${configFontSize(topPostConfig.three_post_one_body_font_size, TOP_POST_DEFAULT_CONFIG.three_post_one_body_font_size)}px`
+  );
+
+  const mainPageDefaults = TOP_POST_DEFAULT_CONFIG.main_page;
+  const mainPage = topPostConfig.main_page && typeof topPostConfig.main_page === 'object'
+    ? topPostConfig.main_page
+    : mainPageDefaults;
+
+  const verticalMove = configVerticalPixelOffset(
+    mainPage.three_post_one_body_vertical_move,
+    mainPageDefaults.three_post_one_body_vertical_move
+  );
+  root.style.setProperty('--three-post-one-body-vertical-move', `${verticalMove}px`);
+}
+
+function renderPublishedPostFooter(post) {
+  return `<div class="post-footer-row"><div class="time">${escapeHTML(formatPostTimestamp(post))}</div></div>`;
+}
+
+function renderTopPost() {
+  const card = document.getElementById('topPostCard');
+  if (!card) return;
+  releaseAttachmentUrls(card);
+
+  const post = getSuperStarPost();
+  if (!post) {
+    const text = escapeHTML(String(topPostDefaultString || TOP_POST_DEFAULT_STRING));
+    card.className = 'top-post-card top-post-empty common_border';
+    card.removeAttribute('style');
+    card.innerHTML = `
+      <div class="top-post-layout">
+        <div class="top-post-default-text" style="--top-post-string-color:${topPostColor(topPostConfig.top_post_string_color)};--top-post-string-size:${topPostFontSize(topPostConfig.top_post_string_font_size)}">${text}</div>
+      </div>`;
+    return;
+  }
+
+  const postId = escapeHTML(String(post.id));
+  const images = Array.isArray(post.images) ? post.images : [];
+  card.className = 'top-post-card top-post-super common_border';
+  card.setAttribute('style', postVisualStyle('super_starred', post.id));
+  card.innerHTML = `
+    <div class="top-post-layout">
+      <div class="top-post-content" data-post-id="${postId}">
+        ${renderAttachments(post.attachments)}
+        <div class="text-content">${escapeHTML(post.text || '')}</div>
+        <div class="post-content-clear" aria-hidden="true"></div>
+        ${renderPublishedVisualMediaHTML(images, post.attachments)}
+        <div class="time">${escapeHTML(formatPostTimestamp(post))}</div>
+      </div>
+      <div class="top-post-actions">
+        ${isWorkspaceWritable() ? `<button class="more top-post-more" type="button" data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)" aria-label="More">${moreMenuIcon()}</button>` : ''}
+      </div>
+    </div>`;
+  hydrateAttachments(card);
+  hydrateVideoAttachments(card);
+  bindPublishedInlineImageZoom?.(card);
+}
+
+function loadPosts() {
+  try {
+    const saved = AppStorage.getItem(POSTS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {}
+  return DEFAULT_POSTS.map(p => ({...p}));
+}
+
+async function savePosts() {
+  if (!isWorkspaceWritable()) return false;
+  try { await persistEntries([...draftMedia.post.values()]); return true; }
+  catch(error) { console.error('Entry save failed',error); alert(t('storageFull')); return false; }
+}
+
+
+function renderPosts() {
+  const list = document.getElementById('postList');
+  if (!list) return;
+
+
+  const composerHTML = isWorkspaceWritable() ? `
+    <div class="feed-composer-wrap">
+      <div class="feed-composer common_border">
+        <button class="feed-composer-main"
+                type="button"
+                data-editor-open="create"
+                data-i18n="share">${escapeHTML(t('share'))}</button>
+
+        <button class="feed-composer-photo"
+                onclick="openPostComposerWithVideoPicker()"
+                aria-label="add video">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="11" width="25" height="26" rx="5"/>
+            <path d="M32 19l9-5v20l-9-5z"/>
+          </svg>
+        </button>
+
+        <button class="feed-composer-photo"
+                onclick="openPostComposerWithImagePicker()"
+                aria-label="add image">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="7" y="7" width="34" height="34" rx="6"/>
+            <circle cx="18" cy="18" r="3.4"/>
+            <path d="M10 35l9-9 7 6 5-5 8 8"/>
+          </svg>
+        </button>
+
+        <button class="feed-composer-photo feed-composer-audio"
+                onclick="openPostComposerWithAudioPicker()"
+                aria-label="add audio">
+          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 36V13l20-4v23"/>
+            <circle cx="14" cy="36" r="5"/>
+            <circle cx="34" cy="32" r="5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  ` : '';
+
+  const postsHTML = getFeedPosts().map((post) => {
+    const images = Array.isArray(post.images) ? post.images : [];
+    const postId=escapeHTML(String(post.id));
+
+    return `
+      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post), post.id)}">
+        <div class="post-head post-head-minimal">
+          ${isWorkspaceWritable() ? `<button class="more"
+                  data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
+                  aria-label="More">${moreMenuIcon()}</button>` : ''}
+        </div>
+
+        ${renderAttachments(post.attachments)}
+        <div class="text-content">${escapeHTML(post.text || '')}</div>
+        <div class="post-content-clear" aria-hidden="true"></div>
+        ${renderPublishedVisualMediaHTML(images, post.attachments)}
+        ${renderPublishedPostFooter(post)}
+      </article>
+    `;
+  }).join('');
+
+  releaseAttachmentUrls(list);
+  const debugPostHTML = window.DebugConfigurationFeature?.render?.() || '';
+  list.innerHTML = composerHTML + debugPostHTML + postsHTML;
+  renderTopPost();
+  hydrateAttachments(list);
+  hydrateVideoAttachments(list);
+  bindPublishedInlineImageZoom?.(list);
+  requestAnimationFrame(fit);
+}
+
+function syncPostEditorDraft() {
+  if (EditorController.state === EditorController.State.EDITING || EditorController.state === EditorController.State.TOOL_ACTIVE) {
+    EditorController.setMedia({ images: postDraftImages, attachments: draftAttachments.post });
+    // syncFromComposer was retired; calling it aborted publishing after the
+    // button had already been disabled. Synchronize through the current API.
+    EditorController.syncFromView();
+  }
+}
+
+function initializePostComposerControls() {
+  const screen = document.getElementById('postComposeScreen');
+  if (!screen || screen.dataset.editorControlsBound === 'true') return;
+  // The Composer is mounted once and then only shown/hidden.  No opening flow
+  // recreates its DOM, so focus, toolbar bindings and draft restoration stay stable.
+  if (screen.parentElement !== document.body) document.body.appendChild(screen);
+  screen.dataset.editorControlsBound = 'true';
+  screen.addEventListener('click', event => {
+    const action = event.target.closest('[data-editor-action]')?.dataset.editorAction;
+    if (action === 'cancel') closePostComposer();
+    if (action === 'publish') publishTextPost();
+  });
+  EditorController.bindTextarea(document.getElementById('postComposerText'));
+}
+
+async function openPostComposer(prefillText = '', postId = null, sourcePost = null) {
+  if (!isWorkspaceWritable() || !entriesReady || entriesBusy) {
+    console.warn('[Editor] opening is unavailable', { writable: isWorkspaceWritable(), entriesReady, entriesBusy });
+    return false;
+  }
+  if (EditorController.state !== EditorController.State.CLOSED) return false;
+  initializePostComposerControls();
+  closePostActionPanel();
+
+  try {
+    // Editing starts from a detached copy, so rebuilding the draft never mutates
+    // the live feed before the user explicitly saves it.
+    const editDraft = sourcePost
+        ? structuredClone(sourcePost)
+        : (postId === null ? null : structuredClone(posts.find(item => String(item.id) === String(postId)) || null));
+
+    const initialDraft = await EditorController.begin({
+      mode: postId === null ? 'create' : 'edit', postId,
+      text: editDraft ? String(editDraft.text || '') : prefillText,
+      images: editDraft?.images || [], attachments: editDraft?.attachments || [],
+      starState: getPostStarState(editDraft)
+    });
+    editingPostId = initialDraft.postId;
+    const screen = document.getElementById('postComposeScreen');
+    const textarea = document.getElementById('postComposerText');
+    const title = screen?.querySelector('.post-compose-title');
+    const publishBtn = screen?.querySelector('.post-compose-publish');
+    const composeTopBar = screen?.querySelector('.buttom-string-buttom-bar');
+    const body = screen?.querySelector('.post-compose-body');
+    if (!screen || !textarea || !title || !publishBtn || !body) throw new Error('Composer view is incomplete');
+    initializeTools?.();
+
+    const topBarPageKey = postId === null ? 'new_post_page' : 'edit_post_page';
+    if (composeTopBar && window.JetBottomStringBottomBar?.renderBar) {
+      await window.JetBottomStringBottomBar.renderBar(composeTopBar, topBarPageKey);
+    } else {
+      title.textContent = postId === null ? t('writePost') : t('editPost');
+    }
+    const publishLabel = postId === null ? t('publish') : t('save');
+    publishBtn.setAttribute('aria-label', publishBtn.getAttribute('aria-label') || publishLabel);
+    publishBtn.setAttribute('title', publishBtn.getAttribute('title') || publishLabel);
+
+    textarea.value = initialDraft.text;
+
+    postDraftImages = [...initialDraft.images];
+
+    initAudioDraft('post', { attachments: initialDraft.attachments });
+    renderPostImagePreview();
+    renderPostVideoPreview();
+
+    closeToolbox?.();
+    body.scrollTop = 0;
+    // Native video is a TextureView layered outside the WebView. Suppress it
+    // before exposing the editor so there is no one-frame video flash-through.
+    window.JetNoteVideoOverlay?.suspend?.();
+    screen.classList.add('open');
+    window.__jetSyncNativeVideoVisibility?.();
+    document.body.style.overflow = 'hidden';
+    ViewportManager.update();
+
+    // The composer was opened from a user gesture: focus immediately and then
+    // once more after layout so Android WebView also raises the soft keyboard.
+    const focusComposer = () => {
+      textarea.focus({preventScroll:true});
+      const end = textarea.value.length;
+      try { textarea.setSelectionRange(end, end); } catch (_) {}
+    };
+    focusComposer();
+    setTimeout(focusComposer, 80);
+    return true;
+  } catch (error) {
+    console.error('[Editor] open failed', error);
+    EditorController.abortOpen?.();
+    editingPostId = null;
+    return false;
+  }
+}
+function closePostComposer() {
+  if(entriesBusy)return;
+  // Editor video is temporary. Stop/release it before the editor DOM is hidden
+  // so no decoder, TextureView, seek state or callbacks leak back into the feed.
+  const editorVideoPreview = document.getElementById('postVideoPreview');
+  releaseVideoAttachmentUrls(editorVideoPreview);
+  closeToolbox?.();
+  initAudioDraft('post',null);
+  const screen = document.getElementById('postComposeScreen');
+  screen.classList.remove('open');
+  window.__jetSyncNativeVideoVisibility?.();
+  document.body.style.overflow = '';
+  document.getElementById('postComposerText').value = '';
+  editingPostId = null;
+  postDraftImages = [];
+  renderPostImagePreview();
+  renderPostVideoPreview();
+  void EditorController.discard();
+}
+
+async function pickPostImages() {
+  if (!isWorkspaceWritable()) return;
+  const policy = window.JetNotePostAttachmentPolicy;
+  await policy?.ready;
+  if (policy?.conflict('image', postDraftImages, draftAttachments.post)) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+  if ((policy?.remaining('image', postDraftImages, draftAttachments.post) ?? 0) <= 0) {
+    alert(t('imageLimit'));
+    return;
+  }
+
+  // Image picking in the Android app must never go through an HTML
+  // <input type="file">. WebView/Chromium is allowed to translate an
+  // image-accepting file input into the platform photo/gallery picker, which
+  // is exactly the UI Jet Note does not want here. Route the button directly
+  // to the native SAF attachment picker, just like the native media path.
+  if (!window.JetNoteNative || typeof JetNoteNative.pickAttachments !== 'function') {
+    console.error('Jet Note native attachment picker is unavailable');
+    alert(t('attachmentReadFailed'));
+    return;
+  }
+  void pickEntryMedia('post', 'image');
+}
+
+async function pickPostVideos() {
+  if (!isWorkspaceWritable()) return;
+  const policy = window.JetNotePostAttachmentPolicy;
+  await policy?.ready;
+  if (policy?.conflict('video', postDraftImages, draftAttachments.post)) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+  if ((policy?.remaining('video', postDraftImages, draftAttachments.post) ?? 0) <= 0) {
+    alert(t('videoLimit'));
+    return;
+  }
+  if (NativeMedia.available()) {
+    pickEntryMedia('post', 'video');
+    return;
+  }
+  document.getElementById('postVideoPicker').click();
+}
+
+async function openPostComposerWithImagePicker() {
+  if (!isWorkspaceWritable()) return;
+  if (!await openPostComposer()) return;
+
+  // Wait until the composer is mounted in body before opening the system picker.
+  setTimeout(() => pickPostImages(), 60);
+}
+
+async function openPostComposerWithAudioPicker() {
+  if (!isWorkspaceWritable()) return;
+  if (!await openPostComposer()) return;
+  setTimeout(() => pickEntryAudio('post'), 60);
+}
+
+async function openPostComposerWithVideoPicker() {
+  if (!isWorkspaceWritable()) return;
+  if (!await openPostComposer()) return;
+  setTimeout(() => pickPostVideos(), 60);
+}
+
+function removePostDraftImage(index) {
+  postDraftImages.splice(index, 1);
+  renderPostImagePreview();
+  syncPostEditorDraft();
+}
+
+function renderPostImagePreview() {
+  const box = document.getElementById('postImagePreview');
+  if (!box) return;
+
+  box.innerHTML = postDraftImages.map((src, index) => `
+    <div class="compose-image-item common_border">
+      <img src="${src}"
+           alt=""
+           onclick="openImageViewer(this.src)">
+      <button class="compose-image-remove"
+              onclick="event.stopPropagation(); removePostDraftImage(${index})"
+              aria-label="remove">×</button>
+    </div>
+  `).join('');
+}
+
+async function handlePostVideos(event) {
+  const picker = event.target;
+  if (!isWorkspaceWritable()) { picker.value = ''; return; }
+  const files = Array.from(picker.files || []);
+  picker.value = '';
+
+  const policy = window.JetNotePostAttachmentPolicy;
+  await policy?.ready;
+  if (policy?.conflict('video', postDraftImages, draftAttachments.post)) {
+    alert(t('imageVideoExclusive'));
+    return;
+  }
+
+  const remaining = policy?.remaining('video', postDraftImages, draftAttachments.post) ?? 0;
+  if (remaining <= 0) {
+    alert(t('videoLimit'));
+    return;
+  }
+
+  if (files.length > remaining) alert(t('videoLimit'));
+  const selected = files.slice(0, remaining);
+
+  try {
+    for (const file of selected) {
+      if (!file.type.startsWith('video/')) throw Error(t('videoOnly'));
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const meta = {
+        id: entryUuid(),
+        type: 'video',
+        mimeType: file.type || 'video/mp4',
+        originalName: file.name,
+        sourceMimeType: file.type || null,
+        lastModified: file.lastModified,
+        size: bytes.length,
+        sha256: sha256(bytes)
+      };
+      draftMedia.post.set(meta.id, {
+        ...meta,
+        blob: new Blob([bytes], {type: meta.mimeType})
+      });
+      draftAttachments.post.push(meta);
+    }
+    renderPostVideoPreview();
+    renderAudioDraft('post');
+    syncPostEditorDraft();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function removePostDraftVideo(id) {
+  draftAttachments.post = draftAttachments.post.filter(item => String(item.id) !== String(id));
+  draftMedia.post.delete(String(id));
+  renderPostVideoPreview();
+  renderAudioDraft('post');
+  syncPostEditorDraft();
+}
+
+function renderPostVideoPreview() {
+  const box = document.getElementById('postVideoPreview');
+  if (!box) return;
+
+  releaseVideoAttachmentUrls(box);
+  const videos = draftAttachments.post.filter(item => item.type === 'video');
+  box.innerHTML = videos.map(item => `
+    <div class="video-attachment-shell compose-video-shell common_border">
+      <div class="compose-video-item video-attachment-item native-video-card" data-media-id="${escapeHTML(item.id)}">
+        <img class="video-poster" alt="" draggable="false">
+        <button class="compose-image-remove"
+                type="button"
+                onclick="event.stopPropagation(); removePostDraftVideo('${escapeHTML(item.id)}')"
+                aria-label="${escapeHTML(t('remove'))}">×</button>
+      </div>
+      <div class="video-progress-track" role="slider" tabindex="0" aria-label="video position" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0">
+        <div class="video-progress-fill"></div>
+      </div>
+      <div class="video-inline-time">0:00/0:00</div>
+    </div>
+  `).join('');
+
+  hydrateVideoAttachments(box, draftMedia.post);
+}
+
+let activePostActionId = null;
+let activePostActionAnchor = null;
+
+function positionMenuLeftOfAnchor(panel, anchorRect) {
+  if (!panel || !anchorRect) return;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const menuWidth = panel.offsetWidth;
+  const menuHeight = panel.offsetHeight;
+  const gap = 6;
+  const edge = 8;
+
+  let left = anchorRect.left - menuWidth - gap;
+  if (left < edge) left = Math.min(viewportWidth - menuWidth - edge, anchorRect.right + gap);
+  const top = Math.max(edge, Math.min(
+      viewportHeight - menuHeight - edge,
+      anchorRect.top + (anchorRect.height - menuHeight) / 2
+  ));
+
+  panel.style.setProperty('left', Math.round(left) + 'px', 'important');
+  panel.style.setProperty('right', 'auto', 'important');
+  panel.style.setProperty('top', Math.round(top) + 'px', 'important');
+  panel.style.setProperty('transform', 'none', 'important');
+}
+
+function closePostActionPanel() {
+  const panel = document.getElementById('postActionPanel');
+  if (panel) panel.classList.remove('open');
+  activePostActionId = null;
+  activePostActionAnchor = null;
+}
+
+function syncPostFavoriteAction() {
+  const button = document.getElementById('postFavoriteAction');
+  if (!button) return;
+
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  const state = getPostStarState(post);
+  button.classList.toggle('active', state === 'starred');
+  button.classList.toggle('super-active', state === 'super_starred');
+  button.setAttribute('aria-pressed', state === 'none' ? 'false' : 'true');
+  button.setAttribute('data-star-state', state);
+}
+
+async function commitStarStateChange(previous) {
+  syncPostFavoriteAction();
+  renderPosts();
+  const saved = await savePosts();
+  if (!saved) {
+    posts = previous;
+    renderPosts();
+    syncPostFavoriteAction();
+    return false;
+  }
+  return true;
+}
+
+async function toggleFavoriteActivePost() {
+  if (!isWorkspaceWritable() || activePostActionId === null) return;
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  if (!post) return;
+
+  const previous = structuredClone(posts);
+  const state = getPostStarState(post);
+  const nextState = state === 'none' ? 'starred' : 'none';
+  setPostStarState(post, nextState);
+  if (nextState === 'starred') activatePostStarBorderTransition(post, 'starred');
+
+  // Every short-press favorite action closes the shared three-dot menu before
+  // renderPosts(). The panel lives under document.body, so rebuilding the post
+  // list cannot remove it for us. This also covers cancelling Super Star.
+  closePostActionPanel();
+
+  await commitStarStateChange(previous);
+}
+
+async function toggleSuperStarActivePost() {
+  if (!isWorkspaceWritable() || activePostActionId === null) return;
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  if (!post) return;
+
+  const previous = structuredClone(posts);
+  // Long-press is an idempotent "make this the Super Star" action.
+  // It never cancels the current Super Star; cancellation is click-only.
+  for (const item of posts) {
+    if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
+  }
+  setPostStarState(post, 'super_starred');
+  activatePostStarBorderTransition(post, 'super_starred');
+
+  // Super Star moves the post into Top Post, so the action menu anchored to the
+  // post's old screen coordinates must disappear before the list is rebuilt.
+  closePostActionPanel();
+
+  const saved = await commitStarStateChange(previous);
+  if (!saved) return;
+
+  // Reuse exactly the same home-return behavior as Android's Back button.
+  // At this point overlays are closed, so the existing navigation function
+  // naturally scrolls the main sliding page to its top.
+  if (typeof returnToStandardHome === 'function') {
+    returnToStandardHome();
+  } else {
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => fit());
+  }
+}
+
+function openPostActionPanel(event, postId) {
+  if (!isWorkspaceWritable()) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const panel = document.getElementById('postActionPanel');
+  if (!panel) return;
+
+  // Mount the action layer on body so page containers cannot clip it.
+  // This avoids invisible or clipped panels in Android WebView.
+  // Mount before display so full-screen stacking contexts cannot cover it.
+  if (panel.parentElement !== document.body) {
+    document.body.appendChild(panel);
+  }
+
+
+  // Tapping the same post menu button again closes the panel.
+  if (panel.classList.contains('open') && activePostActionId === postId) {
+    closePostActionPanel();
+    return;
+  }
+
+  activePostActionId = String(postId);
+  const anchor=event.currentTarget||event.target.closest('.more');
+  const rect=anchor.getBoundingClientRect();
+  activePostActionAnchor = {
+    left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+    width: rect.width, height: rect.height
+  };
+  panel.classList.add('open');
+  syncPostFavoriteAction();
+  positionMenuLeftOfAnchor(panel, activePostActionAnchor);
+}
+
+function editActivePost() {
+  if (!isWorkspaceWritable()) return;
+  if (activePostActionId === null) return;
+
+  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  if (!post) return;
+
+  const postId = activePostActionId;
+  const editDraft = structuredClone(post);
+  closePostActionPanel();
+  openPostComposer(editDraft.text, postId, editDraft);
+}
+
+function deleteActivePost() {
+  if (!isWorkspaceWritable()) return;
+  if (activePostActionId === null) return;
+
+  const postId = activePostActionId;
+  const anchorRect = activePostActionAnchor ? {...activePostActionAnchor} : null;
+  closePostActionPanel();
+  openDeleteConfirm('post', postId, anchorRect);
+}
+
+let favoriteLongPressTimer = null;
+let suppressFavoriteClick = false;
+
+document.addEventListener('pointerdown', event => {
+  const button = event.target.closest('#postFavoriteAction[data-post-action="favorite"]');
+  if (!button) return;
+  suppressFavoriteClick = false;
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = setTimeout(() => {
+    suppressFavoriteClick = true;
+    if (navigator.vibrate) navigator.vibrate(28);
+    void toggleSuperStarActivePost();
+  }, 550);
+});
+
+document.addEventListener('pointerup', () => {
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = null;
+});
+document.addEventListener('pointercancel', () => {
+  clearTimeout(favoriteLongPressTimer);
+  favoriteLongPressTimer = null;
+});
+document.addEventListener('contextmenu', event => {
+  if (event.target.closest('#postFavoriteAction')) event.preventDefault();
+});
+
+document.addEventListener('click', event => {
+  const editorOpen = event.target.closest('[data-editor-open="create"]');
+  if (editorOpen) {
+    event.preventDefault();
+    void openPostComposer();
+    return;
+  }
+  const action = event.target.closest('#postActionPanel [data-post-action]')?.dataset.postAction;
+  if (action) {
+    event.preventDefault();
+    if (action === 'edit') void editActivePost();
+    if (action === 'favorite') {
+      if (suppressFavoriteClick) { suppressFavoriteClick = false; return; }
+      void toggleFavoriteActivePost();
+    }
+    if (action === 'delete') void deleteActivePost();
+    return;
+  }
+  if (!event.target.closest('#postActionPanel') && !event.target.closest('.more')) {
+    closePostActionPanel();
+  }
+});
+
+initializePostComposerControls();
+window.addEventListener('jetnote:editor-resume', () => {
+  const screen = document.getElementById('postComposeScreen');
+  if (!screen?.classList.contains('open')) return;
+  renderPostImagePreview();
+  renderPostVideoPreview();
+  renderAudioDraft();
+  ViewportManager.requestUpdate();
+});
+
+function formatPostTimestamp(post) {
+  const parsed = Date.parse(post?.createdAt || '');
+  const fallbackId = Number(post?.id);
+  const timestamp = Number.isFinite(parsed)
+    ? parsed
+    : (Number.isFinite(fallbackId) && fallbackId > 0 ? fallbackId : NaN);
+
+  if (!Number.isFinite(timestamp)) return String(post?.time || '');
+
+  const date = new Date(timestamp);
+  const now = new Date();
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  const isToday = date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate();
+
+  if (isToday) return `${hh}:${mm} Today`;
+  if (date.getFullYear() === now.getFullYear()) return `${hh}:${mm} ${month}/${day}`;
+  return `${hh}:${mm} ${date.getFullYear()}/${month}/${day}`;
+}
+
+function formatNowForPost() {
+  return formatPostTimestamp({ createdAt: new Date().toISOString() });
+}
+
+function addToolAudioToPost(meta) {
+  const composer = document.getElementById('postComposeScreen');
+  if (!composer?.classList.contains('open')) return 'composer-not-open';
+  if (!meta || meta.type !== 'audio' || !meta.id || !meta.path) return 'invalid-audio';
+
+  if (draftAttachments.post.some(item => String(item.id) === String(meta.id))) {
+    return 'duplicate';
+  }
+  if (draftAttachments.post.filter(item => item.type === 'audio').length >= 20) {
+    alert(t('attachmentLimit'));
+    return 'limit';
+  }
+
+  draftAttachments.post.push(meta);
+  draftMedia.post.set(meta.id, meta);
+  renderAudioDraft();
+  syncPostEditorDraft();
+  return 'added';
+}
+
+window.addToolAudioToPost = addToolAudioToPost;
+
+function attachmentsForPostDraft(draft) {
+  const imageSources = new Set(draft.images || []);
+  return (draft.attachments || []).filter(item => item.type !== 'image' || imageSources.has(NativeMedia.url(item)));
+}
+
+async function commitPostDraft(draft) {
+  const previous = structuredClone(posts);
+  const wasEditing = draft.mode === 'edit';
+  const attachments = attachmentsForPostDraft(draft);
+  let savedPost = null;
+  entriesBusy = true;
+  try {
+    if (!wasEditing) {
+      savedPost = {
+        id: nextEntryId(), uuid: entryUuid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images],
+        starState: 'none', time: formatNowForPost()
+      };
+      posts.unshift(savedPost);
+    } else {
+      const index = posts.findIndex(item => String(item.id) === String(draft.postId));
+      if (index < 0) throw Error('This post no longer exists. Please reopen it from the feed.');
+      savedPost = {
+        ...structuredClone(posts[index]), updatedAt: new Date().toISOString(),
+        attachments: structuredClone(attachments), text: draft.text.trim(), images: [...draft.images], starState: normalizeStarStateValue(draft.starState)
+      };
+      posts[index] = savedPost;
+    }
+    if (!await savePosts()) throw Error(t('storageFull'));
+    renderPosts();
+    return { wasEditing, savedPost };
+  } catch (error) {
+    posts = previous;
+    throw error;
+  } finally {
+    entriesBusy = false;
+  }
+}
+
+let postPublishInFlight = false;
+async function publishTextPost() {
+  // Publishing is governed by PostDraftStore, never by a toolbar element.
+  if (postPublishInFlight || !isWorkspaceWritable() || !entriesReady || entriesBusy || isPostDraftMediaLoading()) return;
+  postPublishInFlight = true;
+  const publishButton = document.querySelector('#postComposeScreen [data-editor-action="publish"]');
+  if (publishButton) publishButton.disabled = true;
+  syncPostEditorDraft();
+  let commitResult = null;
+  const result = await EditorController.publish(async draft => { commitResult = await commitPostDraft(draft); });
+  try {
+    if (!result.ok) {
+      if (result.code === 'empty-post') alert(t('emptyPost'));
+      else if (result.code === 'image-video-exclusive') alert(t('imageVideoExclusive'));
+      else if (result.code === 'image-limit') alert(t('imageLimit'));
+      else if (result.code === 'video-limit') alert(t('videoLimit'));
+      else if (result.code === 'audio-limit' || result.code === 'video-photo-combined-limit') alert(t('attachmentLimit'));
+      else if (result.code === 'save-failed') alert(result.error?.message || t('storageFull'));
+      return;
+    }
+    closePostComposer();
+    if (!commitResult.wasEditing) document.getElementById('postList')?.scrollTo({ top: 0 });
+  } finally {
+    postPublishInFlight = false;
+    if (publishButton?.isConnected) publishButton.disabled = false;
+  }
+}
+
+/* ---------- Name ---------- */

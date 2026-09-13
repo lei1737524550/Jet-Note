@@ -126,7 +126,7 @@ final class ImagePickerController {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
             );
         } catch (SecurityException ignored) {
-            // 某些选择器只给临时读取权限；WebView 当前会话仍然可以正常读取。
+            // Some pickers grant only temporary read permission; the current WebView session can still read the file.
         }
     }
 

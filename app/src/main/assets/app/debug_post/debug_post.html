@@ -1,0 +1,23 @@
+<section class="post-compose-screen debug-configuration-editor-screen" id="debugConfigurationEditorScreen" aria-hidden="true">
+  <div class="page-action-bar post-compose-header debug-configuration-editor-header buttom-string-buttom-bar">
+    <button class="page-action-bar-control page-action-bar-left common_border debug-configuration-editor-cancel-button" type="button" data-debug-configuration-editor-action="cancel" aria-label="Cancel">
+      <span class="debug-configuration-editor-close-icon" aria-hidden="true">×</span>
+    </button>
+    <div class="page-action-bar-title post-compose-title">Edit Debug Post</div>
+    <button class="page-action-bar-control page-action-bar-right common_border post-compose-publish debug-configuration-editor-save-button" type="button" data-debug-configuration-editor-action="save" aria-label="Save">
+      <span class="post-compose-send-icon" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <div class="post-compose-body debug-configuration-editor-body">
+    <div class="post-input-row debug-configuration-editor-content-column">
+      <div class="debug-configuration-editor-text-region">
+        <textarea id="debugConfigurationJsonTextarea" class="debug-configuration-json-textarea" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="config.json"></textarea>
+      </div>
+      <div id="debugConfigurationValidationError" class="debug-configuration-validation-error common_border" role="alert" aria-live="assertive" hidden>
+        <div class="debug-configuration-validation-error-title">Syntax Error</div>
+        <div class="debug-configuration-validation-error-message"></div>
+      </div>
+    </div>
+  </div>
+</section>

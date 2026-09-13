@@ -54,14 +54,26 @@ final class PageActionBarSpec {
     }
 
     static PageActionBarSpec load(Context context) {
-        try (InputStream in = context.getAssets().open("config.json")) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[4096];
-            int count;
-            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-            JSONObject root = new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
-            return new PageActionBarSpec(root.optJSONObject("page_action_bar") == null
-                    ? new JSONObject() : root.optJSONObject("page_action_bar"));
+        try {
+            // Debug config is a runtime override of the same config.json used by the
+            // Web UI. Native tool pages must read the same source or the two sides
+            // drift after a Debug Post save.
+            String source = context.getSharedPreferences("jet_note_debug_config", Context.MODE_PRIVATE)
+                    .getString("current", null);
+
+            if (source == null) {
+                try (InputStream in = context.getAssets().open("config.json")) {
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+                    byte[] buffer = new byte[4096];
+                    int count;
+                    while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+                    source = out.toString(StandardCharsets.UTF_8.name());
+                }
+            }
+
+            JSONObject root = new JSONObject(source);
+            JSONObject pageActionBar = root.optJSONObject("page_action_bar");
+            return new PageActionBarSpec(pageActionBar == null ? new JSONObject() : pageActionBar);
         } catch (Exception ignored) {
             return new PageActionBarSpec(new JSONObject());
         }

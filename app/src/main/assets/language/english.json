@@ -30,8 +30,6 @@
   "verified": "Verified. Choose an import mode.",
   "importing": "Importing…",
   "importDone": "Import complete.",
-  "startupLoading": "Loading…",
-  "startupDownloading": "Downloading…",
   "added": "Added",
   "updated": "Updated",
   "kept": "Kept",
@@ -61,8 +59,6 @@
   "videoCannotPlay": "This device cannot play this video. Its bytes remain backed up.",
   "imageReadFailed": "Could not read the image.",
   "storageFull": "Local storage is full. Please use fewer or smaller images.",
-  "config_tool_1": "Dictionary",
-  "config_tool_2": "Sentences",
   "tools": "Tools",
   "postTools": "Post tools",
   "attachmentReadFailed": "Unable to read the selected attachment.",
@@ -83,7 +79,10 @@
       "export_jnote": "Export .jnote",
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
-      "color_view_title": "Color View"
+      "color_view_title": "Color View",
+      "debug_title": "Debug",
+      "enable_debug": "Enable Debug",
+      "undo_changes": "Undo Changes"
     },
     "post_composer": {
       "new_post_title": "New Post",
@@ -120,5 +119,32 @@
       "green_accessibility_label": "Green",
       "blue_accessibility_label": "Blue"
     }
-  }
+  },
+  "toolbox_tool_1": "Dictionary",
+  "toolbox_tool_2": "Sentences",
+  "archivePreparingExport": "Preparing export…",
+  "archiveBuildingBackup": "Building backup…",
+  "archivePackingAttachments": "Packing attachments…",
+  "archiveVerifyingExport": "Verifying exported backup…",
+  "archiveExportVerified": "Export verification passed",
+  "archiveWritingDestination": "Writing backup file…",
+  "archiveExportComplete": "Export complete",
+  "archiveExportCancelled": "Export cancelled",
+  "archiveExportFailed": "Export failed: ",
+  "archiveChooseImport": "Choose a .jnote file",
+  "archiveReadingImport": "Reading backup…",
+  "archiveExtractingImport": "Extracting backup…",
+  "archiveValidatingImport": "Validating manifest and checksums…",
+  "archiveInstallingMedia": "Installing media…",
+  "archiveImportReady": "Validation complete. Waiting for import confirmation.",
+  "archiveImportComplete": "Import complete",
+  "archiveImportCancelled": "Import cancelled",
+  "archiveCancelOperation": "Cancel",
+  "dictionaryNoAudio": "No audio was found. Play the pronunciation once, then tap the audio button.",
+  "dictionaryPlayAudio": "Play audio",
+  "dictionaryPauseAudio": "Pause audio",
+  "dictionaryClose": "Close",
+  "dictionaryFoundCandidates": "Found {count} candidate resource(s). Audio resources are listed first.",
+  "dictionaryNonAudio": " (non-audio resource)",
+  "dictionaryPreviewFailed": "Audio preview failed. Try saving the file and playing it locally."
 }

@@ -1,0 +1,350 @@
+.post-compose-screen {
+  position: fixed;
+  left: var(--viewport-offset-left, 0px);
+  top: var(--viewport-offset-top, 0px);
+  width: var(--viewport-width, 100vw);
+  height: var(--editor-stable-viewport-height, var(--viewport-height, 100dvh));
+  z-index: 9999;
+  display: none;
+  overflow: hidden;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  transform: none !important;
+}
+
+.post-compose-screen.open {
+  display: flex;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
+}
+
+/* New Post only supplies its page-specific control width/color. Its geometry
+   comes entirely from the shared Jet Note Page Action Bar above. */
+.post-compose-header { }
+.post-compose-title { }
+.post-compose-cancel,.post-compose-publish {
+  width: var(--page-action-bar-icon-width);
+  min-width: var(--page-action-bar-icon-width);
+  padding: 0;
+}
+.post-compose-cancel.page-action-bar-string,.post-compose-publish.page-action-bar-string {
+  width:auto;
+  min-width:var(--page-action-bar-text-min-width);
+  padding-inline:12px;
+}
+.post-compose-cancel { color:var(--page-action-bar-normal-color); }
+.post-compose-publish { color:var(--page-action-bar-primary-color); }
+.post-compose-cancel-icon {
+  width:24px;
+  height:24px;
+  display:block;
+}
+.post-compose-send-icon {
+  width:24px;
+  height:24px;
+  display:block;
+  background:currentColor;
+  -webkit-mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+  mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+}
+
+.post-compose-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  padding: 22px 20px 16px;
+}
+
+.post-input-row {
+  /* Shared vertical geometry for the normal editor. Debug editor reuses these
+     exact values when converting the missing attachment/tool rows into extra
+     JSON text-editor height. Keep these names explicit to avoid hidden magic
+     numbers drifting between editor variants. */
+  --post-editor-vertical-section-gap: 12px;
+  --post-editor-tools-row-height: var(--post-editor-attachment-row-height, 48px);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--post-editor-vertical-section-gap);
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+#postComposerText {
+  display: block;
+  width: 100%;
+  /* Single source of truth: config.json -> --new-post-text-area-height.
+     The tools row is intentionally outside this height so moving tools below the
+     editor never changes the configured text-area geometry. */
+  flex: 0 0 var(--new-post-text-area-height, 400px);
+  height: var(--new-post-text-area-height, 400px);
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: var(--post-editor-text-padding-top, 0px)
+           var(--post-editor-text-padding-right, 0px)
+           var(--post-editor-text-padding-bottom, 0px)
+           var(--post-editor-text-padding-left, 0px);
+  scroll-margin-top: 70px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #111;
+  font: inherit;
+  font-size: var(--new-post-font-size, 17px);
+  line-height: 1.55;
+  caret-color: transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+#postComposerText::placeholder {
+  color: #a5a8ad;
+}
+#postComposerText::selection { background:var(--cursor-drop-color,#14A89A); color:#fff; }
+.post-compose-caret {
+  display:inline-block;
+  box-sizing:border-box;
+  width:var(--post-compose-caret-width,4px);
+  min-width:var(--post-compose-caret-width,4px);
+  height:1em;
+  background:var(--post-compose-caret-color,#14A89A);
+}
+.post-compose-caret-layer{position:absolute;z-index:2;overflow:hidden;pointer-events:none}.post-compose-caret-mirror{position:absolute;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;color:transparent;pointer-events:none}
+
+.post-input-row .tool,
+.post-input-row .toolbox_tool,
+.post-input-row .toolbox-trigger {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+
+
+.post-compose-screen .common_border{border-color:var(--jet-note-type-edit-post-border-color,var(--common-border-color));}
+
+
+/* Edit Post attachment geometry
+   -----------------------------
+   The Tools toolbar already has the desired geometry. Do not reposition it.
+   Instead, the text area is shorter and the freed vertical space is split into
+   two fixed rows directly above Tools: Audio, then Image/Video. Each row is
+   exactly the same height as a Tools button row. */
+.post-compose-attachment-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 calc(var(--post-editor-attachment-row-height, 48px) * 2);
+  height: calc(var(--post-editor-attachment-row-height, 48px) * 2);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.post-compose-attachment-row {
+  position: relative;
+  flex: 0 0 var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.post-compose-audio-row #postAudioDraft,
+.post-compose-media-row #postImagePreview,
+.post-compose-media-row #postVideoPreview {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Audio attachments live in their own row and remain vertically centered. */
+.post-compose-audio-row #postAudioDraft .attachment-strip {
+  height: var(--post-editor-attachment-row-height, 48px);
+  min-height: var(--post-editor-attachment-row-height, 48px);
+  margin: 0;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.post-compose-audio-row #postAudioDraft .attachment-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* Image/video drafts share one 48px attachment row. Media is exclusive in the
+   editor, so only one preview collection is visible at a time. */
+.post-compose-media-row .post-compose-images,
+.post-compose-media-row .post-compose-videos {
+  margin: 0;
+  height: var(--post-editor-attachment-row-height, 48px);
+  min-height: var(--post-editor-attachment-row-height, 48px);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.post-compose-media-row .post-compose-images::-webkit-scrollbar,
+.post-compose-media-row .post-compose-videos::-webkit-scrollbar {
+  display: none;
+}
+.post-compose-media-row .post-compose-images:empty,
+.post-compose-media-row .post-compose-videos:empty {
+  display: none;
+}
+
+.post-compose-media-row .compose-image-item,
+.post-compose-media-row .video-attachment-shell {
+  flex: 0 0 var(--post-editor-attachment-row-height, 48px);
+  width: var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+  min-width: var(--post-editor-attachment-row-height, 48px);
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  margin: 0;
+}
+.post-compose-media-row .compose-image-item img,
+.post-compose-media-row .video-attachment-shell .compose-video-item,
+.post-compose-media-row .video-attachment-shell .video-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Compact editor thumbnails do not need an inline timeline: the media itself
+   remains tappable and the full viewer/player handles detailed interaction. */
+.post-compose-media-row .video-attachment-shell .video-progress-track,
+.post-compose-media-row .video-attachment-shell .video-inline-time {
+  display: none !important;
+}
+.post-compose-media-row .video-attachment-shell .compose-video-item {
+  aspect-ratio: 1 / 1;
+}
+
+/* Keep remove controls usable without allowing them to dominate a 48px card. */
+.post-compose-media-row .compose-image-remove {
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+/* Edit Post only: the musical-note glyph is optically right-heavy. Correct the
+   glyph, not the button geometry, so the already-correct Tools row stays put. */
+#postEditorTools .tool[data-tool-action="sound"] svg {
+  transform: translateX(-1.5px);
+}
+
+/* Attachment alignment and draft-control safety
+   ---------------------------------------------
+   Attachment rows visually belong to the same content column as the textarea.
+   Respect the configurable textarea left/right padding so the first attachment
+   never starts underneath the text content inset when users change that value. */
+.post-compose-attachment-row {
+  box-sizing: border-box;
+  padding-left: var(--post-editor-text-padding-left, 0px);
+  padding-right: var(--post-editor-text-padding-right, 0px);
+}
+
+/* The draft-audio token owns one complete attachment-row cell. Keeping the
+   remove control inside that cell avoids clipping by the fixed-height row. */
+.post-compose-audio-row #postAudioDraft .audio-token {
+  position: relative;
+  flex: 0 0 var(--post-editor-attachment-row-height, 48px);
+  width: var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+.post-compose-audio-row #postAudioDraft .audio-token-play {
+  margin: 0;
+}
+.post-compose-audio-row #postAudioDraft .audio-token-play svg {
+  /* Speaker path is optically right-heavy in its viewBox. Correct only the
+     glyph; the button/cell geometry remains unchanged. */
+  transform: translateX(-1.5px);
+}
+.post-compose-audio-row #postAudioDraft .audio-token-remove {
+  top: 0;
+  right: 0;
+  margin: 0;
+  z-index: 6;
+}
+
+/* Video draft remove buttons already exist in the DOM. The poster layer uses
+   z-index:2, so explicitly lift the remove button above it instead of creating
+   a second deletion mechanism. */
+.post-compose-media-row .video-attachment-shell .compose-image-remove {
+  z-index: 6;
+}
+
+/* Editor media row: use every available pixel. Unlike the text/audio rows,
+   image/video previews deliberately ignore textarea content padding. */
+.post-compose-media-row {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.post-compose-media-row .post-compose-images,
+.post-compose-media-row .post-compose-videos {
+  gap: 0;
+  width: 100%;
+}
+.post-compose-media-row .compose-image-item,
+.post-compose-media-row .video-attachment-shell {
+  flex: 0 0 calc(100% / 3);
+  width: calc(100% / 3);
+  min-width: calc(100% / 3);
+  height: var(--post-editor-attachment-row-height, 48px);
+  border-radius: 0;
+  border: 0 !important;
+}
+.post-compose-media-row .compose-image-item img,
+.post-compose-media-row .video-attachment-shell .compose-video-item,
+.post-compose-media-row .video-attachment-shell .video-poster {
+  width:100%;
+  height:100%;
+  aspect-ratio:auto;
+  object-fit:cover;
+  border-radius:0;
+}
+/* Editor video reuses the normal playback state/progress machinery. Keep the
+   timeline as a compact overlay so the fixed attachment row does not grow. */
+.post-compose-media-row .video-attachment-shell {
+  position:relative;
+  overflow:hidden;
+  background:#111;
+}
+.post-compose-media-row .video-attachment-shell .video-progress-track {
+  display:block !important;
+  position:absolute;
+  z-index:7;
+  left:0;
+  right:0;
+  bottom:0;
+  width:100%;
+  height:12px;
+  margin:0 !important;
+}
+.post-compose-media-row .video-attachment-shell .video-progress-track::before,
+.post-compose-media-row .video-attachment-shell .video-progress-fill {
+  top:5px;
+  height:4px;
+}
+.post-compose-media-row .video-attachment-shell .video-inline-time {
+  display:none !important;
+}

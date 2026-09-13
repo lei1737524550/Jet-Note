@@ -8,7 +8,11 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
 import android.view.ViewGroup;
+import android.view.Gravity;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -21,11 +25,18 @@ import android.view.inputmethod.InputContentInfo;
 import org.json.JSONObject;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.Drawable;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +44,7 @@ import java.util.Map;
 public class MainActivity extends Activity {
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String LEGACY_HOST = "jetnote.local";
-    private static final String LOCAL_PAGE = "https://" + APP_HOST + "/assets/index.html";
+    private static final String LOCAL_PAGE = "https://" + APP_HOST + "/assets/app/home/home.html";
 
     private FrameLayout root;
     private RichContentWebView webView;
@@ -47,6 +58,202 @@ public class MainActivity extends Activity {
     private boolean frontendIsReady;
     private MediaWriteController mediaWriter;
     private NativeVideoPlayer nativeVideoPlayer;
+
+    // Native startup surface. It is intentionally independent from WebView so
+    // background, application icon and application name can be drawn together
+    // on the first Android frame instead of waiting for HTML/image decoding.
+    private final Handler startupHandler = new Handler(Looper.getMainLooper());
+    private FrameLayout nativeStartupSplashOverlay;
+    private View startupRenderWarningOverlay;
+    private long nativeStartupSplashMinimumDurationMs = 900L;
+
+    private static final String RUNTIME_CONFIG_PREFERENCES = "jet_note_debug_config";
+    private static final String RUNTIME_CONFIG_CURRENT_KEY = "current";
+
+    /**
+     * Reads the exact same runtime config source that the WebView receives for
+     * /assets/config.json. This keeps load_animation_minimum_duration_ms working
+     * after Debug Config edits instead of silently falling back to the bundled value.
+     */
+    private String readBundledConfigurationText() throws IOException {
+        try (InputStream in = getAssets().open("config.json")) {
+            byte[] buffer = new byte[8192];
+            java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+            int count;
+            while ((count = in.read(buffer)) != -1) output.write(buffer, 0, count);
+            return output.toString("UTF-8");
+        }
+    }
+
+    /**
+     * Runtime Debug configuration is optional state and must never be able to brick startup.
+     * A malformed/restored value is discarded immediately and the bundled configuration is
+     * used instead. This is intentionally done before WebView navigation starts.
+     */
+    private String readValidatedEffectiveConfigurationText() {
+        android.content.SharedPreferences preferences =
+                getSharedPreferences(RUNTIME_CONFIG_PREFERENCES, MODE_PRIVATE);
+        String runtime = preferences.getString(RUNTIME_CONFIG_CURRENT_KEY, null);
+        if (runtime != null && !runtime.trim().isEmpty()) {
+            try {
+                new JSONObject(runtime);
+                return runtime;
+            } catch (Exception invalidRuntimeConfiguration) {
+                preferences.edit().remove(RUNTIME_CONFIG_CURRENT_KEY).apply();
+            }
+        }
+        try {
+            String bundled = readBundledConfigurationText();
+            new JSONObject(bundled);
+            return bundled;
+        } catch (Exception ignored) {
+            return "{}";
+        }
+    }
+
+    private JSONObject readEffectiveRuntimeConfiguration() {
+        try { return new JSONObject(readValidatedEffectiveConfigurationText()); }
+        catch (Exception ignored) { return new JSONObject(); }
+    }
+
+    private int dp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private int parseStartupBackgroundColor(JSONObject loadAnimation) {
+        String configured = loadAnimation.optString("load_animation_background", "#FAFFF0").trim();
+        try { return Color.parseColor(configured); }
+        catch (Exception ignored) { return Color.parseColor("#FAFFF0"); }
+    }
+
+    /** Build the complete startup brand surface before WebView navigation begins. */
+    private void installNativeStartupSplash(JSONObject effectiveConfiguration) {
+        JSONObject loadAnimation = effectiveConfiguration.optJSONObject("load_animation");
+        if (loadAnimation == null) loadAnimation = new JSONObject();
+        nativeStartupSplashMinimumDurationMs = Math.max(0L,
+                loadAnimation.optLong("load_animation_minimum_duration_ms", 900L));
+
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackgroundColor(parseStartupBackgroundColor(loadAnimation));
+        overlay.setClickable(true);
+        overlay.setFocusable(true);
+
+        LinearLayout brand = new LinearLayout(this);
+        brand.setOrientation(LinearLayout.VERTICAL);
+        brand.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        ImageView icon = new ImageView(this);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        try {
+            Drawable applicationIcon = getApplicationInfo().loadIcon(getPackageManager());
+            icon.setImageDrawable(applicationIcon);
+        } catch (Exception ignored) {
+            icon.setImageResource(R.drawable.icon);
+        }
+        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(112), dp(112));
+        brand.addView(icon, iconParams);
+
+        TextView applicationName = new TextView(this);
+        applicationName.setTextColor(Color.rgb(34, 34, 34));
+        applicationName.setTextSize(30f);
+        applicationName.setGravity(Gravity.CENTER);
+        applicationName.setPadding(0, dp(18), 0, 0);
+        try {
+            applicationName.setText(getApplicationInfo().loadLabel(getPackageManager()));
+        } catch (Exception ignored) {
+            applicationName.setText(R.string.app_name);
+        }
+        brand.addView(applicationName, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        FrameLayout.LayoutParams brandParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        overlay.addView(brand, brandParams);
+        root.addView(overlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        nativeStartupSplashOverlay = overlay;
+    }
+
+    /**
+     * Splash timing never waits for WebView readiness. At the configured deadline
+     * the overlay is removed unconditionally. Missing frontendReady is diagnostic only.
+     */
+    private void scheduleNativeStartupSplashExit() {
+        startupHandler.postDelayed(() -> {
+            if (nativeStartupSplashOverlay != null) {
+                root.removeView(nativeStartupSplashOverlay);
+                nativeStartupSplashOverlay = null;
+            }
+            if (!frontendIsReady) showStartupRenderWarning();
+        }, nativeStartupSplashMinimumDurationMs);
+    }
+
+    private GradientDrawable jetNoteBorderedBackground(int fillColor, int borderColor, float radiusDp) {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(fillColor);
+        background.setStroke(dp(1.5f), borderColor);
+        background.setCornerRadius(dp(radiusDp));
+        return background;
+    }
+
+    /**
+     * Native fallback warning: it does not depend on WebView being healthy, which
+     * is important because this warning exists specifically for incomplete startup rendering.
+     */
+    private void showStartupRenderWarning() {
+        if (startupRenderWarningOverlay != null || root == null) return;
+
+        FrameLayout shield = new FrameLayout(this);
+        shield.setClickable(true);
+        shield.setFocusable(true);
+        shield.setBackgroundColor(0x18000000);
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18), dp(16), dp(18), dp(14));
+        card.setBackground(jetNoteBorderedBackground(Color.rgb(250, 255, 240), Color.rgb(191, 193, 196), 12));
+
+        TextView title = new TextView(this);
+        title.setText("Startup Rendering Warning");
+        title.setTextColor(Color.rgb(20, 20, 20));
+        title.setTextSize(16f);
+        title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        card.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView message = new TextView(this);
+        message.setText("Render Ready signal was not received before the startup animation ended.");
+        message.setTextColor(Color.rgb(70, 70, 70));
+        message.setTextSize(14f);
+        message.setPadding(0, dp(8), 0, dp(14));
+        card.addView(message, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView dismiss = new TextView(this);
+        dismiss.setText("OK");
+        dismiss.setTextColor(Color.rgb(20, 168, 154));
+        dismiss.setTextSize(14f);
+        dismiss.setGravity(Gravity.CENTER);
+        dismiss.setPadding(dp(14), dp(9), dp(14), dp(9));
+        dismiss.setBackground(jetNoteBorderedBackground(Color.TRANSPARENT, Color.rgb(20, 168, 154), 9));
+        dismiss.setOnClickListener(view -> {
+            if (startupRenderWarningOverlay != null) root.removeView(startupRenderWarningOverlay);
+            startupRenderWarningOverlay = null;
+        });
+        LinearLayout.LayoutParams dismissParams = new LinearLayout.LayoutParams(dp(88), ViewGroup.LayoutParams.WRAP_CONTENT);
+        dismissParams.gravity = Gravity.END;
+        card.addView(dismiss, dismissParams);
+
+        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        cardParams.leftMargin = dp(28);
+        cardParams.rightMargin = dp(28);
+        shield.addView(card, cardParams);
+
+        root.addView(shield, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        startupRenderWarningOverlay = shield;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +269,13 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
 
+        // Build the native splash immediately, before WebView starts navigating.
+        // Its duration is read from the same effective config.json used by the app.
+        JSONObject effectiveStartupConfiguration = readEffectiveRuntimeConfiguration();
+        installNativeStartupSplash(effectiveStartupConfiguration);
+        // Start the configured timer at splash creation, not after controller/WebView setup.
+        scheduleNativeStartupSplashExit();
+
         attachmentStore = new AttachmentStore(this);
         webView.setRichContentListener(this::acceptImeRichContent);
         mediaWriter=new MediaWriteController(this,attachmentStore);
@@ -71,12 +285,12 @@ public class MainActivity extends Activity {
         dictionaryController = new DictionaryController(this, root, webView, attachmentStore);
         attachmentPicker = new AttachmentPickerController(this, webView, attachmentStore);
         archiveController = new JetNoteArchiveController(this, webView, attachmentStore);
-        nativeVideoPlayer = new NativeVideoPlayer(this, root, attachmentStore);
+        nativeVideoPlayer = new NativeVideoPlayer(this, root, webView, attachmentStore);
         pendingLaunchImport = getViewIntentUri(getIntent());
 
-        // Use one HTTPS origin for the packaged app and local media.  Assets are
-        // served directly from AssetManager so the project stays dependency-free;
-        // media uses the byte-range handler below for reliable HTML5 video seek.
+        // Use one HTTPS origin for the packaged app and local media. Assets are
+        // served directly from AssetManager. Post video decoding/seek is handled
+        // by NativeVideoPlayer; the WebView keeps only the poster and control UI.
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -89,14 +303,19 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        // Local post videos should start reliably after a Jet Note user action.
+        // Web tools may still embed media; Jet Note post videos themselves use
+        // NativeVideoPlayer and do not depend on HTMLMediaElement playback.
         settings.setMediaPlaybackRequiresUserGesture(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settings.setForceDark(WebSettings.FORCE_DARK_OFF);
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{frontendIsReady=true;if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();dispatchPendingImport();})),
+                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
+                    frontendIsReady=true;
+                    if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();
+                    dispatchPendingImport();
+                })),
                 "JetNoteNative");
 
         webView.setWebViewClient(new WebViewClient() {
@@ -230,13 +449,21 @@ public class MainActivity extends Activity {
         if (path == null || !path.startsWith("/assets/")) return null;
 
         String assetPath = path.substring("/assets/".length());
-        if (assetPath.isEmpty()) assetPath = "index.html";
+        if (assetPath.isEmpty()) assetPath = "app/home/home.html";
         // Reject traversal and malformed paths before touching AssetManager.
         if (assetPath.startsWith("/") || assetPath.contains("../") || assetPath.contains("\\")) {
             return missingMedia();
         }
         try {
-            InputStream in = getAssets().open(assetPath);
+            InputStream in;
+            if ("config.json".equals(assetPath)) {
+                // Serve only validated configuration. A corrupt value restored by Android
+                // backup or left from an interrupted Debug edit must not break every launch.
+                String effectiveConfiguration = readValidatedEffectiveConfigurationText();
+                in = new ByteArrayInputStream(effectiveConfiguration.getBytes(StandardCharsets.UTF_8));
+            } else {
+                in = getAssets().open(assetPath);
+            }
             String mime = URLConnection.guessContentTypeFromName(assetPath);
             if (mime == null) {
                 if (assetPath.endsWith(".js")) mime = "application/javascript";
@@ -471,6 +698,19 @@ public class MainActivity extends Activity {
         }
 
         @Override
+        public int available() throws IOException {
+            return (int) Math.min((long) delegate.available(), Math.min(remaining, Integer.MAX_VALUE));
+        }
+
+        @Override
+        public long skip(long byteCount) throws IOException {
+            if (remaining <= 0 || byteCount <= 0) return 0;
+            long skipped = delegate.skip(Math.min(byteCount, remaining));
+            if (skipped > 0) remaining -= skipped;
+            return skipped;
+        }
+
+        @Override
         public void close() throws IOException {
             delegate.close();
         }
@@ -506,6 +746,21 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == NativeVideoViewerActivity.REQUEST_CODE) {
+            if (resultCode == RESULT_OK && data != null) {
+                String mediaId = data.getStringExtra(NativeVideoViewerActivity.RESULT_MEDIA_ID);
+                int positionMs = Math.max(0, data.getIntExtra(NativeVideoViewerActivity.RESULT_POSITION_MS, 0));
+                int durationMs = Math.max(0, data.getIntExtra(NativeVideoViewerActivity.RESULT_DURATION_MS, 0));
+                if (nativeVideoPlayer != null) nativeVideoPlayer.synchronizeViewerPosition(mediaId, positionMs);
+                if (webView != null) {
+                    String script = "window.__jetNativeVideoViewerClosed&&window.__jetNativeVideoViewerClosed("
+                            + JSONObject.quote(mediaId == null ? "" : mediaId) + ","
+                            + positionMs + "," + durationMs + ");";
+                    webView.post(() -> webView.evaluateJavascript(script, null));
+                }
+            }
+            return;
+        }
         if(dictionaryController!=null&&dictionaryController.handles(requestCode)){dictionaryController.onActivityResult(requestCode,resultCode,data);return;}
         if (attachmentPicker != null && attachmentPicker.handles(requestCode)) {
             attachmentPicker.onActivityResult(requestCode, resultCode, data);
@@ -542,7 +797,12 @@ public class MainActivity extends Activity {
         );
     }
 
-    @Override protected void onPause(){if(dictionaryController!=null)dictionaryController.pause();if(webView!=null)webView.onPause();super.onPause();}
+    @Override protected void onPause(){
+        if(nativeVideoPlayer!=null)nativeVideoPlayer.onHostPause();
+        if(dictionaryController!=null)dictionaryController.pause();
+        if(webView!=null)webView.onPause();
+        super.onPause();
+    }
     @Override
     protected void onResume() {
         super.onResume();
@@ -556,6 +816,7 @@ public class MainActivity extends Activity {
                     "window.dispatchEvent(new Event('jetnote:app-resume'));", null));
         }
         if (dictionaryController != null) dictionaryController.resume();
+        if (nativeVideoPlayer != null) nativeVideoPlayer.onHostResume();
     }
 
     @Override

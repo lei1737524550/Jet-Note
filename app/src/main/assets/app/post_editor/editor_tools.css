@@ -1,0 +1,19 @@
+/* toolbox_tool entries extend the primary tools row without leaving the editor. */
+.toolbox_tool[hidden] {
+    display: none !important;
+}
+
+.toolbox-trigger[aria-expanded="true"] {
+    background: var(--jet-note-type-edit-post-right-side-tools-expanded-button-background,#f5f6f7);
+}
+
+.post-input-row .tool,
+.post-input-row .toolbox_tool,
+.post-input-row .toolbox-trigger {
+    color: var(--jet-note-type-body-foreground-color,#111111);
+}
+
+/* toolbox_tool entries unfold horizontally from the tools row. */
+@keyframes toolbox-tool-unfold { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:translateX(0); } }
+.toolbox-tool-unfolding { animation:toolbox-tool-unfold 160ms ease-out both; }
+

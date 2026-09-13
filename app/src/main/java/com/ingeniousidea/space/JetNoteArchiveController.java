@@ -60,6 +60,8 @@ final class JetNoteArchiveController {
     private final Map<String, ImportSession> sessions = new HashMap<>();
 
     private volatile boolean destroyed;
+    private volatile boolean exportCancellationRequested;
+    private volatile Uri activeExportDestination;
     private String pendingExportPayload;
     private String pendingImportMode;
 
@@ -78,6 +80,7 @@ final class JetNoteArchiveController {
                 return;
             }
 
+            exportCancellationRequested = false;
             pendingExportPayload = payload;
             dispatchProgress("export", "prepare", 0, 0, 0, "Preparing export…");
             Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -132,10 +135,12 @@ final class JetNoteArchiveController {
             String payload = pendingExportPayload;
             pendingExportPayload = null;
             if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null || payload == null) {
-                dispatchExportFinished(false, "已Cancel导出");
+                dispatchExportFinished(false, "Export cancelled");
                 return;
             }
             Uri destination = data.getData();
+            activeExportDestination = destination;
+            exportCancellationRequested = false;
             dispatchProgress("export", "prepare", 0, 0, 1, "Building backup…");
             io.execute(() -> exportArchive(destination, payload));
             return;
@@ -145,7 +150,7 @@ final class JetNoteArchiveController {
             String mode = pendingImportMode == null ? "merge" : pendingImportMode;
             pendingImportMode = null;
             if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
-                dispatchImportError("已Cancel导入");
+                dispatchImportError("Import cancelled");
                 return;
             }
             Uri source = data.getData();
@@ -154,11 +159,20 @@ final class JetNoteArchiveController {
         }
     }
 
+    void cancelCurrentOperation(String operation) {
+        if (!"export".equalsIgnoreCase(operation)) return;
+        exportCancellationRequested = true;
+    }
+
+    private void throwIfExportCancelled() throws IOException {
+        if (exportCancellationRequested) throw new IOException("Export cancelled");
+    }
+
     void commitImportMedia(String token) {
         io.execute(() -> {
             ImportSession session = sessions.get(token);
             if (session == null) {
-                dispatchImportError("导入会话已失效");
+                dispatchImportError("Import session expired");
                 return;
             }
             try {
@@ -194,13 +208,26 @@ final class JetNoteArchiveController {
     }
 
     void destroy() {
+        // A controller is owned by exactly one Activity/WebView. Never allow an export
+        // started by a dead Activity to keep writing in a half-detached state. The
+        // export loop checks this flag for every streamed chunk and removes an incomplete
+        // destination when cancellation is observed.
+        exportCancellationRequested = true;
         pendingExportPayload = null;
         pendingImportMode = null;
-        destroyed=true;
-        // All session operations stay on the I/O executor. IDB may have committed
-        // immediately before Activity destruction, so never remove published media here.
-        // Unreferenced immutable files are safer than deleting committed user bytes.
-        io.execute(()->{for(ImportSession session:sessions.values())deleteRecursively(session.stageDir);sessions.clear();});
+        destroyed = true;
+
+        // All session cleanup stays on the same single-thread executor so it cannot race
+        // an import commit. IDB may have committed immediately before Activity destruction,
+        // therefore published media is deliberately never deleted here.
+        try {
+            io.execute(() -> {
+                for (ImportSession session : sessions.values()) deleteRecursively(session.stageDir);
+                sessions.clear();
+            });
+        } catch (java.util.concurrent.RejectedExecutionException ignored) {
+            // Defensive only: destroy may be called after an earlier shutdown path.
+        }
         io.shutdown();
     }
 
@@ -208,6 +235,7 @@ final class JetNoteArchiveController {
         File tempArchive = new File(activity.getCacheDir(), "jetnote-export-" + UUID.randomUUID() + ".jnote");
         boolean destinationCreated = true;
         try {
+            throwIfExportCancelled();
             JSONObject root = new JSONObject(payload);
             JSONArray posts = root.optJSONArray("posts");
             if (posts == null) throw new JSONException("posts missing");
@@ -230,8 +258,9 @@ final class JetNoteArchiveController {
 
             long mediaTotal = 0L;
             for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
+                throwIfExportCancelled();
                 File file = store.fileForArchivePath(item.getKey());
-                if (file == null || !file.isFile()) throw new IOException("附件不存在：" + item.getKey());
+                if (file == null || !file.isFile()) throw new IOException("Attachment missing: " + item.getKey());
                 mediaTotal += Math.max(0L, file.length());
             }
             long mediaDone = 0L;
@@ -243,9 +272,10 @@ final class JetNoteArchiveController {
                 if (profile != null) putCheckedText(zip, "data/profile.json", profile.toString(2), checksums);
 
                 for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
+                    throwIfExportCancelled();
                     String path = item.getKey();
                     File file = store.fileForArchivePath(path);
-                    if (file == null || !file.isFile()) throw new IOException("附件不存在：" + path);
+                    if (file == null || !file.isFile()) throw new IOException("Attachment missing: " + path);
 
                     MessageDigest digest = AttachmentStore.sha256Digest();
                     zip.putNextEntry(new ZipEntry(path));
@@ -255,12 +285,13 @@ final class JetNoteArchiveController {
                         int read;
                         long fileDone = 0L;
                         while ((read = in.read(buffer)) != -1) {
+                            throwIfExportCancelled();
                             zip.write(buffer, 0, read);
                             fileDone += read;
                             long totalDone = base + fileDone;
                             int percent = 5 + scaledPercent(totalDone, mediaTotal, 60);
                             dispatchProgress("export", "archive", totalDone, mediaTotal, percent,
-                                    "正在打包附件 " + Math.min(attachments.size(), checksums.length()) + "/" + attachments.size());
+                                    "Packing attachments " + Math.min(attachments.size(), checksums.length()) + "/" + attachments.size());
                         }
                     }
                     zip.closeEntry();
@@ -269,7 +300,7 @@ final class JetNoteArchiveController {
                     String actualSha = AttachmentStore.hex(digest.digest());
                     String expectedSha = item.getValue().optString("sha256", "");
                     if (!expectedSha.isEmpty() && !expectedSha.equalsIgnoreCase(actualSha)) {
-                        throw new IOException("附件完整性异常：" + path);
+                        throw new IOException("Attachment integrity mismatch: " + path);
                     }
                     checksums.put(path, actualSha);
                 }
@@ -280,23 +311,25 @@ final class JetNoteArchiveController {
                 fileOut.getFD().sync();
             }
 
-            dispatchProgress("export", "verify", tempArchive.length(), tempArchive.length(), 72, "正在校验导出文件…");
+            throwIfExportCancelled();
+            dispatchProgress("export", "verify", tempArchive.length(), tempArchive.length(), 72, "Verifying exported backup…");
             verifyExportArchive(tempArchive, attachments);
-            dispatchProgress("export", "verify", tempArchive.length(), tempArchive.length(), 82, "导出文件校验通过");
+            dispatchProgress("export", "verify", tempArchive.length(), tempArchive.length(), 82, "Export verification passed");
 
             long total = tempArchive.length();
             try (ParcelFileDescriptor pfd = activity.getContentResolver().openFileDescriptor(destination, "rwt")) {
-                if (pfd == null) throw new IOException("无法打开导出目标");
+                if (pfd == null) throw new IOException("Unable to open export destination");
                 try (InputStream in = new BufferedInputStream(new FileInputStream(tempArchive));
                      FileOutputStream out = new FileOutputStream(pfd.getFileDescriptor())) {
                     byte[] buffer = new byte[COPY_BUFFER];
                     long done = 0L;
                     int read;
                     while ((read = in.read(buffer)) != -1) {
+                        throwIfExportCancelled();
                         out.write(buffer, 0, read);
                         done += read;
                         int percent = 82 + scaledPercent(done, total, 17);
-                        dispatchProgress("export", "write", done, total, percent, "正在写入目标文件…");
+                        dispatchProgress("export", "write", done, total, percent, "Writing backup file…");
                     }
                     out.flush();
                     out.getFD().sync();
@@ -305,17 +338,24 @@ final class JetNoteArchiveController {
 
             long targetSize = querySize(destination);
             if (targetSize >= 0 && targetSize != total) {
-                throw new IOException("导出目标大小不一致：" + targetSize + " / " + total);
+                throw new IOException("Export destination size mismatch: " + targetSize + " / " + total);
             }
-            dispatchProgress("export", "done", total, total, 100, "导出完成，完整性校验通过");
-            dispatchExportFinished(true, "导出成功 · " + formatBytes(total));
+            dispatchProgress("export", "done", total, total, 100, "Export complete and verified");
+            dispatchExportFinished(true, "Export complete · " + formatBytes(total));
         } catch (Exception e) {
-            dispatchProgress("export", "error", 0, 0, 0, "导出失败：" + safeMessage(e));
+            boolean cancelled = exportCancellationRequested || "Export cancelled".equals(safeMessage(e));
             if (destinationCreated) {
                 try { activity.getContentResolver().delete(destination, null, null); } catch (Exception ignored) { }
             }
-            dispatchExportFinished(false, "导出失败：" + safeMessage(e));
+            if (cancelled) {
+                dispatchExportFinished(false, "Export cancelled");
+            } else {
+                dispatchProgress("export", "error", 0, 0, 0, "Export failed: " + safeMessage(e));
+                dispatchExportFinished(false, "Export failed: " + safeMessage(e));
+            }
         } finally {
+            activeExportDestination = null;
+            exportCancellationRequested = false;
             //noinspection ResultOfMethodCallIgnored
             tempArchive.delete();
         }
@@ -327,7 +367,7 @@ final class JetNoteArchiveController {
             ZipEntry postsEntry = zip.getEntry("data/posts.json");
             ZipEntry checksumsEntry = zip.getEntry("checksums.json");
             if (manifestEntry == null || postsEntry == null || checksumsEntry == null) {
-                throw new IOException("导出文件缺少核心条目");
+                throw new IOException("Export is missing required entries");
             }
             JSONObject checksums;
             try (InputStream in = zip.getInputStream(checksumsEntry)) {
@@ -338,20 +378,20 @@ final class JetNoteArchiveController {
             while (keys.hasNext()) {
                 String path = keys.next();
                 ZipEntry entry = zip.getEntry(path);
-                if (entry == null || entry.isDirectory()) throw new IOException("导出文件缺少：" + path);
+                if (entry == null || entry.isDirectory()) throw new IOException("Export is missing: " + path);
                 MessageDigest digest = AttachmentStore.sha256Digest();
                 try (DigestInputStream in = new DigestInputStream(new BufferedInputStream(zip.getInputStream(entry)), digest)) {
                     byte[] buffer = new byte[COPY_BUFFER];
                     while (in.read(buffer) != -1) { }
                 }
                 String actual = AttachmentStore.hex(digest.digest());
-                if (!actual.equalsIgnoreCase(checksums.getString(path))) throw new IOException("导出校验失败：" + path);
+                if (!actual.equalsIgnoreCase(checksums.getString(path))) throw new IOException("Export checksum failed: " + path);
                 verified++;
             }
             for (String path : attachments.keySet()) {
-                if (!checksums.has(path)) throw new IOException("附件未写入校验清单：" + path);
+                if (!checksums.has(path)) throw new IOException("Attachment missing from checksum manifest: " + path);
             }
-            if (verified < 2 + attachments.size()) throw new IOException("导出校验条目数量异常");
+            if (verified < 2 + attachments.size()) throw new IOException("Unexpected export verification entry count");
         }
     }
 
@@ -359,7 +399,7 @@ final class JetNoteArchiveController {
         String token = UUID.randomUUID().toString();
         File stageDir = new File(activity.getCacheDir(), "jetnote-import-" + token);
         if (!stageDir.mkdirs()) {
-            dispatchImportError("无法创建导入临时目录");
+            dispatchImportError("Unable to create import staging directory");
             return;
         }
 

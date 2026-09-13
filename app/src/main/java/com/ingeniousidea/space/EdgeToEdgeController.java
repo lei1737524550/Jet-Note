@@ -15,7 +15,7 @@ import android.webkit.WebView;
 final class EdgeToEdgeController {
     private final Activity activity;
     private final WebView webView;
-    private int top, right, bottom, left, keyboardViewportHeight;
+    private int top, right, bottom, left, keyboardViewportHeight; // available viewport height above IME, physical px
     private boolean hasInsets;
 
     EdgeToEdgeController(Activity activity, WebView webView) {
@@ -51,6 +51,7 @@ final class EdgeToEdgeController {
                 if (insets.isVisible(WindowInsets.Type.ime())) {
                     int imeBottom = insets.getInsets(WindowInsets.Type.ime()).bottom;
                     int windowHeight = activity.getWindowManager().getCurrentWindowMetrics().getBounds().height();
+                    // This is the usable window height above the IME, not the IME height itself.
                     keyboardViewportHeight = Math.max(1, Math.min(webView.getHeight(), windowHeight - imeBottom));
                 } else {
                     keyboardViewportHeight = 0;

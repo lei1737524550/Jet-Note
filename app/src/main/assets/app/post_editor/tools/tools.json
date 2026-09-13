@@ -1,0 +1,59 @@
+{
+  "_comment": "Stable runtime identifiers use tool_1, tool_2... and toolbox_tool_1, toolbox_tool_2.... The name field is documentation-only metadata for maintainers and MUST NOT be used for behavior, dispatch, ordering, styling, or lookup.",
+  "toolbox": {
+    "unfoldAnimation": "app/post_editor/tools_unfold_animation.js",
+    "unfoldIcon": "shared/icons/is_unfold.svg"
+  },
+  "tools": [
+    {
+      "id": "tool_1",
+      "name": "AddVideoButton",
+      "enabled": true,
+      "action": "video",
+      "icon": "video",
+      "labelKey": "addVideo"
+    },
+    {
+      "id": "tool_2",
+      "name": "AddImageButton",
+      "enabled": true,
+      "action": "photo",
+      "icon": "photo",
+      "labelKey": "addImage"
+    },
+    {
+      "id": "tool_3",
+      "name": "AddAudioButton",
+      "enabled": true,
+      "action": "sound",
+      "icon": "sound",
+      "labelKey": "addAudio"
+    },
+    {
+      "id": "tool_4",
+      "name": "ToolboxButton",
+      "enabled": true,
+      "action": "toolbox",
+      "icon": "tools",
+      "labelKey": "tools"
+    }
+  ],
+  "toolbox_tools": [
+    {
+      "id": "toolbox_tool_1",
+      "name": "DictionaryButton",
+      "enabled": true,
+      "url": "https://www.merriam-webster.com/",
+      "icon": "dictionary",
+      "labelKey": "toolbox_tool_1"
+    },
+    {
+      "id": "toolbox_tool_2",
+      "name": "SentencesButton",
+      "enabled": true,
+      "url": "https://soundoftext.com/",
+      "icon": "sentence",
+      "labelKey": "toolbox_tool_2"
+    }
+  ]
+}

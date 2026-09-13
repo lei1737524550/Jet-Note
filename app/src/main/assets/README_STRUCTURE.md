@@ -1,0 +1,88 @@
+# Jet Note frontend structure
+
+The Android WebView entry point is `app/home/home.html`.
+
+## Directory rules
+
+- `app/` — feature-specific UI and logic.
+- `shared/` — code reused by multiple pages/features.
+- `config.json` — user-tunable runtime configuration.
+- `language/` — language data.
+
+## Post editor
+
+- `app/post_editor/editor_config.js` — maps `config.json` values to CSS variables.
+- `app/post_editor/draft_store.js` — in-memory draft model only.
+- `app/post_editor/composer_caret.js` — custom caret rendering only.
+- `app/post_editor/editor_controller.js` — editor lifecycle and persistence coordinator.
+- `app/post_editor/tools.js` — horizontal post-editor tool rendering/actions.
+- `shared/core/viewport.js` — the only owner of viewport/IME geometry.
+
+### Important rule
+
+Do not calculate keyboard or viewport height inside feature files. Consume the CSS variables and `jetnote:viewport-change` event produced by `shared/core/viewport.js`.
+
+## Post editor tool-row geometry
+
+The New/Edit Post tools are laid out as one horizontal row **below** the text area.
+The tool order is still owned by the existing tool configuration; layout CSS must
+not hard-code a particular tool count.
+
+Current geometry:
+
+- phone reference width: `1080 / 2.65 ≈ 407.5 CSS px`
+- `.post-compose-body` horizontal padding: `20px + 20px`
+- actual toolbar inner width on that reference phone: `407.5 - 40 ≈ 367.5px`
+- each tool button: `48px × 48px`
+- each SVG icon: `24px × 24px`
+- button internal padding: `10px`
+- horizontal gap between buttons: `8px`
+- text-area-to-toolbar vertical gap: `12px`
+
+Width formula for `n` tools:
+
+`tool_row_width = n × 48 + (n - 1) × 8`
+
+Reference results:
+
+- 4 tools: `4×48 + 3×8 = 216px`
+- 5 tools: `5×48 + 4×8 = 272px`
+- 6 tools: `6×48 + 5×8 = 328px`
+- 7 tools: `7×48 + 6×8 = 384px`
+- 8 tools: `8×48 + 7×8 = 440px`
+
+For the reference device, **6 tools is the recommended comfortable maximum in a
+single non-scrolling row**. With the actual `≈367.5px` inner width, six tools use
+`328px`, leaving about `39.5px`, or roughly `19.75px` breathing room on each side
+when centered. Seven tools need `384px`, which is wider than the padded content
+area, so the toolbar intentionally supports horizontal scrolling rather than
+shrinking the 48px touch targets.
+
+Design rule: keep the 48px button and 24px icon sizes stable. Prefer six visible
+tools per row on this device class; if more tools are enabled, preserve the same
+sizes and allow horizontal scrolling instead of compressing the controls.
+
+
+## Post editor tool naming contract
+
+The New/Edit Post toolbar uses stable numbered runtime identifiers. Keep this convention when adding or moving tools:
+
+```text
+tools
+├── tool_1          name = AddVideoButton
+├── tool_2          name = AddImageButton
+├── tool_3          name = AddAudioButton
+└── tool_4          name = ToolboxButton
+    └── toolbox
+        ├── toolbox_tool_1   name = DictionaryButton
+        ├── toolbox_tool_2   name = SentencesButton
+        └── toolbox_tool_N   name = ...
+```
+
+Rules:
+
+- `tool_N` is the stable identifier for a primary button.
+- `toolbox_tool_N` is the stable identifier for a button revealed by the toolbox.
+- `name` is documentation-only metadata for humans. It must never control dispatch, ordering, CSS, lookup, visibility, or other runtime behavior. Renaming `name` must not change functionality.
+- Runtime behavior comes from fields such as `action`, `url`, `icon`, and `labelKey`.
+- Primary tools and toolbox tools are separate arrays in `app/post_editor/tools/tools.json`; no magic split position or special ID is used.

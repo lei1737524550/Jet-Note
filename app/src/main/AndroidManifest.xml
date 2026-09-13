@@ -7,7 +7,7 @@
         android:label="@string/app_name"
         android:icon="@drawable/icon"
         android:roundIcon="@drawable/icon"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:forceDarkAllowed="false"
         android:hardwareAccelerated="true"
         
@@ -15,6 +15,12 @@
         android:theme="@style/Theme.JetNote"
         android:usesCleartextTraffic="false">
 
+
+        <activity
+            android:name=".NativeVideoViewerActivity"
+            android:exported="false"
+            android:hardwareAccelerated="true"
+            android:theme="@style/Theme.JetNote" />
 
         <activity
             android:name=".MainActivity"

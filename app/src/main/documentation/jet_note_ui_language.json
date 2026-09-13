@@ -1,179 +1,134 @@
 {
   "schema_version": 4,
   "purpose": "Shared UI terminology and naming language for Jet Note development.",
-  "purpose_Zh": "Jet Note 开发过程中统一使用的 UI 术语、区域命名与层级职责说明。",
   "regions": {
     "top_post": {
       "display_name": "Top Post",
-      "description": "The special post area at the top of the main page. It can show either the configured default string or the current Super Star post.",
-      "description_Zh": "主页面最上方的特殊 Post 区域。它可以显示配置中的默认字符串，也可以显示当前的 Super Star Post。"
+      "description": "The special post area at the top of the main page. It can show either the configured default string or the current Super Star post."
     },
     "post_composer": {
       "display_name": "Post Composer",
-      "description": "The post creation entry area containing the Write something field and the video, image, and audio entry buttons.",
-      "description_Zh": "用于创建 Post 的入口区域，包含 Write something 输入入口以及视频、图片和音频按钮。"
+      "description": "The post creation entry area containing the Write something field and the video, image, and audio entry buttons."
     },
     "main_posts": {
       "display_name": "Main Posts",
-      "description": "The primary scrolling area that displays normal posts and ordinary starred posts.",
-      "description_Zh": "主页面中用于滚动显示普通 Post 和普通收藏 Post 的主要内容区域。"
+      "description": "The primary scrolling area that displays normal posts and ordinary starred posts."
     },
     "color_view": {
       "display_name": "Color View",
-      "display_name_Zh": "颜色查看与取色工具",
-      "description": "The unified Jet Note color tool for visual color selection, RGB/HEX editing, preview text, background application, and color-value export.",
-      "description_Zh": "Jet Note 统一颜色工具，用于可视化取色、RGB/HEX 编辑、文字预览、设置应用背景以及导出颜色数值。"
+      "description": "The unified Jet Note color tool for visual color selection, RGB/HEX editing, preview text, background application, and color-value export."
     },
     "main_status_bar": {
       "display_name": "Main Status Bar",
-      "display_name_Zh": "主页状态栏",
-      "description": "The independent home-only battery/time/settings row above the main page body. It is not the Page Action Bar and is not Top Post.",
-      "description_Zh": "位于主页面主体上方、仅用于主页的电池/时间/设置齿轮状态栏。它不是 Page Action Bar，也不是 Top Post。"
+      "description": "The independent home-only battery/time/settings row above the main page body. It is not the Page Action Bar and is not Top Post."
     },
     "system_safe_area": {
       "display_name": "System Safe Area",
-      "display_name_Zh": "系统安全区域",
-      "description": "The device-dependent inset reserved for display cutouts, hidden/visible system bars, and other physical screen obstructions. In the Android app, WindowInsets is the only authoritative source for this geometry.",
-      "description_Zh": "由挖孔、刘海、系统栏显示状态及其他物理屏幕遮挡产生的设备相关安全边距。在 Android 应用中，WindowInsets 是这一几何信息唯一的权威来源。"
+      "description": "The device-dependent inset reserved for display cutouts, hidden/visible system bars, and other physical screen obstructions. In the Android app, WindowInsets is the only authoritative source for this geometry."
     }
   },
   "layout_terms": {
     "outer_layout_container": {
       "display_name": "Outer Layout Container",
-      "description": "The outer layer responsible for a component's position, occupied space, size, spacing, and relationship with surrounding UI. Internal visual alignment should not normally be adjusted at this layer.",
-      "description_Zh": "负责组件整体位置、占位空间、尺寸、外部间距以及与周围 UI 几何关系的外层容器。通常不应在这一层调整内部内容的视觉对齐。"
+      "description": "The outer layer responsible for a component's position, occupied space, size, spacing, and relationship with surrounding UI. Internal visual alignment should not normally be adjusted at this layer."
     },
     "inner_content_container": {
       "display_name": "Inner Content Container",
-      "description": "The inner layer responsible for arranging and aligning the visual content inside a component without moving the component's outer layout area.",
-      "description_Zh": "负责组件内部内容排列与对齐的内层容器。调整这一层不应改变组件外层布局区域的位置。"
+      "description": "The inner layer responsible for arranging and aligning the visual content inside a component without moving the component's outer layout area."
     },
     "button_group": {
       "display_name": "Button Group",
-      "description": "A container that groups multiple related buttons and controls their internal arrangement.",
-      "description_Zh": "用于组织多个相关按钮并控制这些按钮内部排列方式的容器。"
+      "description": "A container that groups multiple related buttons and controls their internal arrangement."
     },
     "audio_outer_layout_container": {
       "display_name": "Audio Outer Layout Container",
-      "description": "The layout container that reserves the audio component's overall area. Do not move this container when the requirement is only to reposition the speaker icons inside it.",
-      "description_Zh": "为音频组件整体预留布局空间的外层容器。如果需求只是移动内部喇叭图标，不应移动这一层。"
+      "description": "The layout container that reserves the audio component's overall area. Do not move this container when the requirement is only to reposition the speaker icons inside it."
     },
     "audio_inner_button_group": {
       "display_name": "Audio Inner Button Group",
-      "description": "The inner group containing the audio play buttons. Use this layer when the audio buttons need to move inside their existing reserved area.",
-      "description_Zh": "包含音频播放按钮的内部按钮组。当需要让喇叭按钮在原有预留区域内部移动时，应修改这一层。"
+      "description": "The inner group containing the audio play buttons. Use this layer when the audio buttons need to move inside their existing reserved area."
     },
     "audio_play_button": {
       "display_name": "Audio Play Button",
-      "description": "An individual audio playback button containing the speaker icon and, when applicable, its index badge.",
-      "description_Zh": "单个音频播放按钮，包含喇叭图标以及存在时的序号徽标。"
+      "description": "An individual audio playback button containing the speaker icon and, when applicable, its index badge."
     },
     "audio_index_badge": {
       "display_name": "Audio Index Badge",
-      "description": "The small numbered, visual-only badge attached to an audio play button to identify an audio attachment. It must not capture pointer/touch events; taps on the badge belong to the parent audio play button.",
-      "description_Zh": "附着在音频播放按钮上的小型数字视觉徽标，用于标识对应的音频附件。它不得截获 pointer/touch 事件；点击徽标应由父级音频播放按钮统一处理。"
+      "description": "The small numbered, visual-only badge attached to an audio play button to identify an audio attachment. It must not capture pointer/touch events; taps on the badge belong to the parent audio play button."
     },
     "action_menu_button": {
       "display_name": "Action Menu Button",
-      "description": "The three-dot button used to open the actions available for a post.",
-      "description_Zh": "用于打开 Post 操作菜单的三点按钮。"
+      "description": "The three-dot button used to open the actions available for a post."
     },
     "settings_button": {
       "display_name": "Settings Button",
-      "description": "The gear button used to open Jet Note settings.",
-      "description_Zh": "用于打开 Jet Note 设置页面的齿轮按钮。"
+      "description": "The gear button used to open Jet Note settings."
     },
     "text_content_area": {
       "display_name": "Text Content Area",
-      "description": "The layout area reserved for post text. Action controls that share the same row or column must reserve space rather than overlap this area.",
-      "description_Zh": "用于显示 Post 文本的布局区域。与文本共享行或列的操作控件必须正常预留空间，不能覆盖这一文本区域。"
+      "description": "The layout area reserved for post text. Action controls that share the same row or column must reserve space rather than overlap this area."
     },
     "timestamp": {
       "display_name": "Timestamp",
-      "description": "The displayed publication time of a post.",
-      "description_Zh": "Post 显示出来的发布时间。"
+      "description": "The displayed publication time of a post."
     },
     "four_quarter_layout": {
       "display_name": "Four-Quarter Layout",
-      "display_name_Zh": "四等分布局",
-      "description": "A horizontal layout divided into four equal-width regions. Each region owns exactly one quarter of the available width regardless of whether it contains content.",
-      "description_Zh": "将横向可用空间严格划分为四个等宽区域的布局。无论某一区域是否放置内容，它都占据恰好四分之一宽度。"
+      "description": "A horizontal layout divided into four equal-width regions. Each region owns exactly one quarter of the available width regardless of whether it contains content."
     },
     "nested_equal_subgrid": {
       "display_name": "Nested Equal Subgrid",
-      "display_name_Zh": "嵌套等分子网格",
-      "description": "An equal subdivision created inside one parent layout region, such as dividing the fourth quarter of the top status area into three equal child regions.",
-      "description_Zh": "在父级布局分区内部继续进行的等分布局，例如把顶部状态区的第四个四分区再严格分成三个等宽子区域。"
+      "description": "An equal subdivision created inside one parent layout region, such as dividing the fourth quarter of the top status area into three equal child regions."
     },
     "horizontal_and_vertical_center": {
       "display_name": "Horizontal and Vertical Center",
-      "display_name_Zh": "上下左右居中",
-      "description": "Center an element on both axes inside its own assigned layout region rather than centering it relative to the full screen.",
-      "description_Zh": "元素在自己所属的布局分区内同时水平和垂直居中，而不是相对于整个屏幕居中。"
+      "description": "Center an element on both axes inside its own assigned layout region rather than centering it relative to the full screen."
     },
     "right_aligned_with_vertical_center": {
       "display_name": "Right Aligned with Vertical Center",
-      "display_name_Zh": "右对齐且垂直居中",
-      "description": "Align content to the right edge of its assigned region while keeping it vertically centered.",
-      "description_Zh": "内容在所属分区内靠右对齐，同时保持垂直方向居中。"
+      "description": "Align content to the right edge of its assigned region while keeping it vertically centered."
     },
     "main_status_bar_battery_group": {
       "display_name": "Main Status Bar Battery Group",
-      "display_name_Zh": "主页状态栏电池信息组",
-      "description": "The battery icon and percentage treated as one visual group inside the first quarter of the main status bar.",
-      "description_Zh": "由电池图标与电量百分比组成的一个整体视觉组，放置于主页状态栏第一个四分区。"
+      "description": "The battery icon and percentage treated as one visual group inside the first quarter of the main status bar."
     },
     "main_status_bar_time": {
       "display_name": "Main Status Bar Time",
-      "display_name_Zh": "主页状态栏时间",
-      "description": "The HH:mm time display in the main status bar. Its alignment is scoped to its assigned quarter and should avoid assumptions about the physical center of the device screen.",
-      "description_Zh": "主页状态栏中的 HH:mm 时间显示。其对齐应限定在所属四分区内，不应假设设备屏幕物理中心一定可用。"
+      "description": "The HH:mm time display in the main status bar. Its alignment is scoped to its assigned quarter and should avoid assumptions about the physical center of the device screen."
     },
     "main_status_bar_settings_region": {
       "display_name": "Main Status Bar Settings Region",
-      "display_name_Zh": "主页状态栏设置区域",
-      "description": "The fourth quarter of the main status bar. It may contain an internal equal subgrid; the Settings button currently belongs to the third child region.",
-      "description_Zh": "主页状态栏的第四个四分区。该区域可以继续划分等宽子网格；当前 Settings 按钮位于其中第三个子区域。"
+      "description": "The fourth quarter of the main status bar. It may contain an internal equal subgrid; the Settings button currently belongs to the third child region."
     },
     "system_safe_area_top": {
       "display_name": "System Safe Area Top",
-      "display_name_Zh": "顶部系统安全边距",
-      "description": "The top inset delivered by Android WindowInsets and exposed to CSS as --system-safe-area-top. It is not a configurable Page Action Bar height and must be consumed exactly once.",
-      "description_Zh": "由 Android WindowInsets 提供并通过 CSS 变量 --system-safe-area-top 暴露的顶部安全边距。它不是可配置的 Page Action Bar 高度，而且只能被布局消费一次。"
+      "description": "The top inset delivered by Android WindowInsets and exposed to CSS as --system-safe-area-top. It is not a configurable Page Action Bar height and must be consumed exactly once."
     }
   },
   "naming_rules": {
     "prefer_explicit_names": {
-      "description": "Prefer long, explicit names over short ambiguous names. A name should identify the UI region, element, and responsibility whenever practical.",
-      "description_Zh": "优先使用较长但明确的名称，而不是简短且容易混淆的名称。条件允许时，名称应同时表达所属 UI 区域、元素类型和职责。"
+      "description": "Prefer long, explicit names over short ambiguous names. A name should identify the UI region, element, and responsibility whenever practical."
     },
     "distinguish_outer_and_inner": {
-      "description": "Always distinguish outer layout containers from inner content containers. Position changes must be applied to the layer whose responsibility matches the requested visual change.",
-      "description_Zh": "必须明确区分外层布局容器和内部内容容器。任何位置调整都应作用在与需求职责相匹配的层级上。"
+      "description": "Always distinguish outer layout containers from inner content containers. Position changes must be applied to the layer whose responsibility matches the requested visual change."
     },
     "scope_region_specific_changes": {
-      "description": "Region-specific UI changes must use selectors or variables scoped to that region so changes to Top Post do not unintentionally affect Main Posts, and vice versa.",
-      "description_Zh": "只针对某一区域的 UI 修改必须使用限定到该区域的选择器或变量，避免修改 Top Post 时意外影响 Main Posts，反之亦然。"
+      "description": "Region-specific UI changes must use selectors or variables scoped to that region so changes to Top Post do not unintentionally affect Main Posts, and vice versa."
     },
     "visual_overlay_must_not_capture_input": {
-      "description": "Decorative overlays such as audio index badges and picker markers must not steal clicks/touches from the interactive control they visually belong to unless they intentionally implement their own action.",
-      "description_Zh": "数字徽标、取色定位标记等装饰性覆盖层，不得截获其所属交互控件的点击/触摸事件，除非该覆盖层本身明确承担独立操作。"
+      "description": "Decorative overlays such as audio index badges and picker markers must not steal clicks/touches from the interactive control they visually belong to unless they intentionally implement their own action."
     },
     "top_area_canonical_names": {
-      "english": "Use system_safe_area for device/cutout/system-bar insets, main_status_bar for the battery/time/settings row on the home screen, page_action_bar for the reusable Back/Title/Action page header, and top_post only for the first post surface inside three_post_one_body. Do not use generic top_bar/top_status names for these distinct concepts.",
-      "chinese": "设备挖孔/刘海/系统栏产生的安全边距统一命名为 system_safe_area；主页电池/时间/设置齿轮行统一命名为 main_status_bar；页面中的“返回按钮/标题/右侧动作按钮”复用顶栏统一命名为 page_action_bar；three_post_one_body 内第一块 Post 仅命名为 top_post。禁止再用含糊的 top_bar/top_status 混指这些概念。"
+      "english": "Use system_safe_area for device/cutout/system-bar insets, main_status_bar for the battery/time/settings row on the home screen, page_action_bar for the reusable Back/Title/Action page header, and top_post only for the first post surface inside three_post_one_body. Do not use generic top_bar/top_status names for these distinct concepts."
     },
     "system_safe_area_single_source": {
-      "description": "System safe-area geometry must have one owner. Android WindowInsets provides the values; CSS consumes the resulting variables. Do not add env(safe-area-inset-*) or a second guessed top padding on top of the native inset.",
-      "description_Zh": "系统安全区域几何必须只有一个所有者：Android WindowInsets 提供数值，CSS 只消费对应变量。禁止在原生 inset 之上再次叠加 env(safe-area-inset-*) 或猜测出来的顶部 padding。"
+      "description": "System safe-area geometry must have one owner. Android WindowInsets provides the values; CSS consumes the resulting variables. Do not add env(safe-area-inset-*) or a second guessed top padding on top of the native inset."
     }
   },
   "concepts": {
     "three_posts_one_body": {
       "display_name": "Three Posts, One Body",
-      "display_name_Zh": "三 Post 一体",
       "description": "Top Post, Post Composer, and Main Posts are the three primary regions of the Jet Note main page. They form one integrated page body and should follow one coherent visual language, while each region keeps its own layout responsibility, behavior, and independently scoped styles or configuration.",
-      "description_Zh": "Top Post、Post Composer 和 Main Posts 是 Jet Note 主页面的三个核心区域。三者共同组成一个完整的一体化页面主体，视觉语言应保持统一；同时每个区域仍保留各自独立的布局职责、交互逻辑，以及独立作用域的样式和配置，修改其中一个区域时不应误伤另外两个区域。",
       "members": [
         "top_post",
         "post_composer",
@@ -184,9 +139,7 @@
   "visual_language": {
     "jet_note_border_format": {
       "display_name": "Jet Note Border Format",
-      "display_name_Zh": "Jet Note 边框格式",
       "description": "The shared border language for Jet Note cards, tools, inputs, buttons, text preview blocks, and other box-like UI. New components should reuse the common_border class and its shared CSS variables instead of inventing unrelated border geometry.",
-      "description_Zh": "Jet Note 中卡片、工具、输入框、按钮、文本预览框及其他盒状 UI 共用的边框语言。新增组件应优先复用 common_border 类及其共享 CSS 变量，不应另造与现有界面无关的边框几何风格。",
       "implementation": {
         "shared_class": "common_border",
         "border_color_variable": "--common-border-color",
@@ -198,54 +151,40 @@
         "A component may have different dimensions, but its outline geometry must remain visually consistent with Jet Note.",
         "Nested utility controls should reuse the same border vocabulary unless a functional reason requires otherwise.",
         "Do not force color tools into a square shape; dimensions should follow the surrounding Jet Note layout while preserving the shared border format."
-      ],
-      "rules_Zh": [
-        "边框颜色、粗细与圆角体系应与 Jet Note 现有 Settings 卡片和控件保持一致。",
-        "组件尺寸可以不同，但外轮廓几何语言必须保持 Jet Note 的统一视觉。",
-        "工具内部的嵌套控件默认继续复用同一套边框语言，除非功能上确有必要。",
-        "颜色工具不要求强制做成正方形；尺寸应服从 Jet Note 周边布局，同时保持共享边框格式。"
       ]
     },
     "jet_note_type": {
       "english": "Jet Note Type is the centralized visual-type configuration layer. It maps semantic surfaces such as Settings, Edit Post, Tools, the shared buttom_string_buttom_bar, and three_post_one_body children to background and border-color tokens.",
-      "chinese": "Jet Note Type 是统一的视觉类型配置层。它把 Settings、Edit Post、Tools、共享 buttom_string_buttom_bar，以及 three_post_one_body 子区域映射到统一的背景色和边框色参数。",
       "configuration_root": "config.json -> jet_note_type",
       "body_content_automatic_contrast": {
         "relative_luminance_threshold": {
           "default": 0.5,
-          "english": "Decision threshold after RGB channels are divided by 255 and luminance is calculated as 0.2126R + 0.7152G + 0.0722B. Values above the threshold are treated as light backgrounds.",
-          "chinese": "RGB 通道除以 255 后，按照 0.2126R + 0.7152G + 0.0722B 计算亮度时使用的判断阈值；结果大于该值视为浅色背景。"
+          "english": "Decision threshold after RGB channels are divided by 255 and luminance is calculated as 0.2126R + 0.7152G + 0.0722B. Values above the threshold are treated as light backgrounds."
         },
         "light_background_foreground_color": {
           "default": "#111111",
-          "english": "Foreground used on a light Body background. This reuses an existing Jet Note near-black color.",
-          "chinese": "Body 背景较浅时使用的前景色，复用 Jet Note 现有的近黑色。"
+          "english": "Foreground used on a light Body background. This reuses an existing Jet Note near-black color."
         },
         "dark_background_foreground_color": {
           "default": "#f5f5f5",
-          "english": "Foreground used on a dark Body background. This reuses an existing Jet Note light gray color.",
-          "chinese": "Body 背景较深时使用的前景色，复用 Jet Note 现有的浅灰色。"
+          "english": "Foreground used on a dark Body background. This reuses an existing Jet Note light gray color."
         }
       },
       "background_group": "jet_note_type_background",
       "border_group": "jet_note_type_border_color",
       "current_background_token": {
         "value": "current_background",
-        "english": "Resolve to the application/page background persisted by the Color View Set Background action.",
-        "chinese": "解析为 Color View 的 Set Background 操作持久化保存的应用/页面背景色。"
+        "english": "Resolve to the application/page background persisted by the Color View Set Background action."
       },
       "current_body_token": {
         "value": "current_body",
-        "english": "Resolve to the content-surface color persisted by the Color View Set Body action. It is independent from current_background.",
-        "chinese": "解析为 Color View 的 Set Body 操作持久化保存的内容表面颜色；它与 current_background 相互独立。"
+        "english": "Resolve to the content-surface color persisted by the Color View Set Body action. It is independent from current_background."
       },
       "inheritance_rule": {
-        "english": "A child surface that uses current_background must update immediately when Set Background changes the application background. Native Tool 1 / Tool 2 overlays receive the resolved value from the editor instead of falling back to white.",
-        "chinese": "使用 current_background 的子界面必须在 Set Background 修改应用背景后立即同步。原生 Tool 1 / Tool 2 浮层应从编辑器接收已经解析的颜色，而不能重新回退到白色。"
+        "english": "A child surface that uses current_background must update immediately when Set Background changes the application background. Native Tool 1 / Tool 2 overlays receive the resolved value from the editor instead of falling back to white."
       },
       "invalid_token_safety_rule": {
-        "english": "An unknown symbolic background token must resolve to the supplied fallback color. It must never be assigned directly to a CSS custom property because that can make the surface transparent.",
-        "chinese": "无法识别的符号型背景令牌必须解析为调用方提供的后备颜色，禁止直接写入 CSS 自定义属性，否则对应表面可能变成透明。"
+        "english": "An unknown symbolic background token must resolve to the supplied fallback color. It must never be assigned directly to a CSS custom property because that can make the surface transparent."
       },
       "three_post_one_body": {
         "children": [
@@ -253,24 +192,21 @@
           "post_composer",
           "main_posts"
         ],
-        "english": "Nested visual-type group for Top Post, Post Composer, and Main Posts. Set a child to current_body when it should follow Set Body.",
-        "chinese": "Top Post、Post Composer 与 Main Posts 三个主要区域的嵌套视觉类型组。需要跟随 Set Body 时，把对应子项设为 current_body。"
+        "english": "Nested visual-type group for Top Post, Post Composer, and Main Posts. Set a child to current_body when it should follow Set Body."
       },
       "edit_post_right_side_tool_buttons": {
         "children": [
           "normal_background",
           "tools_expanded_background"
         ],
-        "english": "Backgrounds of the Edit Post right-side attachment buttons and the extra buttons revealed after Tools is expanded.",
-        "chinese": "编辑 Post 右侧附件按钮，以及展开 Tools 后新增按钮的背景色配置。"
+        "english": "Backgrounds of the Edit Post right-side attachment buttons and the extra buttons revealed after Tools is expanded."
       },
       "settings_body_cards": {
         "children": [
           "backup",
           "color_view"
         ],
-        "english": "Backgrounds of the two large Settings content cards. backup controls the Backup card and its ordinary child controls. color_view controls the Color View card, its inner panel, previews, inputs, and ordinary buttons. Functional color surfaces such as the SV field, Hue strip, RGB labels, selection overlays, and feedback states keep their own colors.",
-        "chinese": "Settings 中两个大内容卡片的背景色。backup 控制 Backup 卡片及其普通子控件；color_view 控制 Color View 卡片、内部面板、预览框、输入框和普通按钮。SV 取色区、Hue 色相条、RGB 标签、选择叠层及反馈状态等功能性颜色保持独立。"
+        "english": "Backgrounds of the two large Settings content cards. backup controls the Backup card and its ordinary child controls. color_view controls the Color View card, its inner panel, previews, inputs, and ordinary buttons. Functional color surfaces such as the SV field, Hue strip, RGB labels, selection overlays, and feedback states keep their own colors."
       },
       "tools_group": {
         "children": [
@@ -278,55 +214,44 @@
           "tool_2",
           "fallback"
         ],
-        "english": "Tool 1 and Tool 2 can be styled independently. In the current configuration both resolve to current_background, while fallback covers future or unknown tools.",
-        "chinese": "Tool 1 与 Tool 2 可以分别配置。当前两者都解析为 current_background；fallback 用于以后新增或无法识别的工具。"
+        "english": "Tool 1 and Tool 2 can be styled independently. In the current configuration both resolve to current_background, while fallback covers future or unknown tools."
       }
     },
     "tool_surface_inheritance": {
-      "english": "Tool Surface Inheritance: Dictionary (Tool 1) and Sentences (Tool 2) are launched from the post editor and inherit the configured Tools background/border appearance, including the native top bar and loading surface.",
-      "chinese": "工具界面继承：Dictionary（Tool 1）和 Sentences（Tool 2）由 Post 编辑器启动，继承 Tools 配置的背景与边框外观，包括原生顶栏与加载区域。"
+      "english": "Tool Surface Inheritance: Dictionary (Tool 1) and Sentences (Tool 2) are launched from the post editor and inherit the configured Tools background/border appearance, including the native top bar and loading surface."
     }
   },
   "components": {
     "jet_note_pill_formats": {
       "english": "Jet Note pill formats are shared two-part control geometries. Both use one rounded outer border; child elements do not draw separate outer borders.",
-      "chinese": "Jet Note 药丸格式是可复用的双元素控件几何规范。两种格式都只使用一个圆角外框，子元素不再各自绘制外边框。",
       "horizontal_pill_format": {
-        "english": "Two elements are arranged left and right inside one rounded frame, separated by one vertical divider. Both halves are equal unless another ratio is explicitly documented.",
-        "chinese": "两个元素在同一个圆角外框内左右排列，中间只有一条竖向分隔线；除非另有明确比例，两部分尺寸相等。"
+        "english": "Two elements are arranged left and right inside one rounded frame, separated by one vertical divider. Both halves are equal unless another ratio is explicitly documented."
       },
       "vertical_pill_format": {
-        "english": "Two elements are arranged top and bottom inside one rounded frame, separated by one horizontal divider. Both halves are equal unless another ratio is explicitly documented.",
-        "chinese": "两个元素在同一个圆角外框内上下排列，中间只有一条横向分隔线；除非另有明确比例，两部分高度相等。"
+        "english": "Two elements are arranged top and bottom inside one rounded frame, separated by one horizontal divider. Both halves are equal unless another ratio is explicitly documented."
       },
       "body_inheritance": {
-        "english": "Inside a Body-controlled surface, the outer pill, both child regions, and ordinary text inherit Body background and automatic contrast foreground. Dividers retain the configured border color.",
-        "chinese": "药丸位于受 Body 控制的界面时，外框、两个子区域及普通文字继承 Body 背景和自动对比前景色；分隔线继续使用配置的边框色。"
+        "english": "Inside a Body-controlled surface, the outer pill, both child regions, and ordinary text inherit Body background and automatic contrast foreground. Dividers retain the configured border color."
       }
     },
     "appearance_default_colors": {
       "configuration_root": "config.json -> appearance_default_colors",
       "background": {
         "default": "#AED194",
-        "english": "Default application background used on first launch and by Color View Reset.",
-        "chinese": "首次启动以及点击 Color View Reset 时使用的默认应用背景色。"
+        "english": "Default application background used on first launch and by Color View Reset."
       },
       "body": {
         "default": "#D2E9C2",
-        "english": "Default Body surface color used on first launch and by Color View Reset.",
-        "chinese": "首次启动以及点击 Color View Reset 时使用的默认 Body 表面颜色。"
+        "english": "Default Body surface color used on first launch and by Color View Reset."
       },
       "color_view_picker_after_reset": {
         "default": "#000000",
-        "english": "Color loaded into the Color View picker after Reset. It does not replace the configured default Background or Body colors.",
-        "chinese": "点击 Reset 后装入 Color View 取色器的颜色；它不会替代配置的默认 Background 或 Body 颜色。"
+        "english": "Color loaded into the Color View picker after Reset. It does not replace the configured default Background or Body colors."
       }
     },
     "color_view_reset_button": {
       "display_name": "Color View Reset Button",
-      "display_name_Zh": "Color View 重置按钮",
       "description": "Placed horizontally at the right side of the Color View title. It inherits the Color View Body background and automatic foreground contrast. A click persists both configured default colors and resets the picker to its configured reset color.",
-      "description_Zh": "水平放置在 Color View 标题右侧，继承 Color View 的 Body 背景和自动前景对比色。点击后持久化两种配置默认色，并把取色器恢复为配置的重置颜色。",
       "runtime_language_keys": [
         "color_view.reset",
         "color_view.reset_accessibility_label",
@@ -335,105 +260,67 @@
     },
     "buttom_string_buttom_bar": {
       "display_name": "buttom_string_buttom_bar",
-      "display_name_Zh": "Jet Note 统一顶边栏",
       "description": "Reusable Jet Note Page Action Bar with one centered string and optional left/right buttons. The center string remains geometrically centered even when either side is none or uses content of a different width.",
-      "description_Zh": "Jet Note 可复用统一顶边栏，由居中的字符串和可选的左右按钮组成。即使任意一侧为 none，或左右内容宽度不同，中间字符串仍保持几何居中。",
       "button_content_types": {
         "none": "Do not render the button; the empty side must not disturb center alignment.",
         "string": "Render the configured string inside the Jet Note button.",
         "asset_path": "Render the configured SVG/PNG/image asset path inside the Jet Note button."
       },
-      "button_content_types_Zh": {
-        "none": "不渲染按钮；空缺的一侧不得影响中间标题居中。",
-        "string": "在 Jet Note 按钮中渲染配置字符串。",
-        "asset_path": "在 Jet Note 按钮中渲染配置的 SVG/PNG/图片资源路径。"
-      },
       "background_rule": "All pages using this component use the persisted Jet Note application background for the page surface and the top-bar surface.",
-      "background_rule_Zh": "所有使用此组件的页面，其页面表面和顶边栏表面都同步使用 Jet Note 已持久化保存的应用背景色。",
       "content_resolution_rule": "Left/right button content is resolved by content type: none renders nothing, string renders literal text, and asset_path resolves a supported image resource such as SVG or PNG through the shared asset-path flow.",
-      "content_resolution_rule_Zh": "左右按钮内容由 content type 统一解析：none 不渲染内容，string 渲染文字，asset_path 通过共享资源路径流程解析 SVG、PNG 等受支持图片资源。",
       "center_alignment_rule": "The center string is positioned from the bar geometry, not by balancing the measured widths of the left and right buttons.",
-      "center_alignment_rule_Zh": "中间字符串依据顶栏自身几何位置定位，而不是通过平衡左右按钮实际宽度来实现居中。",
-      "shared_background_sync_rule": "When Jet Note background changes, every surface using buttom_string_buttom_bar updates to the same persisted background immediately and on later re-entry/restart.",
-      "shared_background_sync_rule_Zh": "Jet Note 背景变化时，所有使用 buttom_string_buttom_bar 的页面表面和顶栏都立即同步相同的持久化背景；之后重新进入页面或重启也继续恢复该背景。"
+      "shared_background_sync_rule": "When Jet Note background changes, every surface using buttom_string_buttom_bar updates to the same persisted background immediately and on later re-entry/restart."
     },
     "color_view_picker": {
       "display_name": "Color View Picker",
-      "display_name_Zh": "Color View 取色器",
-      "description": "The visual picker portion of Color View. It combines a two-dimensional Saturation/Value field with a separate Hue slider and controls the same single current-color state used by RGB/HEX inputs.",
-      "description_Zh": "Color View 中负责可视化取色的部分，由二维饱和度/明度区域和独立 Hue 色相条组成，并与 RGB/HEX 输入共同控制同一份当前颜色状态。"
+      "description": "The visual picker portion of Color View. It combines a two-dimensional Saturation/Value field with a separate Hue slider and controls the same single current-color state used by RGB/HEX inputs."
     },
     "saturation_value_field": {
       "display_name": "Saturation/Value Field",
-      "display_name_Zh": "饱和度/明度二维取色区",
-      "description": "A two-dimensional color field where the horizontal axis controls saturation and the vertical axis controls value/brightness. It must allow white, grayscale, dark colors, and black.",
-      "description_Zh": "二维颜色选择区域，横轴控制饱和度，纵轴控制明度/亮度。必须能够取得白色、灰阶、深色和黑色。"
+      "description": "A two-dimensional color field where the horizontal axis controls saturation and the vertical axis controls value/brightness. It must allow white, grayscale, dark colors, and black."
     },
     "color_picker_handle": {
       "display_name": "Color Picker Handle",
-      "display_name_Zh": "取色点 / 选择点",
-      "description": "The draggable circular handle showing the selected coordinate inside the Saturation/Value field.",
-      "description_Zh": "位于饱和度/明度区域中的可拖动圆形选择点，用于显示当前选择坐标。"
+      "description": "The draggable circular handle showing the selected coordinate inside the Saturation/Value field."
     },
     "hue_slider": {
       "display_name": "Hue Slider",
-      "display_name_Zh": "Hue 色相条",
-      "description": "The horizontal rainbow strip used to select hue independently from saturation and value.",
-      "description_Zh": "用于独立选择色相的横向彩虹渐变条，与饱和度和明度选择分离。"
+      "description": "The horizontal rainbow strip used to select hue independently from saturation and value."
     },
     "hue_selection_rails": {
       "display_name": "Hue Selection Rails",
-      "display_name_Zh": "Hue 双竖线定位标记",
-      "description": "The two narrow vertical rails that visually bracket the selected hue position on the Hue slider.",
-      "description_Zh": "Hue 色相条上用于夹住当前选中色相位置的两根窄竖线标记。"
+      "description": "The two narrow vertical rails that visually bracket the selected hue position on the Hue slider."
     },
     "hue_caret": {
       "display_name": "Hue Caret",
-      "display_name_Zh": "Hue caret 指针",
-      "description": "The triangular pointer under the Hue slider. Its tip points upward and must align precisely with the center line between the two Hue selection rails.",
-      "description_Zh": "位于 Hue 色相条下方的三角形指针。尖端朝上，并且必须精确指向两根 Hue 竖线之间的中线。"
+      "description": "The triangular pointer under the Hue slider. Its tip points upward and must align precisely with the center line between the two Hue selection rails."
     },
     "color_preview_text_block": {
       "display_name": "Color Preview Text Block",
-      "display_name_Zh": "颜色文字预览框",
-      "description": "A Jet Note bordered text block used to preview the current color on configurable sample text. The sample string is supplied from config.json rather than hard-coded in markup.",
-      "description_Zh": "使用 Jet Note 边框格式的文字预览区域，用于在可配置示例字符串上预览当前颜色。示例字符串必须来自 config.json，而不是硬编码在页面中。"
+      "description": "A Jet Note bordered text block used to preview the current color on configurable sample text. The sample string is supplied from config.json rather than hard-coded in markup."
     },
     "rgb_channel_inputs": {
       "display_name": "RGB Channel Inputs",
-      "display_name_Zh": "RGB 通道输入区",
-      "description": "The three aligned R/G/B channel inputs. R is labeled red, G green, and B pure blue. Their displayed number format follows the active Decimal/HEX mode while the underlying color state remains the same.",
-      "description_Zh": "并排排列的 R/G/B 三个颜色通道输入框。R 标签为红色、G 为绿色、B 为纯蓝色。其显示数值格式由 Decimal/HEX 模式决定，但底层颜色状态始终是同一份。"
+      "description": "The three aligned R/G/B channel inputs. R is labeled red, G green, and B pure blue. Their displayed number format follows the active Decimal/HEX mode while the underlying color state remains the same."
     },
     "color_format_toggle": {
       "display_name": "Color Format Toggle",
-      "display_name_Zh": "颜色数值格式切换按钮",
-      "description": "The control that toggles Color View numeric presentation between decimal RGB channels and hexadecimal channel values without creating a second color state.",
-      "description_Zh": "在十进制 RGB 通道值与十六进制通道值之间切换显示格式的控件，不得因此创建第二份颜色状态。"
+      "description": "The control that toggles Color View numeric presentation between decimal RGB channels and hexadecimal channel values without creating a second color state."
     },
     "set_background_button": {
       "display_name": "Set Background Button",
-      "display_name_Zh": "设置背景按钮",
-      "description": "Applies the single current Color View color as the persisted Jet Note application background and immediately synchronizes surfaces that follow the shared background rule.",
-      "description_Zh": "把 Color View 的唯一当前颜色设置为 Jet Note 持久化应用背景，并立即同步所有遵循共享背景规则的页面表面和统一顶栏。"
+      "description": "Applies the single current Color View color as the persisted Jet Note application background and immediately synchronizes surfaces that follow the shared background rule."
     },
     "set_body_button": {
       "display_name": "Set Body Button",
-      "display_name_Zh": "设置 Body 颜色按钮",
       "description": "Persists the current Color View color as the independent Body color and immediately refreshes every config.json surface that uses current_body.",
-      "description_Zh": "把 Color View 当前颜色持久化为独立的 Body 颜色，并立即刷新 config.json 中所有使用 current_body 的界面。",
       "runtime_language_keys": {
         "color_view.set_body": "Visible button label; configured in assets/language/english.json.",
         "color_view.body_set": "Success feedback after the Body color is persisted; configured in assets/language/english.json."
-      },
-      "runtime_language_keys_Zh": {
-        "color_view.set_body": "按钮上显示的文字，在 assets/language/english.json 中配置。",
-        "color_view.body_set": "Body 颜色持久化成功后的提示文字，在 assets/language/english.json 中配置。"
       }
     },
     "color_view_four_action_frames": {
       "display_name": "Color View Six Action Frames",
-      "display_name_Zh": "Color View 六个操作外框",
       "children": [
         "set_background",
         "set_body",
@@ -442,36 +329,27 @@
         "saved_body_color",
         "hex_decimal_combined_frame"
       ],
-      "description": "A three-column by two-row layout. Row one is Set Background, Set Body, and Export Color. Row two is the saved Background value, saved Body value, and the combined HEX/DEC frame. All six outer frames use the same dimensions. HEX/DEC also controls how both saved values are displayed.",
-      "description_Zh": "三列两行布局：第一行为 Set Background、Set Body、Export Color；第二行为已保存 Background 色值、已保存 Body 色值、HEX/DEC 整体框。六个外框尺寸完全相同，HEX/DEC 同时控制两个已保存色值的显示格式。"
+      "description": "A three-column by two-row layout. Row one is Set Background, Set Body, and Export Color. Row two is the saved Background value, saved Body value, and the combined HEX/DEC frame. All six outer frames use the same dimensions. HEX/DEC also controls how both saved values are displayed."
     },
     "export_color_button": {
       "display_name": "Export Color Button",
-      "display_name_Zh": "导出颜色按钮",
-      "description": "Generates a textual representation of the current color in the active numeric format. Decimal export uses R,G,B with English commas; HEX export uses one # followed by six hexadecimal digits.",
-      "description_Zh": "按照当前数值模式生成当前颜色的文本表示。十进制导出格式为 R,G,B，数字之间使用英文逗号；十六进制导出格式为一个 # 加六位十六进制数字。"
+      "description": "Generates a textual representation of the current color in the active numeric format. Decimal export uses R,G,B with English commas; HEX export uses one # followed by six hexadecimal digits."
     },
     "exported_color_value": {
       "display_name": "Exported Color Value",
-      "display_name_Zh": "已导出的颜色值",
-      "description": "The generated text value shown after Export Color. It updates when the current color or Decimal/HEX mode changes.",
-      "description_Zh": "点击 Export Color 后显示的颜色文本值。当前颜色或 Decimal/HEX 模式变化时，该值应同步更新。"
+      "description": "The generated text value shown after Export Color. It updates when the current color or Decimal/HEX mode changes."
     },
     "copy_color_button": {
       "display_name": "Copy Color Button",
-      "display_name_Zh": "颜色复制按钮",
-      "description": "The button placed next to the exported color value. It copies that displayed value to the system clipboard and is separate from the Export Color action.",
-      "description_Zh": "位于已导出颜色值右侧的复制按钮。它负责把当前显示值复制到系统剪贴板，并与 Export Color 的生成/刷新行为分离。"
+      "description": "The button placed next to the exported color value. It copies that displayed value to the system clipboard and is separate from the Export Color action."
     },
     "audio_index_badge": {
       "display_name": "Audio Index Badge",
-      "description": "The small numbered, visual-only badge attached to an audio play button to identify an audio attachment. It must not capture pointer/touch events; taps on the badge belong to the parent audio play button.",
-      "description_Zh": "附着在音频播放按钮上的小型数字视觉徽标，用于标识对应的音频附件。它不得截获 pointer/touch 事件；点击徽标应由父级音频播放按钮统一处理。"
+      "description": "The small numbered, visual-only badge attached to an audio play button to identify an audio attachment. It must not capture pointer/touch events; taps on the badge belong to the parent audio play button."
     },
     "main_status_bar": {
       "display_name": "Main Status Bar",
       "english": "Home-only status row containing battery information, HH:mm time, an empty balancing region, and the Settings entry. Its geometry is configured by config.json -> main_status_bar.",
-      "chinese": "主页专用状态栏，包含电池信息、HH:mm 时间、平衡空白区和 Settings 入口。几何参数统一来自 config.json -> main_status_bar。",
       "not_the_same_as": [
         "page_action_bar",
         "top_post"
@@ -480,7 +358,6 @@
     "page_action_bar": {
       "display_name": "Page Action Bar",
       "english": "Reusable page header for Settings, New/Edit Post, Tools, Dictionary and Sentences. It contains a left action, an absolutely centered title, and a right action. Geometry and visual tokens come from config.json -> page_action_bar; page-specific button content still comes from buttom_string_buttom_bar.",
-      "chinese": "Settings、New/Edit Post、Tools、Dictionary、Sentences 等页面共用的页面操作顶栏，由左侧动作、中间绝对居中标题、右侧动作组成。几何与视觉参数来自 config.json -> page_action_bar；各页面按钮内容仍由 buttom_string_buttom_bar 配置。",
       "not_the_same_as": [
         "main_status_bar",
         "top_post"
@@ -489,7 +366,6 @@
     "top_post": {
       "display_name": "Top Post",
       "english": "The first post surface inside three_post_one_body. It is content, not a status bar and not a page action bar.",
-      "chinese": "three_post_one_body 内的第一块 Post 内容区域。它是内容卡片，不是状态栏，也不是页面操作顶栏。",
       "not_the_same_as": [
         "main_status_bar",
         "page_action_bar"
@@ -499,186 +375,136 @@
   "post_state_terms": {
     "no_starred_post": {
       "display_name": "No-Starred Post",
-      "display_name_Zh": "未收藏 Post",
-      "description": "A normal post with no starred state. Its border and timestamp presentation are read from the no_starred_post configuration block.",
-      "description_Zh": "没有收藏状态的普通 Post，其边框和时间戳视觉参数从 no_starred_post 配置块读取。"
+      "description": "A normal post with no starred state. Its border and timestamp presentation are read from the no_starred_post configuration block."
     },
     "starred_post": {
       "display_name": "Starred Post",
-      "display_name_Zh": "收藏 Post",
-      "description": "A normally starred post. Its state-specific border and timestamp presentation are read from the starred_post configuration block.",
-      "description_Zh": "普通收藏状态的 Post，其状态专属边框和时间戳视觉参数从 starred_post 配置块读取。"
+      "description": "A normally starred post. Its state-specific border and timestamp presentation are read from the starred_post configuration block."
     },
     "super_starred_post": {
       "display_name": "Super-Starred Post",
-      "display_name_Zh": "超级收藏 Post",
-      "description": "The highest-priority starred post represented by the red star state. It is promoted to Top Post, closes stale post action UI, and returns the main page to its standard top position.",
-      "description_Zh": "以红色五角星表示的最高优先级收藏状态。进入该状态后 Post 会提升到 Top Post，同时关闭已失效的 Post 操作菜单，并让主页面回到标准顶部位置。"
+      "description": "The highest-priority starred post represented by the red star state. It is promoted to Top Post, closes stale post action UI, and returns the main page to its standard top position."
     }
   },
   "state_and_sync_terms": {
     "single_current_color_state": {
       "display_name": "Single Current Color State",
-      "display_name_Zh": "唯一当前颜色状态",
-      "description": "Color View keeps one authoritative current color. The SV field, Hue slider, RGB/HEX inputs, preview text, background action, and export value are projections of the same state.",
-      "description_Zh": "Color View 只维护一份权威的当前颜色状态。SV 区域、Hue 色相条、RGB/HEX 输入、预览文字、设置背景以及导出值都只是这同一状态的不同表现。"
+      "description": "Color View keeps one authoritative current color. The SV field, Hue slider, RGB/HEX inputs, preview text, background action, and export value are projections of the same state."
     },
     "bidirectional_color_sync": {
       "display_name": "Bidirectional Color Synchronization",
-      "display_name_Zh": "颜色双向同步",
-      "description": "Picker changes must update RGB/HEX fields, and valid RGB/HEX edits must reverse-convert into picker hue, field position, and all dependent previews. Synchronization is two-way, not picker-to-input only.",
-      "description_Zh": "取色器变化必须更新 RGB/HEX；合法的 RGB/HEX 编辑也必须反向换算并更新取色器 Hue、二维取色点位置以及所有依赖预览。同步必须是真正双向，而不是只有取色器到输入框单向。"
+      "description": "Picker changes must update RGB/HEX fields, and valid RGB/HEX edits must reverse-convert into picker hue, field position, and all dependent previews. Synchronization is two-way, not picker-to-input only."
     },
     "post_reorder_menu_lifecycle": {
       "display_name": "Post Reorder Menu Lifecycle",
-      "display_name_Zh": "Post 重排时的菜单生命周期",
-      "description": "If an action changes a post state in a way that moves the post to another layout position, any action menu anchored to the old position must be closed before or during the reorder.",
-      "description_Zh": "如果某个操作改变 Post 状态并导致 Post 移动到新的布局位置，那么锚定在旧位置的操作菜单必须在重排前或重排过程中关闭。"
+      "description": "If an action changes a post state in a way that moves the post to another layout position, any action menu anchored to the old position must be closed before or during the reorder."
     },
     "return_to_standard_home": {
       "display_name": "Return to Standard Home",
-      "display_name_Zh": "返回标准主页顶部",
-      "description": "Reuse the existing home-return behavior used by the Android back flow so the main scrolling interface returns to its canonical top position instead of creating a duplicate scroll-to-top implementation.",
-      "description_Zh": "复用 Android 返回流程已经使用的主页返回行为，让主滑动界面回到规范的顶部位置，而不是再创建一套重复的滚动到顶部逻辑。"
+      "description": "Reuse the existing home-return behavior used by the Android back flow so the main scrolling interface returns to its canonical top position instead of creating a duplicate scroll-to-top implementation."
     },
     "system_safe_area_frontend_handshake": {
       "display_name": "System Safe Area Frontend Handshake",
-      "display_name_Zh": "系统安全区域前端握手",
-      "description": "The startup synchronization that replays the latest native WindowInsets after the Web frontend is ready. It prevents the header from starting at an incorrect Y position and only correcting later when the keyboard, focus, or another inset event occurs.",
-      "description_Zh": "Web 前端准备完成后，由原生层重新发送最新 WindowInsets 的启动同步机制。它用于避免顶栏启动时 Y 位置错误，直到键盘、焦点或其他 inset 事件发生后才“自动矫正”的问题。"
+      "description": "The startup synchronization that replays the latest native WindowInsets after the Web frontend is ready. It prevents the header from starting at an incorrect Y position and only correcting later when the keyboard, focus, or another inset event occurs."
     },
     "main_status_bar_height_semantics": {
-      "english": "main_status_bar.main_status_bar_height is the literal CSS box height of #mainStatusBar only. It does not include .phone system-safe-area padding and does not include three_post_one_body_vertical_move. 0 means exactly 0px.",
-      "chinese": "main_status_bar.main_status_bar_height 只表示 #mainStatusBar 元素自身的 CSS 盒子高度；不包含 .phone 的 system_safe_area 顶部内边距，也不包含 three_post_one_body_vertical_move。0 就是严格的 0px。"
+      "english": "main_status_bar.main_status_bar_height is the literal CSS box height of #mainStatusBar only. It does not include .phone system-safe-area padding and does not include three_post_one_body_vertical_move. 0 means exactly 0px."
     }
   },
   "configuration_terms": {
     "config_driven_ui": {
       "display_name": "Config-Driven UI",
-      "display_name_Zh": "配置驱动 UI",
-      "description": "Visual values, text strings, button content, asset paths, and page-specific options that are expected to be tunable should live in config.json rather than be duplicated as literals in HTML/CSS/JS.",
-      "description_Zh": "预期需要调整的视觉数值、字符串、按钮内容、资源路径和页面专属选项，应优先放在 config.json 中，而不是重复硬编码在 HTML/CSS/JS 里。"
+      "description": "Visual values, text strings, button content, asset paths, and page-specific options that are expected to be tunable should live in config.json rather than be duplicated as literals in HTML/CSS/JS."
     },
     "button_content_type_none": {
       "display_name": "Button Content Type: none",
-      "display_name_Zh": "按钮内容类型：none",
-      "description": "No visible button is rendered for that side, while the center title keeps its geometric alignment.",
-      "description_Zh": "该侧不渲染可见按钮，同时中间标题继续保持几何居中。"
+      "description": "No visible button is rendered for that side, while the center title keeps its geometric alignment."
     },
     "button_content_type_string": {
       "display_name": "Button Content Type: string",
-      "display_name_Zh": "按钮内容类型：string",
-      "description": "The configured text string is rendered as the button content.",
-      "description_Zh": "把配置中的文字字符串作为按钮内容渲染。"
+      "description": "The configured text string is rendered as the button content."
     },
     "button_content_type_asset_path": {
       "display_name": "Button Content Type: asset_path",
-      "display_name_Zh": "按钮内容类型：asset_path",
-      "description": "The configured asset path is resolved as button visual content. SVG, PNG, and other supported image assets should use one path-handling flow rather than page-specific image logic.",
-      "description_Zh": "把配置中的资源路径解析为按钮视觉内容。SVG、PNG 以及其他受支持图片资源应统一走同一套路径处理逻辑，而不是为各页面单独编写图片逻辑。"
+      "description": "The configured asset path is resolved as button visual content. SVG, PNG, and other supported image assets should use one path-handling flow rather than page-specific image logic."
     },
     "long_explicit_configuration_key": {
       "display_name": "Long Explicit Configuration Key",
-      "display_name_Zh": "长且明确的配置键",
-      "description": "A configuration-key naming style that intentionally favors explicit scope and responsibility over brevity to avoid future ambiguity.",
-      "description_Zh": "配置键命名时有意优先表达明确的作用域和职责，而不是追求简短，以降低后续维护中的歧义。"
+      "description": "A configuration-key naming style that intentionally favors explicit scope and responsibility over brevity to avoid future ambiguity."
     },
     "page_action_bar_config": {
-      "english": "config.json -> page_action_bar controls shared page-header geometry and colors, including height, controlHeight, axes, button widths, radius, divider and text colors.",
-      "chinese": "config.json -> page_action_bar 统一控制页面操作顶栏的高度、按钮高度、左右轴线、按钮宽度、圆角、分隔线以及文字颜色等。"
+      "english": "config.json -> page_action_bar controls shared page-header geometry and colors, including height, controlHeight, axes, button widths, radius, divider and text colors."
     },
     "main_status_bar_config": {
-      "english": "config.json -> main_status_bar controls only the home battery/time/settings row and must not be reused for page headers or Top Post sizing.",
-      "chinese": "config.json -> main_status_bar 只控制主页电池/时间/设置齿轮这一行，不得拿它控制页面顶栏或 Top Post 尺寸。"
+      "english": "config.json -> main_status_bar controls only the home battery/time/settings row and must not be reused for page headers or Top Post sizing."
     },
     "system_safe_area_is_not_configurable_height": {
       "display_name": "System Safe Area Is Not a Configurable Height",
-      "display_name_Zh": "系统安全区域不是配置高度",
-      "description": "Do not place a guessed cutout/status-bar height in config.json. page_action_bar.height and main_status_bar.height describe component geometry; system_safe_area is runtime device geometry supplied by Android.",
-      "description_Zh": "不要在 config.json 中写死或猜测挖孔/状态栏高度。page_action_bar.height 与 main_status_bar.height 描述组件自身几何；system_safe_area 是 Android 在运行时提供的设备几何。"
+      "description": "Do not place a guessed cutout/status-bar height in config.json. page_action_bar.height and main_status_bar.height describe component geometry; system_safe_area is runtime device geometry supplied by Android."
     }
   },
   "ui_rules": {
     "main_status_bar_height_semantics": {
-      "english": "main_status_bar.height is a literal authoritative height in CSS pixels. 0 means exactly 0px, not auto. Battery icon, Settings button, and Settings icon sizes are capped so they cannot visually exceed the configured bar height.",
-      "chinese": "main_status_bar.height 是按 CSS 像素直接生效的权威高度参数。0 就是严格的 0px，不再表示 auto。电池图标、Settings 按钮和设置图标尺寸会自动限制，不能在视觉上超过配置的状态栏高度。"
+      "english": "main_status_bar.height is a literal authoritative height in CSS pixels. 0 means exactly 0px, not auto. Battery icon, Settings button, and Settings icon sizes are capped so they cannot visually exceed the configured bar height."
     }
   },
   "terms": {},
   "main_status_bar_config_key_naming": {
-    "english": "Inside config.json -> main_status_bar, every key names the exact affected geometry. main_status_bar_height is the only non-underscored primary key. Secondary tuning keys remain underscored and include the component name plus the affected region/property.",
-    "chinese": "config.json -> main_status_bar 内所有字段必须直接描述实际受影响的几何对象。main_status_bar_height 是唯一不以下划线开头的主参数；其余微调项保持下划线开头，并明确包含组件名、区域名和受影响属性。"
+    "english": "Inside config.json -> main_status_bar, every key names the exact affected geometry. main_status_bar_height is the only non-underscored primary key. Secondary tuning keys remain underscored and include the component name plus the affected region/property."
   },
   "implementation_rules": {
     "main_status_bar_single_owner": {
-      "english": "main_status_bar.js alone reads config.json -> main_status_bar and applies its CSS variables. posts.js must not own or reinterpret main_status_bar geometry. Java owns system safe-area insets and native battery data, not the web component height.",
-      "chinese": "main_status_bar.js 单独负责读取 config.json -> main_status_bar 并写入对应 CSS 变量；posts.js 不得再拥有或重新解释 main_status_bar 几何。Java 只负责系统安全区和原生电量数据，不负责网页 main_status_bar 的高度。"
+      "english": "main_status_bar.js alone reads config.json -> main_status_bar and applies its CSS variables. posts.js must not own or reinterpret main_status_bar geometry. Java owns system safe-area insets and native battery data, not the web component height."
     }
   },
   "main_status_bar_vertical_move_semantics": {
-    "english": "main_status_bar.main_status_bar_vertical_move independently moves the home battery/time/settings row on the Y axis in CSS pixels. Positive values move it downward; negative values move it upward. It does not move three_post_one_body and does not replace system_safe_area.",
-    "chinese": "main_status_bar.main_status_bar_vertical_move 独立控制主页电池/时间/设置齿轮状态栏在 Y 轴上的视觉位移，单位为 CSS 像素。正值向下移动，负值向上移动；不会带动 three_post_one_body，也不能替代 system_safe_area。"
+    "english": "main_status_bar.main_status_bar_vertical_move independently moves the home battery/time/settings row on the Y axis in CSS pixels. Positive values move it downward; negative values move it upward. It does not move three_post_one_body and does not replace system_safe_area."
   },
   "main_status_bar_config_parameters": {
     "main_status_bar_height": {
-      "english": "Controls the occupied height of the Main Status Bar row in CSS pixels. 0 means zero height; positive values set a literal fixed height.",
-      "chinese": "控制 Main Status Bar 这一整行实际占用的高度，单位为 CSS 像素。0 表示 0px；正值表示对应的固定高度。"
+      "english": "Controls the occupied height of the Main Status Bar row in CSS pixels. 0 means zero height; positive values set a literal fixed height."
     },
     "main_status_bar_vertical_move": {
-      "english": "Moves the entire Main Status Bar visually on the Y axis without moving three_post_one_body. Positive values move it downward; negative values move it upward.",
-      "chinese": "独立控制整个 Main Status Bar 在 Y 轴上的视觉位移，不带动 three_post_one_body。正值向下，负值向上。"
+      "english": "Moves the entire Main Status Bar visually on the Y axis without moving three_post_one_body. Positive values move it downward; negative values move it upward."
     },
     "_main_status_bar_top_margin": {
-      "english": "Adds external spacing above the Main Status Bar layout box. This changes layout spacing, unlike main_status_bar_vertical_move which is a visual translation.",
-      "chinese": "在 Main Status Bar 布局盒上方增加外部间距。它会改变布局间距；与仅做视觉位移的 main_status_bar_vertical_move 不同。"
+      "english": "Adds external spacing above the Main Status Bar layout box. This changes layout spacing, unlike main_status_bar_vertical_move which is a visual translation."
     },
     "_main_status_bar_bottom_margin": {
-      "english": "Adds external spacing below the Main Status Bar layout box and therefore affects the gap before following home-page content.",
-      "chinese": "在 Main Status Bar 布局盒下方增加外部间距，因此会影响它与后续主页内容之间的间隔。"
+      "english": "Adds external spacing below the Main Status Bar layout box and therefore affects the gap before following home-page content."
     },
     "_main_status_bar_horizontal_margin": {
-      "english": "Controls the left and right outer margin reserved for the Main Status Bar content area.",
-      "chinese": "控制 Main Status Bar 内容区域左右两侧的外部留白。"
+      "english": "Controls the left and right outer margin reserved for the Main Status Bar content area."
     },
     "_main_status_bar_text_font_size": {
-      "english": "Controls the text font size used by Main Status Bar text such as battery percentage and HH:mm time.",
-      "chinese": "控制 Main Status Bar 中文字的字号，例如电量百分比和 HH:mm 时间。"
+      "english": "Controls the text font size used by Main Status Bar text such as battery percentage and HH:mm time."
     },
     "_main_status_bar_battery_icon_and_percentage_gap": {
-      "english": "Controls the horizontal gap between the battery SVG icon and the battery percentage text inside the battery group.",
-      "chinese": "控制电池信息组内部“电池 SVG 图标”和“电量百分比文字”之间的水平间距。"
+      "english": "Controls the horizontal gap between the battery SVG icon and the battery percentage text inside the battery group."
     },
     "_main_status_bar_battery_icon_size": {
-      "english": "Controls the rendered size of the battery SVG icon inside the Main Status Bar.",
-      "chinese": "控制 Main Status Bar 内电池 SVG 图标本身的显示尺寸。"
+      "english": "Controls the rendered size of the battery SVG icon inside the Main Status Bar."
     },
     "_main_status_bar_settings_button_hit_area_size": {
-      "english": "Controls the square touch/click hit area of the Settings button. This is the button interaction box, not the gear icon size.",
-      "chinese": "控制 Settings 按钮方形点击/触摸热区的尺寸。它表示按钮交互区域，不是齿轮图标本身的尺寸。"
+      "english": "Controls the square touch/click hit area of the Settings button. This is the button interaction box, not the gear icon size."
     },
     "_main_status_bar_settings_icon_size": {
-      "english": "Controls the rendered size of the Settings gear icon inside its button hit area.",
-      "chinese": "控制 Settings 按钮点击区域内部齿轮图标本身的显示尺寸。"
+      "english": "Controls the rendered size of the Settings gear icon inside its button hit area."
     },
     "_main_status_bar_time_region_right_padding": {
-      "english": "Adds right-side internal padding to the time region for fine horizontal alignment of the HH:mm display inside its assigned region.",
-      "chinese": "给时间所属区域增加右侧内部留白，用于微调 HH:mm 在其分区内的水平位置。"
+      "english": "Adds right-side internal padding to the time region for fine horizontal alignment of the HH:mm display inside its assigned region."
     }
   },
   "ui_string_storage_rule": {
-    "english": "Runtime user-visible wording belongs in assets/language/english.json. config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration. This document is human-readable development guidance only and must not be loaded by the APK.",
-    "chinese": "运行时用户可见文案统一放在 assets/language/english.json。config.json 只保存几何尺寸、颜色、行为、动作标识、资源路径、URL 等非语言配置。本文件只供开发人员阅读，APK 运行时不得加载。"
+    "english": "Runtime user-visible wording belongs in assets/language/english.json. config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration. This document is human-readable development guidance only and must not be loaded by the APK."
   },
   "interaction_rules": {
     "color_view_radix_selector": {
-      "english": "HEX selects hexadecimal channel input/export. DEC selects decimal channel input/export. Exported text and Copy must always follow the currently selected segment.",
-      "chinese": "HEX 选择十六进制通道输入/导出，DEC 选择十进制通道输入/导出。导出文本和 Copy 必须始终跟随当前选中的分段。"
+      "english": "HEX selects hexadecimal channel input/export. DEC selects decimal channel input/export. Exported text and Copy must always follow the currently selected segment."
     }
   },
   "interaction_transition_configuration": {
     "display_name": "Interaction Transition Configuration",
-    "display_name_Zh": "交互过渡配置",
-    "description": "Transient interaction feedback is configured in config.json. Post editor caret color and visible/hidden durations, Color View Copied color stages, and normal/super star activation border transitions are configuration values rather than UI strings.",
-    "description_Zh": "短暂交互反馈由 config.json 配置：Post 编辑器 caret 的颜色及显示/隐藏时长、Color View 的 Copied 分阶段颜色，以及普通收藏和 Super 收藏激活时的边框过渡色。它们属于视觉/行为参数，不属于 UI 字符串。"
+    "description": "Transient interaction feedback is configured in config.json. Post editor caret color and visible/hidden durations, Color View Copied color stages, and normal/super star activation border transitions are configuration values rather than UI strings."
   }
 }

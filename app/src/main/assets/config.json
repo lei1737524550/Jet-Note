@@ -1,4 +1,8 @@
 {
+  "load_animation": {
+    "load_animation_background": "#FAFFF0",
+    "load_animation_minimum_duration_ms": 900
+  },
   "post_editor_text_caret": {
     "text_caret_width_px": 2,
     "text_caret_color": "#14A89A",
@@ -24,49 +28,12 @@
   "audioPlayback": {
     "maxConcurrentPlayingAudios": 2
   },
-  "edit_post_tool_1": "video",
-  "edit_post_tool_2": "photo",
-  "edit_post_tool_3": "sound",
-  "edit_post_tool_4": "tools",
-  "tools_unfold_tool": [
-    "config_tool_1",
-    "config_tool_2"
-  ],
-  "tools_unfold_anim": "js/features/tools_unfold_animation.js",
-  "tools_unfold_icon": "icons/is_unfold.svg",
-  "edit_post_tool_5": "tools_unfold_tool[0]",
-  "edit_post_tool_6": "tools_unfold_tool[1]",
-  "post_tool_definitions": {
-    "video": {
-      "action": "video",
-      "icon": "video",
-      "labelKey": "addVideo"
-    },
-    "photo": {
-      "action": "photo",
-      "icon": "photo",
-      "labelKey": "addImage"
-    },
-    "sound": {
-      "action": "sound",
-      "icon": "sound",
-      "labelKey": "addAudio"
-    },
-    "tools": {
-      "action": "tools",
-      "icon": "tools",
-      "labelKey": "tools"
-    }
-  },
-  "config_tool_1": {
-    "url": "https://www.merriam-webster.com/",
-    "icon": "dictionary",
-    "labelKey": "config_tool_1"
-  },
-  "config_tool_2": {
-    "url": "https://soundoftext.com/",
-    "icon": "sentence",
-    "labelKey": "config_tool_2"
+  "post_attachment": {
+    "audio_max_quantity": 20,
+    "video_max_quantity": 9,
+    "photo_max_quantity": 9,
+    "video_photo_coexistence": true,
+    "video_photo_combined_max_quantity": 9
   },
   "top_post_string_color": "F06E80",
   "top_post_string_font_size": 2,
@@ -133,7 +100,7 @@
   "buttom_string_buttom_bar": {
     "settings_page": {
       "left_button_content_type": "asset_path",
-      "left_button_string_or_asset_path": "icons/back-chevron.svg",
+      "left_button_string_or_asset_path": "shared/icons/back_chevron.svg",
       "left_button_action_name": "close_settings",
       "right_button_content_type": "none",
       "right_button_string_or_asset_path": "none",
@@ -143,10 +110,10 @@
     },
     "new_post_page": {
       "left_button_content_type": "asset_path",
-      "left_button_string_or_asset_path": "icons/close.svg",
+      "left_button_string_or_asset_path": "shared/icons/close.svg",
       "left_button_action_name": "cancel_post_composer",
       "right_button_content_type": "asset_path",
-      "right_button_string_or_asset_path": "icons/send-blue.svg",
+      "right_button_string_or_asset_path": "shared/icons/send_blue.svg",
       "right_button_action_name": "publish_post",
       "center_string_language_key": "post_composer.new_post_title",
       "left_button_accessibility_label_language_key": "common.cancel",
@@ -154,10 +121,10 @@
     },
     "edit_post_page": {
       "left_button_content_type": "asset_path",
-      "left_button_string_or_asset_path": "icons/close.svg",
+      "left_button_string_or_asset_path": "shared/icons/close.svg",
       "left_button_action_name": "cancel_post_composer",
       "right_button_content_type": "asset_path",
-      "right_button_string_or_asset_path": "icons/send-blue.svg",
+      "right_button_string_or_asset_path": "shared/icons/send_blue.svg",
       "right_button_action_name": "publish_post",
       "center_string_language_key": "post_composer.edit_post_title",
       "left_button_accessibility_label_language_key": "common.cancel",
@@ -165,7 +132,7 @@
     },
     "tools_page": {
       "left_button_content_type": "asset_path",
-      "left_button_string_or_asset_path": "icons/back-chevron.svg",
+      "left_button_string_or_asset_path": "shared/icons/back_chevron.svg",
       "left_button_action_name": "close_tools",
       "right_button_content_type": "none",
       "right_button_string_or_asset_path": "none",
@@ -218,5 +185,29 @@
       },
       "page_action_bar": "#bfc1c4"
     }
+  },
+  "new_post_font_size": 17,
+  "new_post_text_area_height": 262,
+  "three_post_one_body_font_size": 17,
+  "post_editor_layout": {
+    "text_area_padding_top": 0,
+    "text_area_padding_right": 0,
+    "text_area_padding_bottom": 0,
+    "text_area_padding_left": 0,
+    "attachment_row_height": 48
+  },
+  "debug_configuration_editor": {
+    "text_area_height": 430
+  },
+  "published_single_media_spacing": {
+    "top_px": 3,
+    "right_px": 3,
+    "bottom_px": 3,
+    "left_px": 3
+  },
+  "published_post_media_max_height_px": 262,
+  "viewer_media_scale": {
+    "image_viewer_max_scale": -1,
+    "video_viewer_max_scale": -1
   }
 }

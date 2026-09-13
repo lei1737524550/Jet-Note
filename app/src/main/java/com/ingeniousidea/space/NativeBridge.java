@@ -10,6 +10,10 @@ import android.view.HapticFeedbackConstants;
 
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 
 /** Narrow JavaScript bridge exposed only to Jet Note's bundled local page. */
 final class NativeBridge {
@@ -39,6 +43,62 @@ final class NativeBridge {
         this.store = store;
         this.archive = archive;
         this.videoPlayer = videoPlayer;
+    }
+
+
+    private static final String DEBUG_PREFS = "jet_note_debug_config";
+    private static final String DEBUG_CURRENT = "current";
+    private static final String DEBUG_PREVIOUS = "previous";
+
+    private String bundledConfig() throws Exception {
+        try (InputStream in = activity.getAssets().open("config.json")) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192]; int n;
+            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+            return out.toString("UTF-8");
+        }
+    }
+
+    @JavascriptInterface public String getRuntimeConfigJson() {
+        try {
+            android.content.SharedPreferences prefs =
+                    activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
+            String saved = prefs.getString(DEBUG_CURRENT, null);
+            if (saved != null && !saved.trim().isEmpty()) {
+                try {
+                    new JSONObject(saved);
+                    return saved;
+                } catch (Exception invalidRuntimeConfiguration) {
+                    // Runtime config is recoverable state. Never return malformed JSON to
+                    // the frontend; discard it and fall back to the shipped configuration.
+                    prefs.edit().remove(DEBUG_CURRENT).apply();
+                }
+            }
+            return bundledConfig();
+        } catch (Exception error) { return "{}"; }
+    }
+
+    @JavascriptInterface public boolean setRuntimeConfigJson(String json) {
+        try {
+            JSONObject parsed = new JSONObject(json);
+            String normalized = parsed.toString(2);
+            android.content.SharedPreferences prefs = activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
+            String current = prefs.getString(DEBUG_CURRENT, null);
+            if (current == null) current = bundledConfig();
+            return prefs.edit().putString(DEBUG_PREVIOUS, current).putString(DEBUG_CURRENT, normalized).commit();
+        } catch (Exception error) { return false; }
+    }
+
+    @JavascriptInterface public boolean undoRuntimeConfigJson() {
+        try {
+            android.content.SharedPreferences prefs = activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
+            String previous = prefs.getString(DEBUG_PREVIOUS, null);
+            if (previous == null) return false;
+            String current = prefs.getString(DEBUG_CURRENT, null);
+            android.content.SharedPreferences.Editor edit = prefs.edit().putString(DEBUG_CURRENT, previous);
+            if (current != null) edit.putString(DEBUG_PREVIOUS, current); else edit.remove(DEBUG_PREVIOUS);
+            return edit.commit();
+        } catch (Exception error) { return false; }
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
@@ -136,8 +196,49 @@ final class NativeBridge {
     }
 
     @JavascriptInterface
-    public void playVideo(String archivePath) {
-        videoPlayer.play(archivePath);
+    public void openVideoViewer(String archivePath, String mediaId, double startMs) {
+        activity.runOnUiThread(() -> {
+            try {
+                java.io.File file = store.fileForArchivePath(archivePath);
+                if (file == null || !file.isFile()) return;
+                Intent intent = new Intent(activity, NativeVideoViewerActivity.class);
+                intent.putExtra(NativeVideoViewerActivity.EXTRA_FILE_PATH, file.getAbsolutePath());
+                intent.putExtra(NativeVideoViewerActivity.EXTRA_MEDIA_ID, mediaId == null ? "" : mediaId);
+                intent.putExtra(NativeVideoViewerActivity.EXTRA_START_MS,
+                        Math.max(0, (int) Math.min(Integer.MAX_VALUE, Math.round(startMs))));
+                activity.startActivityForResult(intent, NativeVideoViewerActivity.REQUEST_CODE);
+            } catch (Exception ignored) { }
+        });
+    }
+
+    @JavascriptInterface
+    public void playVideoInline(String archivePath, String mediaId, double left, double top, double width, double height, double devicePixelRatio) {
+        videoPlayer.playInline(archivePath, mediaId, left, top, width, height, devicePixelRatio);
+    }
+
+    @JavascriptInterface
+    public void updateVideoRect(String mediaId, double left, double top, double width, double height, double devicePixelRatio) {
+        videoPlayer.updateRect(mediaId, left, top, width, height, devicePixelRatio);
+    }
+
+    @JavascriptInterface
+    public void setVideoOverlayAllowed(boolean allowed) {
+        videoPlayer.setOverlayAllowed(allowed);
+    }
+
+    @JavascriptInterface
+    public void beginVideoSeek(String mediaId, double fraction) {
+        videoPlayer.beginSeek(mediaId, fraction);
+    }
+
+    @JavascriptInterface
+    public void endVideoSeek(String mediaId, double fraction) {
+        videoPlayer.endSeek(mediaId, fraction);
+    }
+
+    @JavascriptInterface
+    public void stopVideo(String mediaId) {
+        videoPlayer.stop(mediaId);
     }
 
     @JavascriptInterface
@@ -148,6 +249,11 @@ final class NativeBridge {
     @JavascriptInterface
     public void importJetNote(String mode) {
         archive.requestImport(mode);
+    }
+
+    @JavascriptInterface
+    public void cancelArchiveOperation(String operation) {
+        archive.cancelCurrentOperation(operation);
     }
 
     @JavascriptInterface
