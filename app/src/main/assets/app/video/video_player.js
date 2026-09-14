@@ -9,7 +9,12 @@ const nativeVideoBlockingSelectors = [
   '#settingsScreen.open',
   '#toolsScreen.open',
   '#imageViewer.open',
-  '#importPreview.open'
+  '#importPreview.open',
+  // Post action/confirmation menus must always sit above the native TextureView.
+  // CSS z-index cannot order a native sibling below WebView HTML, so treat these
+  // overlays as native-video blockers too.
+  '#postActionPanel.open',
+  '#deleteConfirmBackdrop.open'
 ];
 let nativeVideoOverlayAllowed = true;
 
@@ -235,11 +240,13 @@ function bindVideoProgress(item) {
 
   let dragging = false;
   let pointerId = null;
+  let lastFraction = 0;
 
   const begin = event => {
     const fraction = fractionFromPointer(track, event);
     dragging = true;
     pointerId = event.pointerId;
+    lastFraction = fraction;
     track.classList.add('seeking');
     try { track.setPointerCapture(pointerId); } catch (_) {}
 
@@ -258,26 +265,40 @@ function bindVideoProgress(item) {
 
   const move = event => {
     if (!dragging || event.pointerId !== pointerId) return;
-    renderSeekPreview(shell, fractionFromPointer(track, event));
+    lastFraction = fractionFromPointer(track, event);
+    renderSeekPreview(shell, lastFraction);
     event.preventDefault();
   };
 
-  const end = event => {
-    if (!dragging || event.pointerId !== pointerId) return;
-    const fraction = fractionFromPointer(track, event);
-    renderSeekPreview(shell, fraction);
+  const finishSeek = (event, useEventPosition = true) => {
+    if (!dragging) return;
+    if (event?.pointerId != null && pointerId != null && event.pointerId !== pointerId) return;
+    if (useEventPosition && event?.clientX != null) {
+      lastFraction = fractionFromPointer(track, event);
+      renderSeekPreview(shell, lastFraction);
+    }
+    const capturedId = pointerId;
     dragging = false;
-    track.classList.remove('seeking');
-    try { track.releasePointerCapture(pointerId); } catch (_) {}
     pointerId = null;
-    window.JetNoteNative?.endVideoSeek?.(item.dataset.mediaId, fraction);
-    event.preventDefault();
+    track.classList.remove('seeking');
+    try {
+      if (capturedId != null && track.hasPointerCapture?.(capturedId)) track.releasePointerCapture(capturedId);
+    } catch (_) {}
+    window.JetNoteNative?.endVideoSeek?.(item.dataset.mediaId, lastFraction);
+    if (event?.preventDefault) event.preventDefault();
   };
 
   track.addEventListener('pointerdown', begin);
   track.addEventListener('pointermove', move);
-  track.addEventListener('pointerup', end);
-  track.addEventListener('pointercancel', end);
+  track.addEventListener('pointerup', event => finishSeek(event, true));
+  track.addEventListener('pointercancel', event => finishSeek(event, false));
+  track.addEventListener('lostpointercapture', event => finishSeek(event, false));
+  window.addEventListener('pointerup', event => finishSeek(event, true), true);
+  window.addEventListener('pointercancel', event => finishSeek(event, false), true);
+  window.addEventListener('blur', () => finishSeek(null, false));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) finishSeek(null, false);
+  });
 }
 
 window.__jetNativeVideoViewerClosed = function(mediaId, currentMs, durationMs) {

@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
     private AttachmentPickerController attachmentPicker;
     private AttachmentStore attachmentStore;
     private JetNoteArchiveController archiveController;
-    private DictionaryController dictionaryController;
+    private ToolPageController toolPageController;
     private EdgeToEdgeController edgeToEdge;
     private Uri pendingLaunchImport;
     private boolean frontendIsReady;
@@ -67,52 +67,17 @@ public class MainActivity extends Activity {
     private View startupRenderWarningOverlay;
     private long nativeStartupSplashMinimumDurationMs = 900L;
 
-    private static final String RUNTIME_CONFIG_PREFERENCES = "jet_note_debug_config";
-    private static final String RUNTIME_CONFIG_CURRENT_KEY = "current";
-
     /**
-     * Reads the exact same runtime config source that the WebView receives for
-     * /assets/config.json. This keeps load_animation_minimum_duration_ms working
-     * after Debug Config edits instead of silently falling back to the bundled value.
-     */
-    private String readBundledConfigurationText() throws IOException {
-        try (InputStream in = getAssets().open("config.json")) {
-            byte[] buffer = new byte[8192];
-            java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
-            int count;
-            while ((count = in.read(buffer)) != -1) output.write(buffer, 0, count);
-            return output.toString("UTF-8");
-        }
-    }
-
-    /**
-     * Runtime Debug configuration is optional state and must never be able to brick startup.
-     * A malformed/restored value is discarded immediately and the bundled configuration is
-     * used instead. This is intentionally done before WebView navigation starts.
+     * The effective config is centralized in RuntimeConfigStore. Runtime edits
+     * are automatically invalidated when a newly installed APK ships a changed
+     * config.json, so stale SharedPreferences cannot mask source edits.
      */
     private String readValidatedEffectiveConfigurationText() {
-        android.content.SharedPreferences preferences =
-                getSharedPreferences(RUNTIME_CONFIG_PREFERENCES, MODE_PRIVATE);
-        String runtime = preferences.getString(RUNTIME_CONFIG_CURRENT_KEY, null);
-        if (runtime != null && !runtime.trim().isEmpty()) {
-            try {
-                new JSONObject(runtime);
-                return runtime;
-            } catch (Exception invalidRuntimeConfiguration) {
-                preferences.edit().remove(RUNTIME_CONFIG_CURRENT_KEY).apply();
-            }
-        }
-        try {
-            String bundled = readBundledConfigurationText();
-            new JSONObject(bundled);
-            return bundled;
-        } catch (Exception ignored) {
-            return "{}";
-        }
+        return RuntimeConfigStore.readEffective(this);
     }
 
     private JSONObject readEffectiveRuntimeConfiguration() {
-        try { return new JSONObject(readValidatedEffectiveConfigurationText()); }
+        try { return new JSONObject(RuntimeConfigStore.readEffective(this)); }
         catch (Exception ignored) { return new JSONObject(); }
     }
 
@@ -214,7 +179,7 @@ public class MainActivity extends Activity {
         card.setBackground(jetNoteBorderedBackground(Color.rgb(250, 255, 240), Color.rgb(191, 193, 196), 12));
 
         TextView title = new TextView(this);
-        title.setText("Startup Rendering Warning");
+        title.setText(UiLanguage.text(this, "startupRenderingWarningTitle"));
         title.setTextColor(Color.rgb(20, 20, 20));
         title.setTextSize(16f);
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
@@ -222,7 +187,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView message = new TextView(this);
-        message.setText("Render Ready signal was not received before the startup animation ended.");
+        message.setText(UiLanguage.text(this, "startupRenderingWarningMessage"));
         message.setTextColor(Color.rgb(70, 70, 70));
         message.setTextSize(14f);
         message.setPadding(0, dp(8), 0, dp(14));
@@ -230,7 +195,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
         TextView dismiss = new TextView(this);
-        dismiss.setText("OK");
+        dismiss.setText(UiLanguage.text(this, "startupRenderingWarningDismiss"));
         dismiss.setTextColor(Color.rgb(20, 168, 154));
         dismiss.setTextSize(14f);
         dismiss.setGravity(Gravity.CENTER);
@@ -282,7 +247,7 @@ public class MainActivity extends Activity {
         imagePicker = new ImagePickerController(this);
         edgeToEdge = new EdgeToEdgeController(this, webView);
         edgeToEdge.install();
-        dictionaryController = new DictionaryController(this, root, webView, attachmentStore);
+        toolPageController = new ToolPageController(this, root, webView, attachmentStore);
         attachmentPicker = new AttachmentPickerController(this, webView, attachmentStore);
         archiveController = new JetNoteArchiveController(this, webView, attachmentStore);
         nativeVideoPlayer = new NativeVideoPlayer(this, root, webView, attachmentStore);
@@ -311,7 +276,7 @@ public class MainActivity extends Activity {
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(this, webView, dictionaryController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
+                new NativeBridge(this, webView, toolPageController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
                     frontendIsReady=true;
                     if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();
                     dispatchPendingImport();
@@ -733,7 +698,7 @@ public class MainActivity extends Activity {
             if("true".equals(value)){
                 webView.evaluateJavascript("entriesBusy=true;archiveStatus(t('validating'));",null);
                 archiveController.importFromUri(uri,"merge");
-            } else android.widget.Toast.makeText(this,"Finish the current edit or import before opening a backup.",android.widget.Toast.LENGTH_LONG).show();
+            } else android.widget.Toast.makeText(this,UiLanguage.text(this, "archiveOpenBusy"),android.widget.Toast.LENGTH_LONG).show();
         });
     }
 
@@ -761,7 +726,6 @@ public class MainActivity extends Activity {
             }
             return;
         }
-        if(dictionaryController!=null&&dictionaryController.handles(requestCode)){dictionaryController.onActivityResult(requestCode,resultCode,data);return;}
         if (attachmentPicker != null && attachmentPicker.handles(requestCode)) {
             attachmentPicker.onActivityResult(requestCode, resultCode, data);
             return;
@@ -779,8 +743,8 @@ public class MainActivity extends Activity {
             nativeVideoPlayer.close();
             return;
         }
-        if (dictionaryController != null && dictionaryController.isOpen()) {
-            dictionaryController.handleBack();
+        if (toolPageController != null && toolPageController.isOpen()) {
+            toolPageController.handleBack();
             return;
         }
 
@@ -799,7 +763,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onPause(){
         if(nativeVideoPlayer!=null)nativeVideoPlayer.onHostPause();
-        if(dictionaryController!=null)dictionaryController.pause();
+        if(toolPageController!=null)toolPageController.pause();
         if(webView!=null)webView.onPause();
         super.onPause();
     }
@@ -815,7 +779,7 @@ public class MainActivity extends Activity {
             webView.post(() -> webView.evaluateJavascript(
                     "window.dispatchEvent(new Event('jetnote:app-resume'));", null));
         }
-        if (dictionaryController != null) dictionaryController.resume();
+        if (toolPageController != null) toolPageController.resume();
         if (nativeVideoPlayer != null) nativeVideoPlayer.onHostResume();
     }
 
@@ -836,7 +800,7 @@ public class MainActivity extends Activity {
         frontendIsReady=false;
         if (nativeVideoPlayer != null) nativeVideoPlayer.close();
         if(mediaWriter!=null)mediaWriter.destroy();
-        if (dictionaryController != null) dictionaryController.destroy();
+        if (toolPageController != null) toolPageController.destroy();
         if (attachmentPicker != null) attachmentPicker.destroy();
         if (archiveController != null) archiveController.destroy();
         if (imagePicker != null) imagePicker.destroy();

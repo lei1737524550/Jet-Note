@@ -1,34 +1,6 @@
-const imageViewerScaleConfiguration = {
-  imageViewerMaxScale: -1,
-  videoViewerMaxScale: -1
-};
-
-function applyImageViewerScaleConfiguration(config) {
-  const scale = config?.viewer_media_scale || {};
-  const imageMax = Number(scale.image_viewer_max_scale);
-  const videoMax = Number(scale.video_viewer_max_scale);
-  if (Number.isFinite(imageMax)) imageViewerScaleConfiguration.imageViewerMaxScale = imageMax;
-  if (Number.isFinite(videoMax)) imageViewerScaleConfiguration.videoViewerMaxScale = videoMax;
-}
-
-try {
-  const runtimeConfigJson = window.JetNoteNative?.getRuntimeConfigJson?.();
-  if (runtimeConfigJson) applyImageViewerScaleConfiguration(JSON.parse(runtimeConfigJson));
-} catch (_) {}
-
-fetch('config.json', {cache: 'no-store'})
-  .then(response => response.ok ? response.json() : null)
-  .then(applyImageViewerScaleConfiguration)
-  .catch(() => {});
-
 function activeImageViewerConfiguredMaxScale() {
-  const video = document.getElementById('imageViewerVideo');
-  const raw = video?.classList.contains('active')
-    ? imageViewerScaleConfiguration.videoViewerMaxScale
-    : imageViewerScaleConfiguration.imageViewerMaxScale;
-  if (raw === 0) return 0;
-  if (raw < 0) return Infinity;
-  return Math.max(1, raw);
+  const mediaType = document.getElementById('imageViewerVideo')?.classList.contains('active') ? 'video' : 'image';
+  return window.JetNoteImageViewerConfiguration?.maxScale?.(mediaType) ?? Infinity;
 }
 
 function constrainImageViewerZoom(nextZoom) {
@@ -37,6 +9,7 @@ function constrainImageViewerZoom(nextZoom) {
   const finiteNext = Number.isFinite(nextZoom) ? nextZoom : Number.MAX_VALUE;
   return Math.max(1, Math.min(maxScale, finiteNext));
 }
+
 let imageViewerZoom = 1;
 let imageViewerOffsetX = 0;
 let imageViewerOffsetY = 0;
@@ -48,12 +21,25 @@ let imageViewerPinchOffsetX = 0;
 let imageViewerPinchOffsetY = 0;
 let imageViewerTransformFrame = 0;
 const imageViewerPointers = new Map();
+let activeImageViewerDownloadSource = '';
+let imageViewerPreviousBodyOverflow = null;
+
+function releaseAllImageViewerPointerCaptures() {
+  const viewer = document.getElementById('imageViewer');
+  if (!viewer) return;
+  for (const pointerId of imageViewerPointers.keys()) {
+    try {
+      if (viewer.hasPointerCapture?.(pointerId)) viewer.releasePointerCapture(pointerId);
+    } catch (_) {}
+  }
+}
 
 function resetImageViewerTransform() {
   if (imageViewerTransformFrame) {
     cancelAnimationFrame(imageViewerTransformFrame);
     imageViewerTransformFrame = 0;
   }
+  releaseAllImageViewerPointerCaptures();
   document.getElementById('imageViewerImg')?.classList.remove('is-gesturing');
   document.getElementById('imageViewerVideo')?.classList.remove('is-gesturing');
   imageViewerZoom = 1;
@@ -126,6 +112,9 @@ function openImageViewer(src) {
   video.classList.remove('active');
   image.classList.add('active');
   image.src = src;
+  window.JetNoteImageViewerBackgroundControl?.apply?.();
+  activeImageViewerDownloadSource = String(src || '');
+  if (!viewer.classList.contains('open')) imageViewerPreviousBodyOverflow = document.body.style.overflow;
   viewer.classList.add('open');
   resetImageViewerTransform();
   document.body.style.overflow = 'hidden';
@@ -143,8 +132,10 @@ function openVideoViewer(src, startTime = 0) {
 
   image.src = '';
   image.classList.remove('active');
+  window.JetNoteImageViewerBackgroundControl?.reset?.();
   video.classList.add('active');
   video.src = src;
+  activeImageViewerDownloadSource = String(src || '');
   video.setAttribute('playsinline', '');
   video.setAttribute('webkit-playsinline', '');
   video.load();
@@ -154,6 +145,7 @@ function openVideoViewer(src, startTime = 0) {
       try { video.currentTime = Math.min(desiredTime, Number.isFinite(video.duration) ? video.duration : desiredTime); } catch (_) {}
     }, {once: true});
   }
+  if (!viewer.classList.contains('open')) imageViewerPreviousBodyOverflow = document.body.style.overflow;
   viewer.classList.add('open');
   resetImageViewerTransform();
   document.body.style.overflow = 'hidden';
@@ -176,18 +168,15 @@ function closeImageViewer(event) {
   const video = document.getElementById('imageViewerVideo');
   image.src = '';
   image.classList.remove('active');
+  window.JetNoteImageViewerBackgroundControl?.reset?.();
   video.pause();
   video.removeAttribute('src');
   video.load();
   video.classList.remove('active');
+  activeImageViewerDownloadSource = '';
 
-  const anyOverlay =
-    document.getElementById('postComposeScreen')?.classList.contains('open') ||
-    document.getElementById('settingsScreen')?.classList.contains('open');
-
-  if (!anyOverlay) {
-    document.body.style.overflow = '';
-  }
+  document.body.style.overflow = imageViewerPreviousBodyOverflow ?? '';
+  imageViewerPreviousBodyOverflow = null;
 }
 
 (() => {
@@ -196,8 +185,15 @@ function closeImageViewer(event) {
   const video = document.getElementById('imageViewerVideo');
   if (!viewer || !image || !video) return;
 
+  window.JetNoteImageViewerBackgroundControl?.install?.();
+  window.JetNoteImageViewerCloseControl?.install?.({
+    close: closeImageViewer,
+    getDownloadSource: () => activeImageViewerDownloadSource || activeViewerMedia()?.currentSrc || activeViewerMedia()?.src || '',
+    getMediaType: () => video.classList.contains('active') ? 'video' : 'image'
+  });
+
   viewer.addEventListener('pointerdown', event => {
-    if (!viewer.classList.contains('open') || event.target === viewer || event.target.closest('.image-viewer-close')) return;
+    if (!viewer.classList.contains('open') || event.target === viewer || event.target.closest('.image-viewer-close, .image-viewer-background-switch')) return;
     if (activeImageViewerConfiguredMaxScale() === 0) return;
     if (event.target.closest('video') && event.pointerType === 'mouse') return;
     imageViewerPointers.set(event.pointerId, {x: event.clientX, y: event.clientY});
@@ -251,7 +247,11 @@ function closeImageViewer(event) {
   });
 
   const releasePointer = event => {
+    if (!imageViewerPointers.has(event.pointerId)) return;
     imageViewerPointers.delete(event.pointerId);
+    try {
+      if (viewer.hasPointerCapture?.(event.pointerId)) viewer.releasePointerCapture(event.pointerId);
+    } catch (_) {}
     if (imageViewerPointers.size === 1) {
       imageViewerDragPoint = Array.from(imageViewerPointers.values())[0];
       imageViewerPinchDistance = 0;
@@ -264,8 +264,27 @@ function closeImageViewer(event) {
       applyImageViewerTransform();
     }
   };
+  const forceReleaseViewerGestures = () => {
+    if (!imageViewerPointers.size) return;
+    releaseAllImageViewerPointerCaptures();
+    imageViewerPointers.clear();
+    imageViewerDragPoint = null;
+    imageViewerPinchDistance = 0;
+    imageViewerPinchCenter = null;
+    activeViewerMedia()?.classList.remove('is-gesturing');
+    applyImageViewerTransform();
+  };
   viewer.addEventListener('pointerup', releasePointer);
   viewer.addEventListener('pointercancel', releasePointer);
+  viewer.addEventListener('lostpointercapture', event => {
+    if (imageViewerPointers.has(event.pointerId)) releasePointer(event);
+  });
+  window.addEventListener('pointerup', releasePointer, true);
+  window.addEventListener('pointercancel', releasePointer, true);
+  window.addEventListener('blur', forceReleaseViewerGestures);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) forceReleaseViewerGestures();
+  });
 
   const toggleDoubleZoom = event => {
     event.preventDefault();

@@ -6,7 +6,7 @@
   width:100%;
   margin:0 0 6px;
   padding:12px 12px 14px;
-  background:var(--jet-note-type-main-posts-background,#fff);
+  background:var(--jet-note-type-three-post-set-body,#fff);
   animation:debugConfigurationPostRgbBorder 750ms steps(1,end) infinite;
 }
 @keyframes debugConfigurationPostRgbBorder{
@@ -45,7 +45,7 @@
   right:auto!important;
   box-sizing:border-box;
 }
-.debug-configuration-post-edit-button svg{
+.debug-configuration-post-edit-button svg, .debug-configuration-post-edit-button img{
   width:19px!important;
   height:19px!important;
   display:block;

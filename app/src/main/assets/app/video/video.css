@@ -130,7 +130,7 @@
    right edges meet the Post border. This selector is deliberately scoped to
    article.post + .post-video-grid.one, so editor previews and 1xN mixed-media
    strips keep their own geometry. */
-#postList article.post > .post-video-grid.one {
+#mainPosts article.post > .post-video-grid.one {
   width:calc(100% + var(--published-post-horizontal-padding, 12px) + var(--published-post-horizontal-padding, 12px) - var(--published-single-media-spacing-left, 3px) - var(--published-single-media-spacing-right, 3px));
   margin-left:calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-left, 3px));
   margin-right:calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-right, 3px));
@@ -138,10 +138,10 @@
   margin-bottom:var(--published-single-media-spacing-bottom, 3px);
 }
 
-#postList article.post > .post-video-grid.one > .video-attachment-shell {
+#mainPosts article.post > .post-video-grid.one > .video-attachment-shell {
   border-left:0;
   border-right:0;
-  border-radius:0 !important;
+  border-radius:1px !important;
 }
 
 /* Maine-style player geometry: video + seek + time are one rounded component. */
@@ -253,22 +253,22 @@
 
 
 /* Multi-video cards use the same square cell geometry as multi-photo cards. */
-#postList article.post .post-video-grid.two > .video-attachment-shell,
-#postList article.post .post-video-grid.many > .video-attachment-shell,
-#postList article.post .post-published-media-strip > .video-attachment-shell { border-radius:0 !important; }
+#mainPosts article.post .post-video-grid.two > .video-attachment-shell,
+#mainPosts article.post .post-video-grid.many > .video-attachment-shell,
+#mainPosts article.post .post-published-media-strip > .video-attachment-shell { border-radius:1px !important; }
 
 /* Published media height guard -------------------------------------------------
    Single-video Posts use the same maximum visual height as single-photo Posts.
    The poster/video surface stays contained instead of allowing portrait media
    to consume most of the feed viewport. Editor previews and 1xN strips are not
    affected by this rule. */
-#postList article.post > .post-video-grid.one > .video-attachment-shell,
-#postList article.post > .post-video-grid.one > .video-attachment-shell > .video-attachment-item {
+#mainPosts article.post > .post-video-grid.one > .video-attachment-shell,
+#mainPosts article.post > .post-video-grid.one > .video-attachment-shell > .video-attachment-item {
   max-height: var(--published-post-media-max-height, 262px);
 }
 
-#postList article.post > .post-video-grid.one .video-poster,
-#postList article.post > .post-video-grid.one .inline-video-player {
+#mainPosts article.post > .post-video-grid.one .video-poster,
+#mainPosts article.post > .post-video-grid.one .inline-video-player {
   max-height: var(--published-post-media-max-height, 262px);
   object-fit: contain;
   object-position: center;
@@ -277,11 +277,11 @@
 
 /* Published video polish: keep the media shell visually transparent and let the
    seek track begin immediately at the video edge. */
-#postList article.post .video-attachment-shell {
+#mainPosts article.post .video-attachment-shell {
   background: transparent !important;
 }
 
-#postList article.post .video-attachment-item + .video-progress-track {
+#mainPosts article.post .video-attachment-item + .video-progress-track {
   margin-top: 0 !important;
 }
 
@@ -290,22 +290,22 @@
    Single and multi-video Posts share exactly the same internal component.
    Quantity changes only the cell width; controls are never moved into the
    Post footer. */
-#postList article.post .video-attachment-shell {
+#mainPosts article.post .video-attachment-shell {
   background: transparent !important;
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 1px !important;
   box-shadow: none !important;
 }
 
-#postList article.post .video-attachment-shell > .video-attachment-item {
+#mainPosts article.post .video-attachment-shell > .video-attachment-item {
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: 1px !important;
   box-shadow: none !important;
 }
 
 /* Seek track touches the video directly. It has no decorative border and no
    radius; only the neutral track and current-position fill remain. */
-#postList article.post .video-progress-track {
+#mainPosts article.post .video-progress-track {
   display:block;
   width:100%;
   height:7px;
@@ -318,12 +318,12 @@
   overflow:hidden;
 }
 
-#postList article.post .video-progress-track::before {
+#mainPosts article.post .video-progress-track::before {
   display:none !important;
   content:none !important;
 }
 
-#postList article.post .video-progress-fill {
+#mainPosts article.post .video-progress-fill {
   top:0;
   height:7px;
   border:0 !important;
@@ -333,7 +333,7 @@
 
 /* The time string is the play/pause control. Keep the Jet Note border, but
    wrap only the text instead of creating a full-width control row. */
-#postList article.post .video-inline-time.video-playback-time-button {
+#mainPosts article.post .video-inline-time.video-playback-time-button {
   display:block;
   width:max-content;
   max-width:calc(100% - 8px);
@@ -348,7 +348,20 @@
 
 /* Single video keeps the full media width, but no longer has any special
    footer/time-control layout. */
-#postList article.post > .post-video-grid.one .video-inline-time {
+#mainPosts article.post > .post-video-grid.one .video-inline-time {
   display:block;
 }
 
+
+
+/* 3 Post One Body integration: the track and time control use the explicit Post-internal Body surface.
+   The fill remains a semantic progress indicator so played progress stays
+   visible against the Post-internal track surface. */
+.three-posts-one-body #mainPosts article.post .video-progress-track,
+.three-posts-one-body #topPostCard .video-progress-track {
+  background: var(--three-post-internal-surface-background) !important;
+}
+.three-posts-one-body #mainPosts article.post .video-inline-time.video-playback-time-button,
+.three-posts-one-body #topPostCard .video-inline-time.video-playback-time-button {
+  background: var(--three-post-internal-surface-background) !important;
+}

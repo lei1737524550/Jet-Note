@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="420"
+    android:viewportHeight="360">
+
+    <!--
+      This is the same lower-half geometry used by Active, translated upward by 68.5.
+      Its complete visual bounds are centered around (210, 180), so Inactive is centered
+      by its own geometry rather than by Active's pupil.
+    -->
+    <path
+        android:pathData="M17.5,111.5 C80,173.5 145,197.5 210,199.5 C275,197.5 340,173.5 402.5,111.5"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFF0000"
+        android:strokeWidth="15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <path android:pathData="M95,165.5 L70,209.5 M155,190.5 L145,236.5 M210,199.5 L210,248.5 M265,190.5 L275,236.5 M325,165.5 L350,209.5"
+        android:fillColor="#00000000" android:strokeColor="#FFFF0000" android:strokeWidth="15" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

@@ -108,6 +108,7 @@ public final class NativeVideoViewerActivity extends Activity
         mediaController = new MediaController(this);
         mediaController.setMediaPlayer(this);
         mediaController.setAnchorView(root);
+        root.post(this::hideMediaControllerSeekButtons);
 
         installViewerZoomAndPan();
 
@@ -115,13 +116,21 @@ public final class NativeVideoViewerActivity extends Activity
         close.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
         close.setBackgroundColor(Color.TRANSPARENT);
         close.setColorFilter(Color.WHITE);
-        close.setContentDescription("Close video");
+        close.setContentDescription(UiLanguage.text(this, "nativeVideoClose"));
         int size = dp(56);
         FrameLayout.LayoutParams closeParams = new FrameLayout.LayoutParams(size, size, Gravity.TOP | Gravity.END);
         closeParams.topMargin = dp(18);
         closeParams.rightMargin = dp(18);
         root.addView(close, closeParams);
         close.setOnClickListener(v -> finishWithPosition());
+        close.setOnLongClickListener(v -> {
+            MediaDownloadController.saveFile(
+                    this,
+                    new File(filePath),
+                    mimeForVideoFile(filePath),
+                    "video");
+            return true;
+        });
 
         setContentView(root);
     }
@@ -155,6 +164,7 @@ public final class NativeVideoViewerActivity extends Activity
                 if (mediaController != null) {
                     mediaController.setEnabled(true);
                     mediaController.show(3000);
+                    hideMediaControllerSeekButtons();
                 }
             });
             player.setOnVideoSizeChangedListener((mp, width, height) -> updateVideoDisplaySize(width, height));
@@ -353,7 +363,34 @@ public final class NativeVideoViewerActivity extends Activity
     private void toggleController() {
         if (mediaController == null) return;
         if (mediaController.isShowing()) mediaController.hide();
-        else mediaController.show(3000);
+        else {
+            mediaController.show(3000);
+            hideMediaControllerSeekButtons();
+        }
+    }
+
+    /** Remove MediaController's built-in rewind/fast-forward buttons while keeping
+     *  play/pause, the seek bar and time display intact. */
+    private void hideMediaControllerSeekButtons() {
+        if (mediaController == null) return;
+        hideSystemMediaControllerChild("rew");
+        hideSystemMediaControllerChild("ffwd");
+    }
+
+    private void hideSystemMediaControllerChild(String systemIdName) {
+        int id = getResources().getIdentifier(systemIdName, "id", "android");
+        if (id == 0) return;
+        View child = mediaController.findViewById(id);
+        if (child != null) child.setVisibility(View.GONE);
+    }
+
+    private String mimeForVideoFile(String path) {
+        String lower = path == null ? "" : path.toLowerCase(java.util.Locale.US);
+        if (lower.endsWith(".webm")) return "video/webm";
+        if (lower.endsWith(".mov")) return "video/quicktime";
+        if (lower.endsWith(".mkv")) return "video/x-matroska";
+        if (lower.endsWith(".3gp")) return "video/3gpp";
+        return "video/mp4";
     }
 
     private float constrainScale(float candidate) {
@@ -406,16 +443,7 @@ public final class NativeVideoViewerActivity extends Activity
 
     private float readConfiguredMaximumScale() {
         try {
-            String source = getSharedPreferences(DEBUG_PREFS, MODE_PRIVATE).getString(DEBUG_CURRENT, null);
-            if (source == null || source.trim().isEmpty()) {
-                try (InputStream in = getAssets().open("config.json")) {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[8192];
-                    int count;
-                    while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-                    source = out.toString("UTF-8");
-                }
-            }
+            String source = RuntimeConfigStore.readEffective(this);
             JSONObject rootJson = new JSONObject(source);
             JSONObject viewerScale = rootJson.optJSONObject("viewer_media_scale");
             if (viewerScale == null) return -1f;

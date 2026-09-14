@@ -6,98 +6,115 @@ let posts = loadPosts();
 let editingPostId = null;
 let postDraftImages = [];
 
-const TOP_POST_DEFAULT_STRING = 'welcome to Jet Note';
-let topPostDefaultString = TOP_POST_DEFAULT_STRING;
+const WELCOME_POST_DEFAULT_STRING = 'welcome to Jet Note';
+let welcomePostDefaultString = WELCOME_POST_DEFAULT_STRING;
 
-const TOP_POST_DEFAULT_CONFIG = Object.freeze({
-  top_post_string_color: 'F06E80',
-  top_post_string_font_size: 2,
-  three_post_one_body_font_size: 17,
-  top_post_border_color: 'bfc1c4',
-  write_sth_border_color: 'bfc1c4',
-  main_posts_border_color: 'bfc1c4',
-  main_page: {
-    three_post_one_body_vertical_move: -60
-  },
-  no_starred_post: {
-    outer_border_color: 'bfc1c4',
-    time_stamp_color: '999da2',
-    time_stamp_top_margin: 3,
-    time_stamp_bottom_margin: 3
-  },
-  starred_post: {
-    outer_border_color: 'bfc1c4',
-    star_activation_transition_border_color: '34A853',
-    star_activation_transition_border_color_display_duration_ms: 250,
-    time_stamp_color: '999da2',
-    time_stamp_top_margin: 3,
-    time_stamp_bottom_margin: 3
-  },
-  super_starred_post: {
-    outer_border_color: 'bfc1c4',
-    super_star_activation_transition_border_color: '34A853',
-    super_star_activation_transition_border_color_display_duration_ms: 250,
-    time_stamp_color: '999da2',
-    time_stamp_top_margin: 10,
-    time_stamp_bottom_margin: 3
-  }
+const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
+  vertical_move_px: -32,
+  font_size_px: 17,
+  welcome_post: Object.freeze({
+    text_color: '#F06E80',
+    text_font_size_em: 2
+  }),
+  top_post: Object.freeze({
+    welcome: Object.freeze({
+      border_rule: Object.freeze({
+        change_count: 0,
+        sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
+      })
+    }),
+    super_starred: Object.freeze({
+      border_rule: Object.freeze({
+        change_count: 1,
+        sequence: Object.freeze([
+          {color: '#34A853', duration_ms: 2250},
+          {color: '#ff0073', duration_ms: 0}
+        ])
+      }),
+      time_stamp_color: '999da2',
+      time_stamp_top_margin: 10,
+      time_stamp_bottom_margin: 3
+    })
+  }),
+  post_composer: Object.freeze({
+    border_rule: Object.freeze({
+      change_count: 0,
+      sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
+    })
+  }),
+  main_posts: Object.freeze({
+    non_star: Object.freeze({
+      border_rule: Object.freeze({
+        change_count: 0,
+        sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
+      }),
+      time_stamp_color: '999da2',
+      time_stamp_top_margin: 3,
+      time_stamp_bottom_margin: 3
+    }),
+    starred: Object.freeze({
+      border_rule: Object.freeze({
+        change_count: 1,
+        sequence: Object.freeze([
+          {color: '#34A853', duration_ms: 2250},
+          {color: '#d3cc06', duration_ms: 0}
+        ])
+      }),
+      time_stamp_color: '999da2',
+      time_stamp_top_margin: 3,
+      time_stamp_bottom_margin: 3
+    })
+  })
 });
-let topPostConfig = {...TOP_POST_DEFAULT_CONFIG};
-const postStarBorderTransitionUntil = new Map();
 
-function activatePostStarBorderTransition(post, state) {
-  if (!post || (state !== 'starred' && state !== 'super_starred')) return;
-  const config = postVisualConfigForState(state);
-  const durationKey = state === 'super_starred'
-    ? 'super_star_activation_transition_border_color_display_duration_ms'
-    : 'star_activation_transition_border_color_display_duration_ms';
-  const duration = Math.max(0, Number(config[durationKey]) || 250);
-  const id = String(post.id);
-  const expiresAt = Date.now() + duration;
-  postStarBorderTransitionUntil.set(id, { state, expiresAt });
-  setTimeout(() => {
-    const active = postStarBorderTransitionUntil.get(id);
-    if (!active || active.expiresAt !== expiresAt) return;
-    postStarBorderTransitionUntil.delete(id);
-    renderPosts();
-  }, duration);
+let threePostOneBodyConfig = THREE_POST_ONE_BODY_DEFAULT_CONFIG;
+
+// The IME is raised only after the split entrance settles. This timing is a
+// structural part of the animation, not a global config option; exposing values
+// below the settle point was misleading because they were always clamped.
+
+const threePostOneBodyBorderTimers = new Map();
+
+function mergeObject(defaultValue, configuredValue) {
+  if (!configuredValue || typeof configuredValue !== 'object' || Array.isArray(configuredValue)) return {...defaultValue};
+  return {...defaultValue, ...configuredValue};
 }
 
-function transientPostBorderColor(postId, state) {
-  const id = String(postId ?? '');
-  const active = postStarBorderTransitionUntil.get(id);
-  if (!active || active.state !== state || active.expiresAt <= Date.now()) {
-    if (active && active.expiresAt <= Date.now()) postStarBorderTransitionUntil.delete(id);
-    return null;
-  }
-  const config = postVisualConfigForState(state);
-  const colorKey = state === 'super_starred'
-    ? 'super_star_activation_transition_border_color'
-    : 'star_activation_transition_border_color';
-  return configBorderColor(config[colorKey], '#34A853');
+function configuredThreePostOneBody(config) {
+  const configured = config?.three_post_one_body;
+  if (!configured || typeof configured !== 'object') return THREE_POST_ONE_BODY_DEFAULT_CONFIG;
+  return {
+    ...THREE_POST_ONE_BODY_DEFAULT_CONFIG,
+    ...configured,
+    welcome_post: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.welcome_post, configured.welcome_post),
+    top_post: {
+      ...THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post,
+      ...configured.top_post,
+      welcome: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.welcome, configured.top_post?.welcome),
+      super_starred: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred, configured.top_post?.super_starred)
+    },
+    post_composer: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.post_composer, configured.post_composer),
+    main_posts: {
+      ...THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts,
+      ...configured.main_posts,
+      non_star: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star, configured.main_posts?.non_star),
+      starred: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred, configured.main_posts?.starred)
+    }
+  };
 }
 
-// Initialize home-page geometry and border variables immediately; config.json overwrites them after loading.
-applyHomeLayoutConfig();
+// Initialize canonical Three Posts, One Body geometry before config.json arrives.
+applyThreePostOneBodyConfig();
 
 Promise.all([
   fetch('config.json', {cache: 'no-store'}).then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed'))),
   window.JetNoteUiLanguage?.get
-    ? window.JetNoteUiLanguage.get('home.top_post_default', TOP_POST_DEFAULT_STRING)
-    : Promise.resolve(TOP_POST_DEFAULT_STRING)
+    ? window.JetNoteUiLanguage.get('home.welcome_post_default', WELCOME_POST_DEFAULT_STRING)
+    : Promise.resolve(WELCOME_POST_DEFAULT_STRING)
 ]).then(([config, defaultString]) => {
-    topPostDefaultString = defaultString || TOP_POST_DEFAULT_STRING;
-    topPostConfig = {
-      ...TOP_POST_DEFAULT_CONFIG,
-      ...config,
-      main_page: {
-        ...TOP_POST_DEFAULT_CONFIG.main_page,
-        ...(config.main_page && typeof config.main_page === 'object' ? config.main_page : {}),
-        // Backward compatibility for older config.json files.
-        ...(config.three_post_one_body_vertical_move !== undefined ? {three_post_one_body_vertical_move: config.three_post_one_body_vertical_move} : {})
-      }
-    };
-    applyHomeLayoutConfig();
+    welcomePostDefaultString = defaultString || WELCOME_POST_DEFAULT_STRING;
+    threePostOneBodyConfig = configuredThreePostOneBody(config);
+    applyThreePostOneBodyConfig();
     renderPosts();
   })
   .catch(() => { /* defaults remain active */ });
@@ -124,7 +141,7 @@ function getSuperStarPost() {
   return posts.find(post => getPostStarState(post) === 'super_starred') || null;
 }
 
-function getFeedPosts() {
+function getMainPosts() {
   const visible = posts.filter(post => getPostStarState(post) !== 'super_starred');
   const regular = visible.filter(post => getPostStarState(post) !== 'starred');
   const starred = visible
@@ -133,15 +150,13 @@ function getFeedPosts() {
   return starred.concat(regular);
 }
 
-
-function topPostFontSize(value) {
+function welcomePostFontSize(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return '2em';
-  // config uses an em-style scale so the requested value 2 remains meaningful.
   return `${Math.max(0.5, Math.min(number, 6))}em`;
 }
 
-function topPostColor(value) {
+function welcomePostTextColor(value) {
   const raw = String(value || '').trim();
   return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : '#F06E80';
 }
@@ -151,11 +166,9 @@ function configBorderColor(value, fallback = '#bfc1c4') {
   return /^#?[0-9a-f]{6}$/i.test(raw) ? `#${raw.replace(/^#/, '')}` : fallback;
 }
 
-function configVerticalPixelOffset(value, fallback = -60) {
+function configVerticalPixelOffset(value, fallback = -32) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
-  // Keep this as a direct CSS-pixel offset. No per-region rounding or derived
-  // arithmetic is used, so Top Post, Post Composer, and Main Posts move as one body.
   return Math.max(-1000, Math.min(number, 1000));
 }
 
@@ -166,10 +179,13 @@ function configFontSize(value, fallback = 17) {
 }
 
 function postVisualConfigForState(state) {
-  const key = state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post';
-  const defaults = TOP_POST_DEFAULT_CONFIG[key] || TOP_POST_DEFAULT_CONFIG.no_starred_post;
-  const configured = topPostConfig[key];
-  return {...defaults, ...(configured && typeof configured === 'object' ? configured : {})};
+  if (state === 'super_starred') {
+    return threePostOneBodyConfig.top_post?.super_starred || THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred;
+  }
+  if (state === 'starred') {
+    return threePostOneBodyConfig.main_posts?.starred || THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred;
+  }
+  return threePostOneBodyConfig.main_posts?.non_star || THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star;
 }
 
 function configPixelMargin(value, fallback = 0) {
@@ -178,37 +194,125 @@ function configPixelMargin(value, fallback = 0) {
   return Math.max(-1000, Math.min(number, 1000));
 }
 
-function postVisualStyle(state, postId = null) {
+function postVisualStyle(state) {
   const config = postVisualConfigForState(state);
-  const defaults = TOP_POST_DEFAULT_CONFIG[state === 'super_starred' ? 'super_starred_post' : state === 'starred' ? 'starred_post' : 'no_starred_post'];
-  const border = transientPostBorderColor(postId, state) || configBorderColor(config.outer_border_color, configBorderColor(defaults.outer_border_color));
+  const defaults = state === 'super_starred'
+    ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred
+    : state === 'starred'
+      ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred
+      : THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star;
   const timeColor = configBorderColor(config.time_stamp_color, configBorderColor(defaults.time_stamp_color, '#999da2'));
   const top = configPixelMargin(config.time_stamp_top_margin, defaults.time_stamp_top_margin);
   const bottom = configPixelMargin(config.time_stamp_bottom_margin, defaults.time_stamp_bottom_margin);
-  return `--post-state-border-color:${border};--post-state-time-color:${timeColor};--post-state-time-top-margin:${top}px;--post-state-time-bottom-margin:${bottom}px`;
+  return `--post-state-time-color:${timeColor};--post-state-time-top-margin:${top}px;--post-state-time-bottom-margin:${bottom}px`;
 }
 
-function applyHomeLayoutConfig() {
+function normalizedBorderSequence(rule, fallbackColor) {
+  const rawSequence = Array.isArray(rule?.sequence) ? rule.sequence : [];
+  const sequence = rawSequence.map(item => ({
+    color: configBorderColor(item?.color, ''),
+    duration_ms: Math.max(0, Math.min(Number(item?.duration_ms) || 0, 86400000))
+  })).filter(item => item.color);
+  return sequence.length ? sequence : [{color: fallbackColor, duration_ms: 1000}];
+}
+
+function stopThreePostOneBodyBorderRule(name) {
+  const timer = threePostOneBodyBorderTimers.get(name);
+  if (timer) clearTimeout(timer);
+  threePostOneBodyBorderTimers.delete(name);
+}
+
+function applyThreePostOneBodyBorderRule(name, rule, cssVariable, fallbackColor = '#bfc1c4') {
+  stopThreePostOneBodyBorderRule(name);
+  const sequence = normalizedBorderSequence(rule, fallbackColor);
+  const changeCount = Number(rule?.change_count);
+  const mode = changeCount === -1 ? -1 : changeCount === 1 ? 1 : 0;
   const root = document.documentElement;
-  root.style.setProperty('--top-post-border-color', configBorderColor(topPostConfig.top_post_border_color));
-  root.style.setProperty('--write-sth-border-color', configBorderColor(topPostConfig.write_sth_border_color));
-  root.style.setProperty('--main-posts-border-color', configBorderColor(topPostConfig.main_posts_border_color));
+
+  if (mode === 0 || sequence.length === 1) {
+    root.style.setProperty(cssVariable, sequence[0].color);
+    return;
+  }
+
+  let index = 0;
+  const show = () => {
+    const item = sequence[index];
+    root.style.setProperty(cssVariable, item.color);
+
+    if (mode === 1 && index === sequence.length - 1) {
+      threePostOneBodyBorderTimers.delete(name);
+      return;
+    }
+
+    const wait = mode === -1 ? Math.max(16, item.duration_ms) : item.duration_ms;
+    const timer = setTimeout(() => {
+      index = (index + 1) % sequence.length;
+      show();
+    }, wait);
+    threePostOneBodyBorderTimers.set(name, timer);
+  };
+  show();
+}
+
+function restartThreePostOneBodyStateBorderRule(state) {
+  if (state === 'starred') {
+    applyThreePostOneBodyBorderRule(
+      'main_posts.starred',
+      threePostOneBodyConfig.main_posts?.starred?.border_rule,
+      '--three-post-one-body-main-posts-starred-border-color'
+    );
+    return;
+  }
+  if (state === 'super_starred') {
+    applyThreePostOneBodyBorderRule(
+      'top_post.super_starred',
+      threePostOneBodyConfig.top_post?.super_starred?.border_rule,
+      '--three-post-one-body-top-post-super-starred-border-color'
+    );
+  }
+}
+
+function applyThreePostOneBodyConfig() {
+  const root = document.documentElement;
   root.style.setProperty(
     '--three-post-one-body-font-size',
-    `${configFontSize(topPostConfig.three_post_one_body_font_size, TOP_POST_DEFAULT_CONFIG.three_post_one_body_font_size)}px`
+    `${configFontSize(threePostOneBodyConfig.font_size_px, THREE_POST_ONE_BODY_DEFAULT_CONFIG.font_size_px)}px`
+  );
+  root.style.setProperty(
+    '--three-post-one-body-vertical-move',
+    `${configVerticalPixelOffset(threePostOneBodyConfig.vertical_move_px, THREE_POST_ONE_BODY_DEFAULT_CONFIG.vertical_move_px)}px`
   );
 
-  const mainPageDefaults = TOP_POST_DEFAULT_CONFIG.main_page;
-  const mainPage = topPostConfig.main_page && typeof topPostConfig.main_page === 'object'
-    ? topPostConfig.main_page
-    : mainPageDefaults;
-
-  const verticalMove = configVerticalPixelOffset(
-    mainPage.three_post_one_body_vertical_move,
-    mainPageDefaults.three_post_one_body_vertical_move
+  applyThreePostOneBodyBorderRule(
+    'top_post.welcome',
+    threePostOneBodyConfig.top_post?.welcome?.border_rule,
+    '--three-post-one-body-top-post-welcome-border-color'
   );
-  root.style.setProperty('--three-post-one-body-vertical-move', `${verticalMove}px`);
+  applyThreePostOneBodyBorderRule(
+    'top_post.super_starred',
+    threePostOneBodyConfig.top_post?.super_starred?.border_rule,
+    '--three-post-one-body-top-post-super-starred-border-color'
+  );
+  applyThreePostOneBodyBorderRule(
+    'post_composer',
+    threePostOneBodyConfig.post_composer?.border_rule,
+    '--three-post-one-body-post-composer-border-color'
+  );
+  applyThreePostOneBodyBorderRule(
+    'main_posts.non_star',
+    threePostOneBodyConfig.main_posts?.non_star?.border_rule,
+    '--three-post-one-body-main-posts-non-star-border-color'
+  );
+  applyThreePostOneBodyBorderRule(
+    'main_posts.starred',
+    threePostOneBodyConfig.main_posts?.starred?.border_rule,
+    '--three-post-one-body-main-posts-starred-border-color'
+  );
 }
+
+window.addEventListener('pagehide', () => {
+  for (const name of [...threePostOneBodyBorderTimers.keys()]) stopThreePostOneBodyBorderRule(name);
+});
 
 function renderPublishedPostFooter(post) {
   return `<div class="post-footer-row"><div class="time">${escapeHTML(formatPostTimestamp(post))}</div></div>`;
@@ -221,20 +325,20 @@ function renderTopPost() {
 
   const post = getSuperStarPost();
   if (!post) {
-    const text = escapeHTML(String(topPostDefaultString || TOP_POST_DEFAULT_STRING));
-    card.className = 'top-post-card top-post-empty common_border';
+    const text = escapeHTML(String(welcomePostDefaultString || WELCOME_POST_DEFAULT_STRING));
+    card.className = 'top-post-card welcome-post three-posts-one-body__box common_border';
     card.removeAttribute('style');
     card.innerHTML = `
       <div class="top-post-layout">
-        <div class="top-post-default-text" style="--top-post-string-color:${topPostColor(topPostConfig.top_post_string_color)};--top-post-string-size:${topPostFontSize(topPostConfig.top_post_string_font_size)}">${text}</div>
+        <div class="welcome-post-text" style="--welcome-post-text-color:${welcomePostTextColor(threePostOneBodyConfig.welcome_post?.text_color)};--welcome-post-text-size:${welcomePostFontSize(threePostOneBodyConfig.welcome_post?.text_font_size_em)}">${text}</div>
       </div>`;
     return;
   }
 
   const postId = escapeHTML(String(post.id));
   const images = Array.isArray(post.images) ? post.images : [];
-  card.className = 'top-post-card top-post-super common_border';
-  card.setAttribute('style', postVisualStyle('super_starred', post.id));
+  card.className = 'top-post-card top-post-super three-posts-one-body__box common_border';
+  card.setAttribute('style', postVisualStyle('super_starred'));
   card.innerHTML = `
     <div class="top-post-layout">
       <div class="top-post-content" data-post-id="${postId}">
@@ -272,56 +376,43 @@ async function savePosts() {
 
 
 function renderPosts() {
-  const list = document.getElementById('postList');
-  if (!list) return;
-
+  const list = document.getElementById('mainPosts');
+  const composerMount = document.getElementById('postComposerMount');
+  if (!list || !composerMount) return;
 
   const composerHTML = isWorkspaceWritable() ? `
-    <div class="feed-composer-wrap">
-      <div class="feed-composer common_border">
-        <button class="feed-composer-main"
+      <div class="post-composer three-posts-one-body__box common_border">
+        <button class="post-composer-main"
                 type="button"
                 data-editor-open="create"
                 data-i18n="share">${escapeHTML(t('share'))}</button>
 
-        <button class="feed-composer-photo"
+        <button class="post-composer-media-button"
                 onclick="openPostComposerWithVideoPicker()"
                 aria-label="add video">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="11" width="25" height="26" rx="5"/>
-            <path d="M32 19l9-5v20l-9-5z"/>
-          </svg>
+          <img src="shared/icons/video.svg" alt="">
         </button>
 
-        <button class="feed-composer-photo"
+        <button class="post-composer-media-button"
                 onclick="openPostComposerWithImagePicker()"
                 aria-label="add image">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="7" width="34" height="34" rx="6"/>
-            <circle cx="18" cy="18" r="3.4"/>
-            <path d="M10 35l9-9 7 6 5-5 8 8"/>
-          </svg>
+          <img src="shared/icons/image.svg" alt="">
         </button>
 
-        <button class="feed-composer-photo feed-composer-audio"
+        <button class="post-composer-media-button post-composer-audio-button"
                 onclick="openPostComposerWithAudioPicker()"
                 aria-label="add audio">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 36V13l20-4v23"/>
-            <circle cx="14" cy="36" r="5"/>
-            <circle cx="34" cy="32" r="5"/>
-          </svg>
+          <img src="shared/icons/audio.svg" alt="">
         </button>
       </div>
-    </div>
   ` : '';
 
-  const postsHTML = getFeedPosts().map((post) => {
+  const postsHTML = getMainPosts().map((post) => {
     const images = Array.isArray(post.images) ? post.images : [];
     const postId=escapeHTML(String(post.id));
 
     return `
-      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post), post.id)}">
+      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} three-posts-one-body__box common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post))}">
         <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
@@ -339,7 +430,8 @@ function renderPosts() {
 
   releaseAttachmentUrls(list);
   const debugPostHTML = window.DebugConfigurationFeature?.render?.() || '';
-  list.innerHTML = composerHTML + debugPostHTML + postsHTML;
+  composerMount.innerHTML = composerHTML;
+  list.innerHTML = debugPostHTML + postsHTML;
   renderTopPost();
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
@@ -426,20 +518,50 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
     // Native video is a TextureView layered outside the WebView. Suppress it
     // before exposing the editor so there is no one-frame video flash-through.
     window.JetNoteVideoOverlay?.suspend?.();
+
+    // Split entrance: prepare both regions off-screen before the editor becomes
+    // visible, then commit the transform on the next animation frame. Keeping
+    // this transform-only avoids layout thrashing and keeps the opening path fast.
+    const splitMotionMs = 320;
+    screen.classList.remove('composer-split-enter-active');
+    screen.classList.add('composer-split-enter');
     screen.classList.add('open');
     window.__jetSyncNativeVideoVisibility?.();
     document.body.style.overflow = 'hidden';
     ViewportManager.update();
 
-    // The composer was opened from a user gesture: focus immediately and then
-    // once more after layout so Android WebView also raises the soft keyboard.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!screen.classList.contains('open')) return;
+        screen.classList.add('composer-split-enter-active');
+      });
+    });
+
+    // Do not raise the Android keyboard while the two halves are moving: an IME
+    // viewport resize during the transform makes the lower half visibly jump.
+    // Focus once the panels have met, while preserving the original caret rule.
     const focusComposer = () => {
+      if (!screen.classList.contains('open')) return;
       textarea.focus({preventScroll:true});
       const end = textarea.value.length;
       try { textarea.setSelectionRange(end, end); } catch (_) {}
     };
-    focusComposer();
-    setTimeout(focusComposer, 80);
+    const splitSettledMs = splitMotionMs + 30;
+
+    // Finish the visual transition independently of the keyboard delay. A long
+    // configured IME delay must not leave animation classes hanging around.
+    setTimeout(() => {
+      if (!screen.classList.contains('open')) return;
+      screen.classList.remove('composer-split-enter', 'composer-split-enter-active');
+    }, splitSettledMs);
+
+    // Raise the keyboard as soon as the split animation has fully settled.
+    setTimeout(() => {
+      if (!screen.classList.contains('open')) return;
+      focusComposer();
+      // One lightweight retry keeps Android WebView/IME hand-off reliable.
+      setTimeout(focusComposer, 80);
+    }, splitSettledMs);
     return true;
   } catch (error) {
     console.error('[Editor] open failed', error);
@@ -457,7 +579,7 @@ function closePostComposer() {
   closeToolbox?.();
   initAudioDraft('post',null);
   const screen = document.getElementById('postComposeScreen');
-  screen.classList.remove('open');
+  screen.classList.remove('open', 'composer-split-enter', 'composer-split-enter-active');
   window.__jetSyncNativeVideoVisibility?.();
   document.body.style.overflow = '';
   document.getElementById('postComposerText').value = '';
@@ -669,6 +791,8 @@ function closePostActionPanel() {
   if (panel) panel.classList.remove('open');
   activePostActionId = null;
   activePostActionAnchor = null;
+  // Re-evaluate the native TextureView only after the HTML overlay has closed.
+  window.__jetSyncNativeVideoVisibility?.();
 }
 
 function syncPostFavoriteAction() {
@@ -681,6 +805,8 @@ function syncPostFavoriteAction() {
   button.classList.toggle('super-active', state === 'super_starred');
   button.setAttribute('aria-pressed', state === 'none' ? 'false' : 'true');
   button.setAttribute('data-star-state', state);
+  const icon = button.querySelector('.post-action-star');
+  if (icon) icon.src = state === 'super_starred' ? 'shared/icons/star_super.svg' : state === 'starred' ? 'shared/icons/star_active.svg' : 'shared/icons/star.svg';
 }
 
 async function commitStarStateChange(previous) {
@@ -705,7 +831,7 @@ async function toggleFavoriteActivePost() {
   const state = getPostStarState(post);
   const nextState = state === 'none' ? 'starred' : 'none';
   setPostStarState(post, nextState);
-  if (nextState === 'starred') activatePostStarBorderTransition(post, 'starred');
+  if (nextState === 'starred') restartThreePostOneBodyStateBorderRule('starred');
 
   // Every short-press favorite action closes the shared three-dot menu before
   // renderPosts(). The panel lives under document.body, so rebuilding the post
@@ -727,7 +853,7 @@ async function toggleSuperStarActivePost() {
     if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
   }
   setPostStarState(post, 'super_starred');
-  activatePostStarBorderTransition(post, 'super_starred');
+  restartThreePostOneBodyStateBorderRule('super_starred');
 
   // Super Star moves the post into Top Post, so the action menu anchored to the
   // post's old screen coordinates must disappear before the list is rebuilt.
@@ -751,6 +877,10 @@ function openPostActionPanel(event, postId) {
   if (!isWorkspaceWritable()) return;
   event.preventDefault();
   event.stopPropagation();
+
+  // Hide Android's native TextureView synchronously. It is a sibling of the
+  // WebView, so no CSS z-index can reliably place this menu above it.
+  window.JetNoteVideoOverlay?.suspend?.();
 
   const panel = document.getElementById('postActionPanel');
   if (!panel) return;
@@ -804,29 +934,72 @@ function deleteActivePost() {
   openDeleteConfirm('post', postId, anchorRect);
 }
 
-let favoriteLongPressTimer = null;
+const favoritePressState = {
+  pointerId: null,
+  button: null,
+  timer: null,
+  longPressTriggered: false
+};
 let suppressFavoriteClick = false;
+
+function clearFavoritePress({ releaseCapture = true } = {}) {
+  if (favoritePressState.timer !== null) {
+    clearTimeout(favoritePressState.timer);
+    favoritePressState.timer = null;
+  }
+  if (releaseCapture && favoritePressState.button && favoritePressState.pointerId !== null) {
+    try {
+      if (favoritePressState.button.hasPointerCapture?.(favoritePressState.pointerId)) {
+        favoritePressState.button.releasePointerCapture(favoritePressState.pointerId);
+      }
+    } catch (_) {}
+  }
+  favoritePressState.pointerId = null;
+  favoritePressState.button = null;
+  favoritePressState.longPressTriggered = false;
+}
 
 document.addEventListener('pointerdown', event => {
   const button = event.target.closest('#postFavoriteAction[data-post-action="favorite"]');
-  if (!button) return;
+  if (!button || event.button > 0 || event.isPrimary === false) return;
+
+  clearFavoritePress();
   suppressFavoriteClick = false;
-  clearTimeout(favoriteLongPressTimer);
-  favoriteLongPressTimer = setTimeout(() => {
+  favoritePressState.pointerId = event.pointerId;
+  favoritePressState.button = button;
+  favoritePressState.longPressTriggered = false;
+
+  // Pointer capture keeps a small finger drift inside the same gesture instead
+  // of letting WebView scrolling/media surfaces cancel the long press.
+  try { button.setPointerCapture?.(event.pointerId); } catch (_) {}
+
+  favoritePressState.timer = setTimeout(() => {
+    if (favoritePressState.pointerId !== event.pointerId || favoritePressState.button !== button) return;
+    favoritePressState.timer = null;
+    favoritePressState.longPressTriggered = true;
     suppressFavoriteClick = true;
     if (navigator.vibrate) navigator.vibrate(28);
     void toggleSuperStarActivePost();
   }, 550);
 });
 
-document.addEventListener('pointerup', () => {
-  clearTimeout(favoriteLongPressTimer);
-  favoriteLongPressTimer = null;
+document.addEventListener('pointerup', event => {
+  if (favoritePressState.pointerId !== event.pointerId) return;
+  clearFavoritePress();
 });
-document.addEventListener('pointercancel', () => {
-  clearTimeout(favoriteLongPressTimer);
-  favoriteLongPressTimer = null;
+
+document.addEventListener('pointercancel', event => {
+  if (favoritePressState.pointerId !== event.pointerId) return;
+  // A browser/system cancellation before the timer means the long press did
+  // not complete. Pointer capture + touch-action:none makes this rare.
+  clearFavoritePress();
 });
+
+document.addEventListener('lostpointercapture', event => {
+  if (favoritePressState.pointerId !== event.pointerId) return;
+  clearFavoritePress({ releaseCapture: false });
+});
+
 document.addEventListener('contextmenu', event => {
   if (event.target.closest('#postFavoriteAction')) event.preventDefault();
 });
@@ -874,6 +1047,12 @@ function formatPostTimestamp(post) {
   if (!Number.isFinite(timestamp)) return String(post?.time || '');
 
   const date = new Date(timestamp);
+  const customPattern = window.JetNoteDateTimeFormat?.customPattern?.();
+  if (customPattern) {
+    const formatted = window.JetNoteDateTimeFormat?.format?.(date, customPattern);
+    if (formatted) return formatted;
+  }
+
   const now = new Date();
   const hh = String(date.getHours()).padStart(2, '0');
   const mm = String(date.getMinutes()).padStart(2, '0');
@@ -892,6 +1071,10 @@ function formatPostTimestamp(post) {
 function formatNowForPost() {
   return formatPostTimestamp({ createdAt: new Date().toISOString() });
 }
+
+window.addEventListener('jetnote:date-time-pattern-changed', () => {
+  if (typeof renderPosts === 'function') renderPosts();
+});
 
 function addToolAudioToPost(meta) {
   const composer = document.getElementById('postComposeScreen');
@@ -975,7 +1158,7 @@ async function publishTextPost() {
       return;
     }
     closePostComposer();
-    if (!commitResult.wasEditing) document.getElementById('postList')?.scrollTo({ top: 0 });
+    if (!commitResult.wasEditing) document.getElementById('mainPosts')?.scrollTo({ top: 0 });
   } finally {
     postPublishInFlight = false;
     if (publishButton?.isConnected) publishButton.disabled = false;

@@ -154,13 +154,9 @@ final class DictionaryController {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(pageActionBarSpec.height), Gravity.TOP);
         overlay.addView(toolbar, toolbarParams);
 
-        downloadStatus = createStatusBanner();
-        FrameLayout.LayoutParams statusParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(42), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        statusParams.leftMargin = dp(16);
-        statusParams.rightMargin = dp(16);
-        statusParams.bottomMargin = dp(16);
-        overlay.addView(downloadStatus, statusParams);
+        // Transient audio status is shown only through the Android Toast below.
+        // The old in-overlay banner duplicated the same message in green.
+        downloadStatus = null;
 
         loadStatePanel = createLoadStatePanel();
         FrameLayout.LayoutParams stateParams = new FrameLayout.LayoutParams(
@@ -201,11 +197,13 @@ final class DictionaryController {
                 wp.rightMargin = right;
                 dictionaryWebView.setLayoutParams(wp);
 
-                FrameLayout.LayoutParams sp = (FrameLayout.LayoutParams) downloadStatus.getLayoutParams();
-                sp.bottomMargin = bottom + dp(16);
-                sp.leftMargin = left + dp(16);
-                sp.rightMargin = right + dp(16);
-                downloadStatus.setLayoutParams(sp);
+                if (downloadStatus != null) {
+                    FrameLayout.LayoutParams sp = (FrameLayout.LayoutParams) downloadStatus.getLayoutParams();
+                    sp.bottomMargin = bottom + dp(16);
+                    sp.leftMargin = left + dp(16);
+                    sp.rightMargin = right + dp(16);
+                    downloadStatus.setLayoutParams(sp);
+                }
                 return insets;
             });
             overlay.requestApplyInsets();
@@ -296,7 +294,7 @@ final class DictionaryController {
         bar.setElevation(dp(pageActionBarSpec.shadowElevation));
 
         ImageButton back = createBackButton();
-        back.setContentDescription("en".equals(pageLanguage) ? "Back" : "Back");
+        back.setContentDescription(UiLanguage.text(activity, "commonBack"));
         back.setOnClickListener(v -> close());
         TextView title = new TextView(activity);
         title.setText(pageTitle);
@@ -316,7 +314,7 @@ final class DictionaryController {
         ImageButton get = createToolbarIconButton(
                 com.ingeniousidea.space.R.drawable.ic_audio_action,
                 pageActionBarSpec.toolActionTextColor);
-        get.setContentDescription("Get page audio");
+        get.setContentDescription(UiLanguage.text(activity, "dictionaryGetPageAudio"));
         get.setOnClickListener(v -> runGetScript());
         // Long press is a compact refresh shortcut; it no longer creates an in-page button.
         get.setOnLongClickListener(v -> { reloadCurrentPage(); return true; });
@@ -444,7 +442,7 @@ final class DictionaryController {
         if (dictionaryWebView != null) dictionaryWebView.setVisibility(View.INVISIBLE);
         if (loadStatePanel != null) loadStatePanel.setVisibility(View.VISIBLE);
         if (loadStateTitle != null) {
-            loadStateTitle.setText("en".equals(pageLanguage) ? "Loading…" : "Loading…");
+            loadStateTitle.setText(UiLanguage.text(activity, "commonLoading"));
             loadStateTitle.setTextColor(0xff78b88c);
         }
         if (loadSpinner != null) loadSpinner.setVisibility(View.VISIBLE);
@@ -456,12 +454,12 @@ final class DictionaryController {
         if (dictionaryWebView != null) { dictionaryWebView.stopLoading(); dictionaryWebView.setVisibility(View.INVISIBLE); }
         if (loadStatePanel != null) loadStatePanel.setVisibility(View.VISIBLE);
         if (loadStateTitle != null) {
-            loadStateTitle.setText("en".equals(pageLanguage) ? "Load failed" : "Load failed");
+            loadStateTitle.setText(UiLanguage.text(activity, "commonLoadFailed"));
             loadStateTitle.setTextColor(0xffb3261e);
         }
         if (loadSpinner != null) loadSpinner.setVisibility(View.GONE);
         if (loadStateCode != null) {
-            loadStateCode.setText(code == null || code.isEmpty() ? "ERROR" : code.toUpperCase(Locale.US));
+            loadStateCode.setText(code == null || code.isEmpty() ? UiLanguage.text(activity, "commonErrorCodeFallback") : code.toUpperCase(Locale.US));
             loadStateCode.setVisibility(View.VISIBLE);
         }
     }
@@ -484,26 +482,21 @@ final class DictionaryController {
         try(java.io.InputStream input=activity.getAssets().open("app/dictionary/dictionary.js");java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream()){
             byte[] buffer=new byte[4096];int n;while((n=input.read(buffer))!=-1)out.write(buffer,0,n);
             JSONObject dictionaryStrings = new JSONObject();
-            try (java.io.InputStream languageInput = activity.getAssets().open("language/english.json");
-                 java.io.ByteArrayOutputStream languageOut = new java.io.ByteArrayOutputStream()) {
-                byte[] languageBuffer = new byte[4096];
-                int languageRead;
-                while ((languageRead = languageInput.read(languageBuffer)) != -1) languageOut.write(languageBuffer, 0, languageRead);
-                JSONObject language = new JSONObject(new String(languageOut.toByteArray(), java.nio.charset.StandardCharsets.UTF_8));
-                dictionaryStrings.put("noAudio", language.optString("dictionaryNoAudio", "No audio was found. Play the pronunciation once, then tap the audio button."));
-                dictionaryStrings.put("playAudio", language.optString("dictionaryPlayAudio", "Play audio"));
-                dictionaryStrings.put("pauseAudio", language.optString("dictionaryPauseAudio", "Pause audio"));
-                dictionaryStrings.put("close", language.optString("dictionaryClose", "Close"));
-                dictionaryStrings.put("foundCandidates", language.optString("dictionaryFoundCandidates", "Found {count} candidate resource(s). Audio resources are listed first."));
-                dictionaryStrings.put("nonAudio", language.optString("dictionaryNonAudio", " (non-audio resource)"));
-                dictionaryStrings.put("previewFailed", language.optString("dictionaryPreviewFailed", "Audio preview failed. Try saving the file and playing it locally."));
-            } catch (Exception ignored) { }
+            dictionaryStrings.put("noAudio", UiLanguage.text(activity, "dictionaryNoAudio"));
+            dictionaryStrings.put("playAudio", UiLanguage.text(activity, "dictionaryPlayAudio"));
+            dictionaryStrings.put("pauseAudio", UiLanguage.text(activity, "dictionaryPauseAudio"));
+            dictionaryStrings.put("close", UiLanguage.text(activity, "dictionaryClose"));
+            dictionaryStrings.put("foundCandidates", UiLanguage.text(activity, "dictionaryFoundCandidates"));
+            dictionaryStrings.put("nonAudio", UiLanguage.text(activity, "dictionaryNonAudio"));
+            dictionaryStrings.put("previewFailed", UiLanguage.text(activity, "dictionaryPreviewFailed"));
             String script = "window.JET_NOTE_UI_LANGUAGE='" + pageLanguage + "';\n"
                     + "window.JET_NOTE_DICTIONARY_STRINGS=" + dictionaryStrings.toString() + ";\n"
                     + "window.JET_NOTE_NATIVE_AUDIO_URLS=" + new JSONArray(observedAudioUrls).toString() + ";\n"
                     + new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8);
             dictionaryWebView.evaluateJavascript(script,null);
-        }catch(java.io.IOException e){showDownloadStatus("Unable to load the audio capture script",false);}
+        } catch (java.io.IOException | org.json.JSONException e) {
+            showDownloadStatus(UiLanguage.text(activity, "toolLoadCaptureScriptFailed"), false);
+        }
     }
 
     private void injectAudioObserver() {
@@ -579,7 +572,7 @@ final class DictionaryController {
         view.setWebChromeClient(new WebChromeClient() {
             @Override
             public boolean onJsAlert(WebView webView, String url, String message, JsResult result) {
-                showDownloadStatus(message == null ? "Notice" : message, false);
+                showDownloadStatus(message == null ? UiLanguage.text(activity, "commonNotice") : message, false);
                 result.confirm();
                 return true;
             }
@@ -656,7 +649,7 @@ final class DictionaryController {
         if (uri == null || !DOWNLOAD_SCHEME.equalsIgnoreCase(uri.getScheme())) return false;
         String raw = uri.getQueryParameter("url");
         if (raw == null || raw.isEmpty()) {
-            showDownloadStatus("No downloadable audio URL was found.", false);
+            showDownloadStatus(UiLanguage.text(activity, "dictionaryNoDownloadableAudioUrl"), false);
             return true;
         }
         offerDownload(raw, null, null, mimeFromUrl(raw));
@@ -676,7 +669,7 @@ final class DictionaryController {
 
     private void offerDownload(String url, String userAgent, String disposition, String mime) {
         if (url == null || !url.startsWith("https://")) {
-            showDownloadStatus("Unsupported audio URL", false);
+            showDownloadStatus(UiLanguage.text(activity, "dictionaryUnsupportedAudioUrl"), false);
             return;
         }
 
@@ -687,7 +680,7 @@ final class DictionaryController {
                 : userAgent;
         final String requestCookie = CookieManager.getInstance().getCookie(url);
         final String requestReferer = dictionaryWebView == null ? null : dictionaryWebView.getUrl();
-        showDownloadStatus("Adding audio to post…", true);
+        showDownloadStatus(UiLanguage.text(activity, "dictionaryAddingAudioToPost"), true);
 
         audioImportExecutor.execute(() -> {
             HttpURLConnection connection = null;
@@ -752,12 +745,12 @@ final class DictionaryController {
                                 + addedMetadata.toString() + ") : 'missing-handler')",
                         result -> {
                             if ("\"added\"".equals(result) || "\"duplicate\"".equals(result)) {
-                                showDownloadStatus("Audio added to post: " + promptName, true);
+                                showDownloadStatus(UiLanguage.format(activity, "dictionaryAudioAddedToPostStatus", "fileName", promptName), true);
                                 showOptionalLocalSaveDialog(url, userAgent, disposition, promptMime, promptName);
                             } else {
                                 String path = addedMetadata.optString("path", "");
                                 if (!path.isEmpty()) attachmentStore.deleteArchivePath(path);
-                                showDownloadStatus("Could not add audio to the current post", false);
+                                showDownloadStatus(UiLanguage.text(activity, "dictionaryAudioAddFailed"), false);
                             }
                         }
                 ));
@@ -777,79 +770,34 @@ final class DictionaryController {
             String url, String userAgent, String disposition, String mime, String fileName
     ) {
         if (activity.isFinishing()) return;
+        String title = UiLanguage.text(activity, "dictionaryAudioAddedTitle");
+        String prompt = UiLanguage.text(activity, "dictionaryAudioSaveLocalPrompt")
+                .replace("{fileName}", fileName == null ? "" : fileName);
         new android.app.AlertDialog.Builder(activity)
-                .setTitle("Audio added to post")
-                .setMessage("Also save " + fileName + " to local storage?")
-                .setPositiveButton("Download", (dialog, which) ->
+                .setTitle(title)
+                .setMessage(prompt)
+                .setPositiveButton(UiLanguage.text(activity, "dictionaryAudioDownload"), (dialog, which) ->
                         startDownload(url, userAgent, disposition, mime))
-                .setNeutralButton("Save as…", (dialog, which) ->
+                .setNeutralButton(UiLanguage.text(activity, "dictionaryAudioSaveAs"), (dialog, which) ->
                         audioSaver.choose(url, dictionaryWebView, fileName, mime))
-                .setNegativeButton("Not now", null)
+                .setNegativeButton(UiLanguage.text(activity, "dictionaryAudioNotNow"), null)
                 .show();
     }
 
     private void startDownload(String url, String userAgent, String contentDisposition, String mimeType) {
-        Uri uri;
-        try {
-            uri = Uri.parse(url);
-        } catch (RuntimeException e) {
-            showDownloadStatus("Download failed: invalid audio URL", false);
-            return;
+        String ua = userAgent;
+        if ((ua == null || ua.isEmpty()) && dictionaryWebView != null) {
+            ua = dictionaryWebView.getSettings().getUserAgentString();
         }
-        String scheme = uri.getScheme();
-        if (!"https".equalsIgnoreCase(scheme)) {
-            showDownloadStatus("Download failed: unsupported URL", false);
-            return;
-        }
-
-        String resolvedMime = mimeType;
-        if (resolvedMime == null || resolvedMime.trim().isEmpty() || "application/octet-stream".equals(resolvedMime)) {
-            resolvedMime = mimeFromUrl(url);
-        }
-        String fileName = safeDownloadName(URLUtil.guessFileName(url, contentDisposition, resolvedMime));
-
-        try {
-            DownloadManager.Request request = new DownloadManager.Request(uri);
-            request.setTitle(fileName);
-            request.setDescription("Jet Note " + pageTitle + " audio");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-            request.setAllowedOverMetered(true);
-            request.setAllowedOverRoaming(true);
-            if (resolvedMime != null) request.setMimeType(resolvedMime);
-
-            String ua = userAgent;
-            if ((ua == null || ua.isEmpty()) && dictionaryWebView != null) {
-                ua = dictionaryWebView.getSettings().getUserAgentString();
-            }
-            if (ua != null && !ua.isEmpty()) request.addRequestHeader("User-Agent", ua);
-
-            String cookie = CookieManager.getInstance().getCookie(url);
-            if (cookie != null && !cookie.isEmpty()) request.addRequestHeader("Cookie", cookie);
-            if (dictionaryWebView != null && dictionaryWebView.getUrl() != null) {
-                request.addRequestHeader("Referer", dictionaryWebView.getUrl());
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
-            } else {
-                request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, fileName);
-            }
-
-            DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
-            if (manager == null) throw new IllegalStateException("DownloadManager unavailable");
-            ensureDownloadReceiver();
-            long id = manager.enqueue(request);
-            activeDownloads.put(id, fileName);
-            showDownloadStatus("Download started: " + fileName, true);
-        } catch (RuntimeException e) {
-            showDownloadStatus("Download failed: " + fileName, false);
-        }
+        String cookie = CookieManager.getInstance().getCookie(url);
+        String referer = dictionaryWebView == null ? null : dictionaryWebView.getUrl();
+        FileTaskManager.downloadUrl(activity, url, ua, cookie, referer);
     }
 
     private void reportDownloadResult(long id, String fileName) {
         DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) {
-            showDownloadStatus("Unknown download status: " + fileName, false);
+            showDownloadStatus(UiLanguage.format(activity, "dictionaryUnknownDownloadStatus", "fileName", fileName), false);
             return;
         }
 
@@ -862,9 +810,9 @@ final class DictionaryController {
         } catch (RuntimeException ignored) { }
 
         if (status == DownloadManager.STATUS_SUCCESSFUL) {
-            showDownloadStatus("Download complete: " + fileName, true);
+            showDownloadStatus(UiLanguage.format(activity, "dictionaryDownloadComplete", "fileName", fileName), true);
         } else {
-            showDownloadStatus("Download failed: " + fileName, false);
+            showDownloadStatus(UiLanguage.format(activity, "dictionaryDownloadFailed", "fileName", fileName), false);
         }
     }
 
@@ -888,15 +836,7 @@ final class DictionaryController {
     }
 
     private void showDownloadStatus(String text, boolean success) {
-        activity.runOnUiThread(() -> {
-            Toast.makeText(activity, text, Toast.LENGTH_SHORT).show();
-            if (downloadStatus == null) return;
-            downloadStatus.removeCallbacks(hideStatusRunnable);
-            downloadStatus.setText(text);
-            downloadStatus.setTextColor(success ? 0xff146c3a : 0xffa32929);
-            downloadStatus.setVisibility(View.VISIBLE);
-            downloadStatus.postDelayed(hideStatusRunnable, success ? 4500L : 6000L);
-        });
+        activity.runOnUiThread(() -> Toast.makeText(activity, text, Toast.LENGTH_SHORT).show());
     }
 
     private static String mimeFromUrl(String url) {

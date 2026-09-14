@@ -1,6 +1,6 @@
 /**
  * Tool behavior registry.
- * IDs (tool_1 / toolbox_tool_1) identify UI entries; behavior dispatch uses action/url only.
+ * IDs (tool_1 / tool_m1 / toolbox_1) identify UI entries; behavior dispatch uses action/url only.
  * The optional `name` metadata is intentionally never read here.
  */
 const ToolActions = (() => {

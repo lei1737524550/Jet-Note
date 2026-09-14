@@ -1,7 +1,7 @@
 /* Shared visual tokens apply to both timeline and journal at actual CSS size. */
 .text-content{ font-size:var(--three-post-one-body-font-size,var(--body-size)); line-height:var(--body-leading); letter-spacing:.1px; }
 .more{ position:absolute; top:0; right:0; width:44px; height:44px; padding:10px; display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; background:transparent; font-size:0; line-height:1; letter-spacing:0; }
-.more svg{ display:block; width:24px; height:24px; fill:currentColor; }
+.more svg, .more img{ display:block; width:24px; height:24px; fill:currentColor; }
 /* Every full-screen route reserves its own safe content area. */
 .settings-screen,.crop-screen { height:var(--viewport-height,100dvh); padding-left:var(--safe-left); padding-right:var(--safe-right); }
 .post-compose-screen {
@@ -14,6 +14,7 @@
 .settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:var(--page-background); }
 #postComposerText{ font-size:var(--new-post-font-size,var(--body-size)); line-height:var(--body-leading); }
 .image-viewer-close { top:calc(var(--safe-top) + 8px); }
+.image-viewer-background-switch { top:calc(var(--safe-top) + 8px); }
 /* Canvas coordinates are independent of CSS display size. */
 .crop-screen { position:fixed; inset:0; width:100%; z-index:40000; padding-top:var(--safe-top); padding-bottom:var(--content-bottom,var(--safe-bottom)); }
 .crop-screen.open { display:flex; flex-direction:column; }

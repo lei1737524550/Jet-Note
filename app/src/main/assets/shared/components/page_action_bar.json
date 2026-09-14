@@ -1,0 +1,65 @@
+{
+  "appearance": {
+    "height": 50,
+    "controlHeight": 36,
+    "titleSize": 16,
+    "controlTextSize": 14,
+    "leftAxis": 44,
+    "rightAxis": 44,
+    "iconButtonWidth": 48,
+    "textButtonMinWidth": 48,
+    "controlRadius": 14,
+    "background": "#f8f9fa",
+    "borderColor": "#bfc1c4",
+    "dividerColor": "#eceef1",
+    "titleColor": "#202124",
+    "normalTextColor": "#222222",
+    "primaryTextColor": "#1599e8",
+    "toolActionTextColor": "#168a45",
+    "shadowElevation": 2
+  },
+  "pages": {
+    "settings_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "shared/icons/back_chevron.svg",
+      "left_button_action_name": "close_settings",
+      "right_button_content_type": "none",
+      "right_button_string_or_asset_path": "none",
+      "right_button_action_name": "none",
+      "left_button_accessibility_label_language_key": "common.back",
+      "center_string_language_key": "settings.page_title"
+    },
+    "new_post_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "shared/icons/close.svg",
+      "left_button_action_name": "cancel_post_composer",
+      "right_button_content_type": "asset_path",
+      "right_button_string_or_asset_path": "shared/icons/send_blue.svg",
+      "right_button_action_name": "publish_post",
+      "center_string_language_key": "post_composer.new_post_title",
+      "left_button_accessibility_label_language_key": "common.cancel",
+      "right_button_accessibility_label_language_key": "post_composer.post_action"
+    },
+    "edit_post_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "shared/icons/close.svg",
+      "left_button_action_name": "cancel_post_composer",
+      "right_button_content_type": "asset_path",
+      "right_button_string_or_asset_path": "shared/icons/send_blue.svg",
+      "right_button_action_name": "publish_post",
+      "center_string_language_key": "post_composer.edit_post_title",
+      "left_button_accessibility_label_language_key": "common.cancel",
+      "right_button_accessibility_label_language_key": "post_composer.save_action"
+    },
+    "tools_page": {
+      "left_button_content_type": "asset_path",
+      "left_button_string_or_asset_path": "shared/icons/back_chevron.svg",
+      "left_button_action_name": "close_tools",
+      "right_button_content_type": "none",
+      "right_button_string_or_asset_path": "none",
+      "right_button_action_name": "none",
+      "center_string_language_key": "tools.page_title",
+      "left_button_accessibility_label_language_key": "common.back"
+    }
+  }
+}

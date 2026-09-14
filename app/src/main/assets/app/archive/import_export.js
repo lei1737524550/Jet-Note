@@ -1,5 +1,6 @@
 let pendingArchive=null;
-let archiveOperationState={operation:'',phase:'',active:false};
+let archiveOperationState={operation:'',phase:'',active:false,cancelling:false};
+let archiveFallbackCancellationRequested=false;
 function archiveMessage(operation,phase,done=0,total=0,fallback=''){
   const keyMap={
     'export:prepare':'archivePreparingExport','export:archive':'archivePackingAttachments',
@@ -13,15 +14,47 @@ function archiveMessage(operation,phase,done=0,total=0,fallback=''){
   let value=key?t(key):fallback;
   return value||fallback||((operation==='export'?'Export':'Import')+' in progress…');
 }
-function setArchiveOperationState(operation='',phase='',active=false){
-  archiveOperationState={operation:String(operation||''),phase:String(phase||''),active:!!active};
-  const cancel=document.getElementById('archiveProgressCancelButton');
-  if(cancel) cancel.hidden=!(archiveOperationState.active&&archiveOperationState.operation==='export');
+function setArchiveOperationState(operation='',phase='',active=false,cancelling=false){
+  const nextOperation=String(operation||'');
+  const keepCancelling=!!active&&archiveOperationState.cancelling&&archiveOperationState.operation===nextOperation;
+  archiveOperationState={operation:nextOperation,phase:String(phase||''),active:!!active,cancelling:!!cancelling||keepCancelling};
+  const stop=document.getElementById('archiveStopButton');
+  const exportButton=document.querySelector('.backup-card .settings-option-grid button:nth-child(1)');
+  const importButton=document.querySelector('.backup-card .settings-option-grid button:nth-child(2)');
+  if(stop)stop.disabled=!archiveOperationState.active||archiveOperationState.cancelling;
+  if(exportButton)exportButton.disabled=archiveOperationState.active;
+  if(importButton)importButton.disabled=archiveOperationState.active;
+}
+function archiveCancelledError(){
+  const error=new Error('Archive operation cancelled');
+  error.name='AbortError';
+  return error;
+}
+function throwIfArchiveFallbackCancelled(){
+  if(archiveFallbackCancellationRequested)throw archiveCancelledError();
 }
 function cancelArchiveOperation(){
-  if(!archiveOperationState.active)return;
-  if(archiveOperationState.operation==='export'&&window.JetNoteNative?.cancelArchiveOperation){
-    window.JetNoteNative.cancelArchiveOperation('export');
+  if(!archiveOperationState.active||archiveOperationState.cancelling)return;
+  const operation=archiveOperationState.operation;
+  setArchiveOperationState(operation,archiveOperationState.phase,true,true);
+  archiveFallbackCancellationRequested=true;
+  archiveStatus(t('archiveStopping')||'Stopping…');
+  if(window.JetNoteNative?.cancelArchiveOperation){
+    window.JetNoteNative.cancelArchiveOperation(operation);
+    return;
+  }
+  if(operation==='import'){
+    pendingArchive=null;
+    document.getElementById('importPreview')?.classList.remove('open');
+    entriesBusy=false;
+    setArchiveOperationState('', '', false);
+    clearArchiveProgress();
+    archiveStatus(t('archiveImportCancelled'));
+  }else if(operation==='export'){
+    entriesBusy=false;
+    setArchiveOperationState('', '', false);
+    clearArchiveProgress();
+    archiveStatus(t('archiveExportCancelled'));
   }
 }
 function archiveStatus(message){
@@ -55,8 +88,6 @@ function setArchiveProgress({message='',done=0,total=0,percent=0,finished=false,
   if(track)track.setAttribute('aria-valuenow',String(Math.round(p)));
   bytes.textContent=total>0?(formatTransferBytes(done)+' / '+formatTransferBytes(total)):'';
   box.classList.toggle('error',!!error);
-  const cancel=document.getElementById('archiveProgressCancelButton');
-  if(cancel) cancel.hidden=!(archiveOperationState.active&&archiveOperationState.operation==='export');
   if(finished&&!error)archiveProgressHideTimer=setTimeout(()=>{box.hidden=true;},2200);
 }
 function clearArchiveProgress(delay=0){
@@ -74,24 +105,35 @@ async function exportArchive(){
     return;
   }
   entriesBusy=true;
+  archiveFallbackCancellationRequested=false;
+  setArchiveOperationState('export','prepare',true);
   archiveStatus(t('exporting'));
   setArchiveProgress({message:'Preparing export…',percent:0});
   try{
-    const snapshot=await EntryStore.read(),bytes=await ArchiveCodec.exportSnapshot({
+    const snapshot=await EntryStore.read();
+    throwIfArchiveFallbackCancelled();
+    const bytes=await ArchiveCodec.exportSnapshot({
       ...snapshot
-    }),name='JetNote_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jnote',blob=new Blob([bytes],{
+    });
+    throwIfArchiveFallbackCancelled();
+    const name='JetNote_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jnote',blob=new Blob([bytes],{
       type:'application/vnd.jnote+zip'
     }),url=URL.createObjectURL(blob),link=document.createElement('a');
     link.href=url;
     link.download=name;
     link.click();
     setTimeout(()=>URL.revokeObjectURL(url),60000);
+    throwIfArchiveFallbackCancelled();
     archiveStatus(t('exportDone'));
+    setArchiveOperationState('', '', false);
   }catch(error){
-    archiveStatus(t('transferFailed')+error.message);
+    if(error?.name==='AbortError')archiveStatus(t('archiveExportCancelled'));
+    else archiveStatus(t('transferFailed')+error.message);
   }
   finally{
     entriesBusy=false;
+    archiveFallbackCancellationRequested=false;
+    setArchiveOperationState('', '', false);
   }
 }
 async function selectArchive(event){
@@ -99,18 +141,26 @@ async function selectArchive(event){
   event.target.value='';
   if(!file||entriesBusy||!entriesReady)return;
   entriesBusy=true;
+  archiveFallbackCancellationRequested=false;
+  setArchiveOperationState('import','read',true);
   archiveStatus(t('validating'));
   try{
     if(file.size>ARCHIVE_MAX)throw Error('Backup exceeds 128 MiB');
-    pendingArchive=ArchiveCodec.validate(new Uint8Array(await file.arrayBuffer()));
+    throwIfArchiveFallbackCancelled();
+    const raw=await file.arrayBuffer();
+    throwIfArchiveFallbackCancelled();
+    pendingArchive=ArchiveCodec.validate(new Uint8Array(raw));
+    throwIfArchiveFallbackCancelled();
     showImportPreview();
   }catch(error){
     pendingArchive=null;
-    archiveStatus(t('transferFailed')+error.message);
-    alert(t('transferFailed')+error.message);
+    if(error?.name==='AbortError')archiveStatus(t('archiveImportCancelled'));
+    else{archiveStatus(t('transferFailed')+error.message);alert(t('transferFailed')+error.message);}
   }
   finally{
     entriesBusy=false;
+    archiveFallbackCancellationRequested=false;
+    setArchiveOperationState('', '', false);
   }
 }
 function showImportPreview(){
@@ -123,6 +173,8 @@ function closeImportPreview(){
   if(entriesBusy)return;
   if(pendingArchive?.nativeToken)JetNoteNative.rollbackImport(pendingArchive.nativeToken);
   pendingArchive=null;
+  archiveFallbackCancellationRequested=false;
+  setArchiveOperationState('', '', false);
   document.getElementById('importPreview')?.classList.remove('open');
 }
 async function importSnapshot(incoming, mode) {
@@ -130,7 +182,9 @@ async function importSnapshot(incoming, mode) {
     throw Error('Invalid import mode');
   }
 
+  throwIfArchiveFallbackCancelled();
   const current = (await EntryStore.read()) || { posts: [] };
+  throwIfArchiveFallbackCancelled();
   const localPosts = enforceSingleSuperStar(Array.isArray(current.posts) ? current.posts : []);
   const importedPosts = enforceSingleSuperStar(Array.isArray(incoming.posts) ? incoming.posts : []);
   const importedMedia = Array.isArray(incoming.media) ? incoming.media : [];
@@ -213,6 +267,7 @@ async function importSnapshot(incoming, mode) {
    */
   if (mode !== 'replace') {
     for (const media of importedMedia) {
+      throwIfArchiveFallbackCancelled();
       const local = await EntryStore.media(media.id);
       if (local && local.sha256 !== media.sha256) {
         throw Error('Attachment ID collision');
@@ -220,16 +275,32 @@ async function importSnapshot(incoming, mode) {
     }
   }
 
+  const originalMedia=[];
+  for(const attachment of localPosts.flatMap(item=>item.attachments||[])){
+    throwIfArchiveFallbackCancelled();
+    const record=await EntryStore.media(attachment.id);
+    if(record)originalMedia.push(record);
+  }
+  let importCommitted=false;
   try {
+    throwIfArchiveFallbackCancelled();
     await EntryStore.commit(nextPosts, importedMedia);
+    importCommitted=true;
+    throwIfArchiveFallbackCancelled();
 
     if (mode === 'replace') {
       const referencedMediaIds = new Set(
         nextPosts.flatMap(item => (item.attachments || []).map(a => String(a.id)))
       );
       await EntryStore.removeUnreferencedMedia(referencedMediaIds);
+      throwIfArchiveFallbackCancelled();
     }
   } catch (error) {
+    if(error?.name==='AbortError'&&importCommitted){
+      await EntryStore.commit(localPosts,originalMedia);
+      const originalIds=new Set(localPosts.flatMap(item=>(item.attachments||[]).map(a=>String(a.id))));
+      await EntryStore.removeUnreferencedMedia(originalIds);
+    }
     throw error;
   }
 
@@ -242,6 +313,8 @@ async function confirmArchiveImport(){
   if (!isWorkspaceWritable()) return;
   if(!pendingArchive||entriesBusy)return;
   entriesBusy=true;
+  archiveFallbackCancellationRequested=false;
+  setArchiveOperationState('import','commit',true);
   archiveStatus(t('importing'));
   setArchiveProgress({message:'Committing import…',percent:75});
   if(pendingArchive.nativeToken){
@@ -253,11 +326,13 @@ async function confirmArchiveImport(){
     const stats=await importSnapshot(pendingArchive,document.getElementById('importMode').value);
     finishImport(stats);
   }catch(error){
-    archiveStatus(t('transferFailed')+error.message);
-    alert(t('transferFailed')+error.message);
+    if(error?.name==='AbortError')archiveStatus(t('archiveImportCancelled'));
+    else{archiveStatus(t('transferFailed')+error.message);alert(t('transferFailed')+error.message);}
   }
   finally{
     entriesBusy=false;
+    archiveFallbackCancellationRequested=false;
+    setArchiveOperationState('', '', false);
   }
 }
 function finishImport(stats){
@@ -271,6 +346,8 @@ function chooseArchive(){
   if(entriesBusy||!entriesReady)return;
   if(window.JetNoteNative?.importJetNote){
     entriesBusy=true;
+    archiveFallbackCancellationRequested=false;
+    setArchiveOperationState('import','select',true);
     archiveStatus(t('validating'));
     setArchiveProgress({message:'Choose a backup file…',percent:0});
     JetNoteNative.importJetNote('merge');
@@ -278,6 +355,8 @@ function chooseArchive(){
 }
 async function exportNativeArchive(){
   entriesBusy=true;
+  archiveFallbackCancellationRequested=false;
+  setArchiveOperationState('export','prepare',true);
   archiveStatus(t('exporting'));
   setArchiveProgress({message:'Preparing export data…',percent:0});
   try{
@@ -287,7 +366,7 @@ async function exportNativeArchive(){
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
     setArchiveOperationState('export','select',true);
-    archiveStatus(t('chooseDestination'));
+    archiveStatus(t('fileTaskExportDefaultDestinationStatus'));
   }catch(error){
     entriesBusy=false;
     archiveStatus(t('transferFailed')+error.message);
@@ -316,11 +395,12 @@ window.JetNoteArchive={
       pendingArchive.nativeToken=token;
       showImportPreview();
       entriesBusy=false;
+      setArchiveOperationState('import','ready',true);
     }catch(error){
       JetNoteNative.rollbackImport(token);
       entriesBusy=false;
-      archiveStatus(t('transferFailed')+error.message);
-      alert(t('transferFailed')+error.message);
+      if(error?.name==='AbortError')archiveStatus(t('archiveImportCancelled'));
+      else{archiveStatus(t('transferFailed')+error.message);alert(t('transferFailed')+error.message);}
     }
   },
   async onMediaCommitted(token){
@@ -331,23 +411,27 @@ window.JetNoteArchive={
     }
     try{
       setArchiveProgress({message:'Committing note data…',percent:96});
+      archiveFallbackCancellationRequested=false;
+      setArchiveOperationState('import','database',true);
       const stats=await importSnapshot(pendingArchive,pendingArchive.selectedMode);
+      setArchiveOperationState('import','finalize',true,true);
       JetNoteNative.finalizeImport(token);
       finishImport(stats);
     }catch(error){
       JetNoteNative.rollbackImport(token);
       pendingArchive=null;
       document.getElementById('importPreview')?.classList.remove('open');
-      archiveStatus(t('transferFailed')+error.message);
-      alert(t('transferFailed')+error.message);
+      if(error?.name==='AbortError')archiveStatus(t('archiveImportCancelled'));
+      else{archiveStatus(t('transferFailed')+error.message);alert(t('transferFailed')+error.message);}
     }finally{
       entriesBusy=false;
+      archiveFallbackCancellationRequested=false;
     }
   },
   onError(message){
     entriesBusy=false;
     setArchiveOperationState('', '', false);
-    if(message==='Import cancelled'){clearArchiveProgress();archiveStatus(message);return;}
+    if(message==='Import cancelled'){pendingArchive=null;document.getElementById('importPreview')?.classList.remove('open');clearArchiveProgress();archiveStatus(t('archiveImportCancelled'));return;}
     setArchiveProgress({message:message,percent:0,error:true});
     archiveStatus(t('transferFailed')+message);
     if(pendingArchive?.nativeToken){
@@ -368,3 +452,5 @@ window.JetNoteArchive={
     if(!success)alert(label);
   }
 };
+
+queueMicrotask(()=>setArchiveOperationState('', '', false));

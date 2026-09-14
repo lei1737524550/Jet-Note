@@ -1,18 +1,18 @@
 {
-  "schema_version": 4,
+  "schema_version": 7,
   "purpose": "Shared UI terminology and naming language for Jet Note development.",
   "regions": {
     "top_post": {
       "display_name": "Top Post",
-      "description": "The special post area at the top of the main page. It can show either the configured default string or the current Super Star post."
+      "description": "The first semantic region inside three_post_one_body. It owns the top post surface and may render welcome_post when no Super Star post occupies the region."
     },
     "post_composer": {
       "display_name": "Post Composer",
-      "description": "The post creation entry area containing the Write something field and the video, image, and audio entry buttons."
+      "description": "The dedicated creation-entry region inside three_post_one_body. Use post_composer consistently; do not call this region write_sth, feed_composer, composer_area, or similar aliases."
     },
     "main_posts": {
       "display_name": "Main Posts",
-      "description": "The primary scrolling area that displays normal posts and ordinary starred posts."
+      "description": "The primary published-post region inside three_post_one_body. Use main_posts consistently for its container, configuration, selectors, and documentation."
     },
     "color_view": {
       "display_name": "Color View",
@@ -25,6 +25,10 @@
     "system_safe_area": {
       "display_name": "System Safe Area",
       "description": "The device-dependent inset reserved for display cutouts, hidden/visible system bars, and other physical screen obstructions. In the Android app, WindowInsets is the only authoritative source for this geometry."
+    },
+    "welcome_post": {
+      "display_name": "Welcome Post",
+      "description": "The welcome-state content rendered inside top_post when no Super Star post occupies Top Post. welcome_post is not a fourth member of Three Posts, One Body."
     }
   },
   "layout_terms": {
@@ -94,7 +98,7 @@
     },
     "main_status_bar_time": {
       "display_name": "Main Status Bar Time",
-      "description": "The HH:mm time display in the main status bar. Its alignment is scoped to its assigned quarter and should avoid assumptions about the physical center of the device screen."
+      "description": "The configurable date/time text display in the main status bar. Its format is controlled by config.json -> main_status_bar -> _main_status_bar_datetime_format_pattern."
     },
     "main_status_bar_settings_region": {
       "display_name": "Main Status Bar Settings Region",
@@ -123,16 +127,80 @@
     },
     "system_safe_area_single_source": {
       "description": "System safe-area geometry must have one owner. Android WindowInsets provides the values; CSS consumes the resulting variables. Do not add env(safe-area-inset-*) or a second guessed top padding on top of the native inset."
+    },
+    "three_post_one_body_canonical_names": {
+      "english": "Use exactly three canonical region names inside three_post_one_body: top_post, post_composer, and main_posts. The top-post empty/default state is named welcome_post. Do not introduce post_1/post_2/post_3, write_sth, feed_composer, composer_area, top_post_default, or other parallel aliases."
     }
   },
   "concepts": {
     "three_posts_one_body": {
       "display_name": "Three Posts, One Body",
-      "description": "Top Post, Post Composer, and Main Posts are the three primary regions of the Jet Note main page. They form one integrated page body and should follow one coherent visual language, while each region keeps its own layout responsibility, behavior, and independently scoped styles or configuration.",
+      "description": "Top Post, Post Composer, and Main Posts are the three canonical regions of the Jet Note home body. welcome_post is a state/content configuration inside top_post rather than a fourth region.",
       "members": [
         "top_post",
         "post_composer",
         "main_posts"
+      ],
+      "top_post_welcome_state": "welcome_post"
+    },
+    "settings_module_model": {
+      "display_name": "Settings Module Model",
+      "description": "Settings page features use stable positional code identities setting_1, setting_2, setting_3, ... . Feature labels such as Color View, Date/Time Viewer, Backup, and Debug are metadata and must not replace the setting_N identity.",
+      "current_order": {
+        "setting_1": {
+          "name": "Color View",
+          "dom_id": "colorViewCard"
+        },
+        "setting_2": {
+          "name": "Date/Time Viewer",
+          "dom_id": "dateTimeViewerCard"
+        },
+        "setting_3": {
+          "name": "Backup",
+          "dom_id": "backupSettingsCard"
+        },
+        "setting_4": {
+          "name": "Debug",
+          "dom_id": "debugSettingsCard"
+        }
+      },
+      "required_dom_format": "Every direct Settings feature module uses class `setting-box`, a unique `data-setting-id=setting_N`, and `data-setting-name`. `settings-card` may remain as the shared visual-card class.",
+      "background_contract": {
+        "set_background": "Settings page area outside setting-box modules. Source: shared/components/jet_note_type.json -> jet_note_type_background.settings.set_background.",
+        "set_body": "Every setting_* / .setting-box is a Body surface. Its module background binds directly to the canonical live Set Body color (`--jet-note-current-body-background`); ordinary box-like descendants inherit that Body surface. config.json may still describe Settings set_body as current_body, but module painting must not depend on per-feature selectors.",
+        "future_module_rule": "Adding setting_5 or later must not require a new background selector. Use the standard setting-box structure; the new module automatically uses Set Body.",
+        "exception_rule": "A deliberately special surface may opt out only with data-settings-background-exempt=true or settings-background-exempt."
+      },
+      "code_locations": {
+        "dom_and_order": "app/settings/settings.html",
+        "module_registry": "app/settings/settings.js -> rebuildSettingsModuleRegistry(); runtime metadata is exposed as window.JetNoteSettings.setting_N.name.",
+        "shared_visual_and_background_contract": "app/settings/settings.css -> .setting-box and Settings module background contract.",
+        "background_configuration": "shared/components/jet_note_type.json -> jet_note_type_background.settings",
+        "background_resolution": "shared/components/jet_note_type.js"
+      },
+      "maintenance_rules": [
+        "setting_N expresses page order and code identity; name expresses what the feature currently is.",
+        "If modules are reordered, renumber setting_N so the visible top-to-bottom order remains sequential.",
+        "Do not add per-feature Set Body selectors such as .backup-card or .color-view-card for ordinary module background inheritance.",
+        "Keep Settings layout/wrapper space on Set Background; only setting-box modules and their ordinary internal surfaces use Set Body."
+      ]
+    },
+    "ui_language_single_source": {
+      "display_name": "UI Language Single Source",
+      "description": "All user-visible English wording is stored in assets/language/english.json. WebView code reads it through shared/core/language_catalog.js and native Android code reads it through UiLanguage.java. Compatibility language facades may delegate to these shared readers but must not create another independent language cache.",
+      "web_reader": "assets/shared/core/language_catalog.js",
+      "native_reader": "java/com/ingeniousidea/space/UiLanguage.java",
+      "language_file": "assets/language/english.json",
+      "non_language_configuration": "Geometry, colors, behavior values, limits, asset paths and URLs remain in config.json rather than the language file."
+    },
+    "shared_image_viewer_modules": {
+      "display_name": "Shared Image Viewer Modules",
+      "description": "Post previews and Tool/Get Source previews reuse the same Image Viewer modules instead of maintaining page-specific viewer behavior.",
+      "modules": [
+        "assets/app/media/image_viewer/configuration.js",
+        "assets/app/media/image_viewer/background_control.js",
+        "assets/app/media/image_viewer/close_control.js",
+        "assets/app/media/image_viewer.js"
       ]
     }
   },
@@ -154,37 +222,16 @@
       ]
     },
     "jet_note_type": {
-      "english": "Jet Note Type is the centralized visual-type configuration layer. It maps semantic surfaces such as Settings, Edit Post, Tools, the shared buttom_string_buttom_bar, and three_post_one_body children to background and border-color tokens.",
-      "configuration_root": "config.json -> jet_note_type",
-      "body_content_automatic_contrast": {
-        "relative_luminance_threshold": {
-          "default": 0.5,
-          "english": "Decision threshold after RGB channels are divided by 255 and luminance is calculated as 0.2126R + 0.7152G + 0.0722B. Values above the threshold are treated as light backgrounds."
-        },
-        "light_background_foreground_color": {
-          "default": "#111111",
-          "english": "Foreground used on a light Body background. This reuses an existing Jet Note near-black color."
-        },
-        "dark_background_foreground_color": {
-          "default": "#f5f5f5",
-          "english": "Foreground used on a dark Body background. This reuses an existing Jet Note light gray color."
-        }
-      },
+      "english": "Jet Note Type is the centralized surface/background configuration layer. Three Posts, One Body backgrounds remain under jet_note_type.jet_note_type_background; Three Posts, One Body border-color timing is owned by config.json -> three_post_one_body and must not be duplicated under jet_note_type_border_color.",
+      "configuration_root": "shared/components/jet_note_type.json",
       "background_group": "jet_note_type_background",
-      "border_group": "jet_note_type_border_color",
+      "border_group": "jet_note_type_border_color (excluding three_post_one_body border rules)",
       "current_background_token": {
         "value": "current_background",
-        "english": "Resolve to the application/page background persisted by the Color View Set Background action."
-      },
-      "current_body_token": {
-        "value": "current_body",
-        "english": "Resolve to the content-surface color persisted by the Color View Set Body action. It is independent from current_background."
+        "english": "Resolve to the background currently selected and persisted by Color View."
       },
       "inheritance_rule": {
         "english": "A child surface that uses current_background must update immediately when Set Background changes the application background. Native Tool 1 / Tool 2 overlays receive the resolved value from the editor instead of falling back to white."
-      },
-      "invalid_token_safety_rule": {
-        "english": "An unknown symbolic background token must resolve to the supplied fallback color. It must never be assigned directly to a CSS custom property because that can make the surface transparent."
       },
       "three_post_one_body": {
         "children": [
@@ -192,21 +239,7 @@
           "post_composer",
           "main_posts"
         ],
-        "english": "Nested visual-type group for Top Post, Post Composer, and Main Posts. Set a child to current_body when it should follow Set Body."
-      },
-      "edit_post_right_side_tool_buttons": {
-        "children": [
-          "normal_background",
-          "tools_expanded_background"
-        ],
-        "english": "Backgrounds of the Edit Post right-side attachment buttons and the extra buttons revealed after Tools is expanded."
-      },
-      "settings_body_cards": {
-        "children": [
-          "backup",
-          "color_view"
-        ],
-        "english": "Backgrounds of the two large Settings content cards. backup controls the Backup card and its ordinary child controls. color_view controls the Color View card, its inner panel, previews, inputs, and ordinary buttons. Functional color surfaces such as the SV field, Hue strip, RGB labels, selection overlays, and feedback states keep their own colors."
+        "english": "Background-only semantic mapping for top_post, post_composer, and main_posts. Border timing for these three regions is configured by state-specific paths under three_post_one_body."
       },
       "tools_group": {
         "children": [
@@ -218,46 +251,113 @@
       }
     },
     "tool_surface_inheritance": {
-      "english": "Tool Surface Inheritance: Dictionary (Tool 1) and Sentences (Tool 2) are launched from the post editor and inherit the configured Tools background/border appearance, including the native top bar and loading surface."
+      "english": "Tool Surface Inheritance: Dictionary (Toolbox Tool 1) and Sentences (Toolbox Tool 2) are launched from the post editor and inherit the configured Tools background/border appearance, including the native top bar and loading surface."
+    },
+    "three_post_one_body_background_inheritance": {
+      "display_name": "Three Posts, One Body Internal Surface Inheritance",
+      "english": "Only explicit controls inside a real three-posts-one-body__box inherit the configured Set Body/internal_controls surface. Layout wrappers are excluded so Set Background remains visible outside real Post boxes.",
+      "configuration": "shared/components/jet_note_type.json -> jet_note_type_background.three_post_one_body.internal_controls",
+      "scope_rule": "Inheritance begins at .three-posts-one-body__box, never at .three-posts-one-body or a __layout wrapper.",
+      "explicit_exemption": "data-three-post-background-exempt=\"true\" remains available for a renderer that must own a different surface."
+    },
+    "three_post_one_body_border_rule_language": {
+      "display_name": "Three Posts, One Body Border Rule Language",
+      "configuration_root": "config.json -> three_post_one_body",
+      "state_paths": {
+        "top_post.welcome": "three_post_one_body.top_post.welcome.border_rule",
+        "top_post.super_starred": "three_post_one_body.top_post.super_starred.border_rule",
+        "post_composer": "three_post_one_body.post_composer.border_rule",
+        "main_posts.non_star": "three_post_one_body.main_posts.non_star.border_rule",
+        "main_posts.starred": "three_post_one_body.main_posts.starred.border_rule"
+      },
+      "rule_shape": {
+        "change_count": "-1, 0, or 1",
+        "sequence": "Ordered array of { color, duration_ms } entries."
+      },
+      "change_count_semantics": {
+        "-1": "Infinite loop. Apply every sequence color in order, wait duration_ms for the current color, then advance; after the final color, return to the first color and continue forever.",
+        "0": "Fixed border. Read only the first sequence color and keep it permanently. Later colors and durations are ignored.",
+        "1": "Single pass. Apply each color in order; every entry before the final color waits its duration_ms before advancing. When the final color is reached, keep it permanently; its duration_ms does not trigger another change."
+      },
+      "state_model": {
+        "top_post": [
+          "welcome",
+          "super_starred"
+        ],
+        "post_composer": [
+          "default"
+        ],
+        "main_posts": [
+          "non_star",
+          "starred"
+        ]
+      },
+      "ownership_rule": "This border-rule language is the single canonical source for Three Posts, One Body border colors, including Star and Super Star states. Do not keep parallel outer_border_color or activation-transition border fields.",
+      "activation_rule": "When a post enters starred or super_starred, restart that state border rule from sequence[0]. This preserves activation transitions expressed as change_count: 1 sequences.",
+      "naming_rule": "Use top_post.welcome, top_post.super_starred, post_composer, main_posts.non_star, and main_posts.starred. Do not reintroduce post_1/post_2/post_3 or separate Star/Super Star border-color fields."
+    },
+    "three_post_one_body_background_geometry": {
+      "display_name": "Three Posts, One Body Set Background / Set Body Geometry",
+      "english": "Three Posts, One Body has two explicit paint responsibilities. Set Background paints the unified parent and is visible anywhere no real Post box covers it. Set Body paints Top Post, Post Composer, and each Main Post. Layout wrappers stay transparent.",
+      "configuration": {
+        "set_background": "shared/components/jet_note_type.json -> jet_note_type_background.three_post_one_body.set_background",
+        "set_body": "shared/components/jet_note_type.json -> jet_note_type_background.three_post_one_body.set_body",
+        "internal_controls": "shared/components/jet_note_type.json -> jet_note_type_background.three_post_one_body.internal_controls"
+      },
+      "actual_locations": {
+        "three_posts_one_body_parent": {
+          "selector": "#threePostsOneBody.three-posts-one-body",
+          "code_location": "app/home/home.html + app/home/home.css + shared/styles/base.css",
+          "visual_location": "The unified home area surrounding Top Post, Post Composer, Main Posts, including exposed gaps around and between those boxes.",
+          "background_role": "Set Background"
+        },
+        "top_post_layout": {
+          "selector": ".home-actions.three-posts-one-body__layout",
+          "code_location": "app/home/home.html",
+          "visual_location": "The layout/padding surrounding Top Post.",
+          "background_role": "transparent layout; reveals Set Background"
+        },
+        "top_post_box": {
+          "selector": "#topPostCard.three-posts-one-body__box",
+          "code_location": "app/home/home.html + app/home/posts.js",
+          "visual_location": "The actual Top Post box, including welcome_post or Super Star content.",
+          "background_role": "Set Body"
+        },
+        "post_composer_layout": {
+          "selector": "#postComposerMount.post-composer-wrap.three-posts-one-body__layout",
+          "code_location": "app/home/home.html + shared/styles/base.css",
+          "visual_location": "The horizontal padding and external bottom gap around Post Composer.",
+          "background_role": "transparent layout; reveals Set Background"
+        },
+        "post_composer_box": {
+          "selector": "#postComposerMount .post-composer.three-posts-one-body__box",
+          "code_location": "app/home/posts.js + shared/styles/base.css",
+          "visual_location": "The actual Share / image / audio Post Composer box.",
+          "background_role": "Set Body"
+        },
+        "main_posts_layout": {
+          "selector": "#mainPosts.main-posts.three-posts-one-body__layout",
+          "code_location": "app/home/home.html + shared/styles/base.css",
+          "visual_location": "The Main Posts list layout, including horizontal padding and gaps between published posts.",
+          "background_role": "transparent layout; reveals Set Background"
+        },
+        "main_post_box": {
+          "selector": "#mainPosts article.post.three-posts-one-body__box",
+          "code_location": "app/home/posts.js + shared/styles/base.css",
+          "visual_location": "Each individual published Main Post box.",
+          "background_role": "Set Body"
+        },
+        "post_internal_controls": {
+          "selector": ".three-posts-one-body .three-posts-one-body__box ...",
+          "code_location": "app/home/home.css + app/media/media.css + app/video/video.css + shared/components/components.css",
+          "visual_location": "Explicit controls physically inside a real Post box, including attachment/audio/video/menu surfaces.",
+          "background_role": "Set Body via internal_controls"
+        }
+      },
+      "hard_rule": "Never assign current_body to .home-actions, .post-composer-wrap, .main-posts, or another layout/wrapper container. A new layout wrapper must remain transparent. A new real Post surface must opt in with three-posts-one-body__box. Internal Body inheritance must be scoped under a real Post box rather than from the entire Three Posts, One Body parent."
     }
   },
   "components": {
-    "jet_note_pill_formats": {
-      "english": "Jet Note pill formats are shared two-part control geometries. Both use one rounded outer border; child elements do not draw separate outer borders.",
-      "horizontal_pill_format": {
-        "english": "Two elements are arranged left and right inside one rounded frame, separated by one vertical divider. Both halves are equal unless another ratio is explicitly documented."
-      },
-      "vertical_pill_format": {
-        "english": "Two elements are arranged top and bottom inside one rounded frame, separated by one horizontal divider. Both halves are equal unless another ratio is explicitly documented."
-      },
-      "body_inheritance": {
-        "english": "Inside a Body-controlled surface, the outer pill, both child regions, and ordinary text inherit Body background and automatic contrast foreground. Dividers retain the configured border color."
-      }
-    },
-    "appearance_default_colors": {
-      "configuration_root": "config.json -> appearance_default_colors",
-      "background": {
-        "default": "#AED194",
-        "english": "Default application background used on first launch and by Color View Reset."
-      },
-      "body": {
-        "default": "#D2E9C2",
-        "english": "Default Body surface color used on first launch and by Color View Reset."
-      },
-      "color_view_picker_after_reset": {
-        "default": "#000000",
-        "english": "Color loaded into the Color View picker after Reset. It does not replace the configured default Background or Body colors."
-      }
-    },
-    "color_view_reset_button": {
-      "display_name": "Color View Reset Button",
-      "description": "Placed horizontally at the right side of the Color View title. It inherits the Color View Body background and automatic foreground contrast. A click persists both configured default colors and resets the picker to its configured reset color.",
-      "runtime_language_keys": [
-        "color_view.reset",
-        "color_view.reset_accessibility_label",
-        "color_view.reset_complete"
-      ]
-    },
     "buttom_string_buttom_bar": {
       "display_name": "buttom_string_buttom_bar",
       "description": "Reusable Jet Note Page Action Bar with one centered string and optional left/right buttons. The center string remains geometrically centered even when either side is none or uses content of a different width.",
@@ -311,26 +411,6 @@
       "display_name": "Set Background Button",
       "description": "Applies the single current Color View color as the persisted Jet Note application background and immediately synchronizes surfaces that follow the shared background rule."
     },
-    "set_body_button": {
-      "display_name": "Set Body Button",
-      "description": "Persists the current Color View color as the independent Body color and immediately refreshes every config.json surface that uses current_body.",
-      "runtime_language_keys": {
-        "color_view.set_body": "Visible button label; configured in assets/language/english.json.",
-        "color_view.body_set": "Success feedback after the Body color is persisted; configured in assets/language/english.json."
-      }
-    },
-    "color_view_four_action_frames": {
-      "display_name": "Color View Six Action Frames",
-      "children": [
-        "set_background",
-        "set_body",
-        "export_color",
-        "saved_background_color",
-        "saved_body_color",
-        "hex_decimal_combined_frame"
-      ],
-      "description": "A three-column by two-row layout. Row one is Set Background, Set Body, and Export Color. Row two is the saved Background value, saved Body value, and the combined HEX/DEC frame. All six outer frames use the same dimensions. HEX/DEC also controls how both saved values are displayed."
-    },
     "export_color_button": {
       "display_name": "Export Color Button",
       "description": "Generates a textual representation of the current color in the active numeric format. Decimal export uses R,G,B with English commas; HEX export uses one # followed by six hexadecimal digits."
@@ -357,7 +437,7 @@
     },
     "page_action_bar": {
       "display_name": "Page Action Bar",
-      "english": "Reusable page header for Settings, New/Edit Post, Tools, Dictionary and Sentences. It contains a left action, an absolutely centered title, and a right action. Geometry and visual tokens come from config.json -> page_action_bar; page-specific button content still comes from buttom_string_buttom_bar.",
+      "english": "Reusable page header for Settings, New/Edit Post, Tools, Dictionary and Sentences. It contains a left action, an absolutely centered title, and a right action. Geometry and visual tokens come from shared/components/page_action_bar.json -> appearance; page-specific button content comes from shared/components/page_action_bar.json -> pages.",
       "not_the_same_as": [
         "main_status_bar",
         "top_post"
@@ -365,25 +445,51 @@
     },
     "top_post": {
       "display_name": "Top Post",
-      "english": "The first post surface inside three_post_one_body. It is content, not a status bar and not a page action bar.",
+      "english": "The first canonical region inside three_post_one_body. It may contain welcome_post or a Super Star post.",
       "not_the_same_as": [
+        "welcome_post",
         "main_status_bar",
         "page_action_bar"
       ]
+    },
+    "welcome_post": {
+      "display_name": "Welcome Post",
+      "english": "The welcome-state content inside Top Post. Its text appearance is configured at config.json -> three_post_one_body.welcome_post and its string is stored at language/english.json -> ui_strings.home.welcome_post_default.",
+      "parent_region": "top_post"
+    },
+    "post_composer": {
+      "display_name": "Post Composer",
+      "english": "The second canonical region inside three_post_one_body. The code/config name is post_composer everywhere."
+    },
+    "main_posts": {
+      "display_name": "Main Posts",
+      "english": "The third canonical region inside three_post_one_body. The DOM container, selectors, configuration, and documentation use main_posts/Main Posts consistently."
     }
   },
   "post_state_terms": {
-    "no_starred_post": {
-      "display_name": "No-Starred Post",
-      "description": "A normal post with no starred state. Its border and timestamp presentation are read from the no_starred_post configuration block."
+    "non_star": {
+      "display_name": "Non-Star Main Post",
+      "description": "A normal published Main Post with no Star state.",
+      "configuration": "config.json -> three_post_one_body.main_posts.non_star",
+      "selector": "#mainPosts article.post.post-state-not-starred"
     },
-    "starred_post": {
-      "display_name": "Starred Post",
-      "description": "A normally starred post. Its state-specific border and timestamp presentation are read from the starred_post configuration block."
+    "starred": {
+      "display_name": "Starred Main Post",
+      "description": "A Starred published Main Post. Border timing and timestamp presentation live in the same canonical state block.",
+      "configuration": "config.json -> three_post_one_body.main_posts.starred",
+      "selector": "#mainPosts article.post.post-state-starred"
     },
-    "super_starred_post": {
-      "display_name": "Super-Starred Post",
-      "description": "The highest-priority starred post represented by the red star state. It is promoted to Top Post, closes stale post action UI, and returns the main page to its standard top position."
+    "super_starred": {
+      "display_name": "Super Starred Top Post",
+      "description": "A Super Star post promoted from Main Posts into Top Post. Border timing and timestamp presentation live in the Top Post state block.",
+      "configuration": "config.json -> three_post_one_body.top_post.super_starred",
+      "selector": "#topPostCard.top-post-super"
+    },
+    "welcome": {
+      "display_name": "Welcome Top Post",
+      "description": "The default Top Post state shown when no Super Star occupies Top Post.",
+      "configuration": "config.json -> three_post_one_body.top_post.welcome",
+      "selector": "#topPostCard.welcome-post"
     }
   },
   "state_and_sync_terms": {
@@ -408,7 +514,7 @@
       "description": "The startup synchronization that replays the latest native WindowInsets after the Web frontend is ready. It prevents the header from starting at an incorrect Y position and only correcting later when the keyboard, focus, or another inset event occurs."
     },
     "main_status_bar_height_semantics": {
-      "english": "main_status_bar.main_status_bar_height is the literal CSS box height of #mainStatusBar only. It does not include .phone system-safe-area padding and does not include three_post_one_body_vertical_move. 0 means exactly 0px."
+      "english": "main_status_bar.main_status_bar_height is the literal CSS box height of #mainStatusBar only. It does not include .phone system-safe-area padding and does not include three_post_one_body.vertical_move_px. 0 means exactly 0px."
     }
   },
   "configuration_terms": {
@@ -433,7 +539,7 @@
       "description": "A configuration-key naming style that intentionally favors explicit scope and responsibility over brevity to avoid future ambiguity."
     },
     "page_action_bar_config": {
-      "english": "config.json -> page_action_bar controls shared page-header geometry and colors, including height, controlHeight, axes, button widths, radius, divider and text colors."
+      "english": "shared/components/page_action_bar.json -> appearance controls shared page-header geometry and colors, including height, controlHeight, axes, button widths, radius, divider and text colors."
     },
     "main_status_bar_config": {
       "english": "config.json -> main_status_bar controls only the home battery/time/settings row and must not be reused for page headers or Top Post sizing."
@@ -441,6 +547,33 @@
     "system_safe_area_is_not_configurable_height": {
       "display_name": "System Safe Area Is Not a Configurable Height",
       "description": "Do not place a guessed cutout/status-bar height in config.json. page_action_bar.height and main_status_bar.height describe component geometry; system_safe_area is runtime device geometry supplied by Android."
+    },
+    "three_post_one_body_config": {
+      "english": "config.json -> three_post_one_body owns vertical_move_px, font_size_px, welcome_post, and the top_post state, post_composer, and main_posts state border rules."
+    },
+    "three_post_one_body_background_config": {
+      "english": "jet_note_type.jet_note_type_background.three_post_one_body contains set_background for exposed outer/gap space, set_body for the three real Post boxes (Top Post, Post Composer, Main Posts), and internal_controls for explicit controls inside those boxes. Do not restore separate wrapper background fields."
+    },
+    "new_post_text_area_height": {
+      "code_location": [
+        "app/src/main/assets/config.json",
+        "app/src/main/assets/app/post_editor/editor_config.js",
+        "app/src/main/assets/app/post_editor/post_editor.css"
+      ],
+      "meaning": "Responsive height rule for the New/Edit Post text input area. The final CSS height is resolved as clamp(viewport_height_css_px * viewport_height_ratio, minimum_px, if_viewpoint_to_tall_edit_area_height).",
+      "fields": {
+        "viewport_height_ratio": "Fraction of the current WebView layout viewport height, measured in CSS pixels.",
+        "minimum_px": "Lower bound for the textarea height in CSS pixels.",
+        "if_viewpoint_to_tall_edit_area_height": "Upper bound for the textarea height in CSS pixels.",
+        "fallback_px": "Used only when a valid viewport height cannot be read."
+      },
+      "compatibility_rule": "Do not multiply by Android density/devicePixelRatio. CSS pixels are already density-independent. Legacy numeric new_post_text_area_height values remain supported."
+    },
+    "get_source_script": {
+      "canonical_name": "get_source.js",
+      "location": "assets/get_source/ (modular page-resource capture project)",
+      "responsibility": "Shared toolbox_* page resource observation, candidate collection, result rendering, and filename long-press dispatch.",
+      "maintenance_rule": "Use the modular assets/get_source/ project: get_text.js, get_audio.js, get_image.js, get_video.js share get_source.js core and get_source/config.json."
     }
   },
   "ui_rules": {
@@ -455,6 +588,15 @@
   "implementation_rules": {
     "main_status_bar_single_owner": {
       "english": "main_status_bar.js alone reads config.json -> main_status_bar and applies its CSS variables. posts.js must not own or reinterpret main_status_bar geometry. Java owns system safe-area insets and native battery data, not the web component height."
+    },
+    "three_post_one_body_single_naming_source": {
+      "english": "Code must use welcome_post, top_post, post_composer, and main_posts as the canonical names. When old code/config uses top_post_default, write_sth, feed_composer, composer_area, postList, or similar aliases, migrate the old reference instead of adding compatibility aliases."
+    },
+    "three_post_one_body_border_rule_engine": {
+      "english": "posts.js owns one timer per canonical Three Posts, One Body state border rule. Reapplying config clears the old timer first. pagehide clears remaining timers so duplicate loops cannot survive navigation."
+    },
+    "three_post_one_body_background_ownership": {
+      "english": "Background ownership is semantic, not selector-convenience based. three-posts-one-body__layout means geometry only and must stay transparent. three-posts-one-body__box means a real Post surface and uses Set Body. The parent uses Set Background. Never add a broad descendant selector that paints Set Body across wrappers."
     }
   },
   "main_status_bar_vertical_move_semantics": {
@@ -485,6 +627,12 @@
     "_main_status_bar_battery_icon_size": {
       "english": "Controls the rendered size of the battery SVG icon inside the Main Status Bar."
     },
+    "_main_status_bar_battery_icon_horizontal_offset_px": {
+      "english": "Moves only the battery icon horizontally in CSS pixels. Positive values move it right; negative values move it left. The battery percentage text is unaffected."
+    },
+    "_main_status_bar_battery_percentage_horizontal_offset_px": {
+      "english": "Moves only the battery percentage text horizontally in CSS pixels. Positive values move it right; negative values move it left. The battery icon is unaffected."
+    },
     "_main_status_bar_settings_button_hit_area_size": {
       "english": "Controls the square touch/click hit area of the Settings button. This is the button interaction box, not the gear icon size."
     },
@@ -493,10 +641,74 @@
     },
     "_main_status_bar_time_region_right_padding": {
       "english": "Adds right-side internal padding to the time region for fine horizontal alignment of the HH:mm display inside its assigned region."
+    },
+    "_main_status_bar_time_text_horizontal_offset_px": {
+      "english": "Moves only the HH:mm time text horizontally in CSS pixels. Positive values move it right; negative values move it left without changing the time region layout."
+    },
+    "_main_status_bar_datetime_format_pattern": {
+      "english": "Java/Android-style date/time format pattern used by the home status display. HH is 24-hour, hh is 12-hour. Example: yyyy/MM/dd-HH-mm."
+    }
+  },
+  "ui_strings": {
+    "common": {
+      "back": "Back",
+      "cancel": "Cancel"
+    },
+    "home": {
+      "settings_accessibility_label": "Settings",
+      "welcome_post_default": "welcome to Jet Note"
+    },
+    "settings": {
+      "page_title": "Settings",
+      "backup_title": "Backup",
+      "export_jnote": "Export .jnote",
+      "import_jnote": "Import .jnote",
+      "preparing": "Preparing…",
+      "color_view_title": "Color View",
+      "date_time_viewer_title": "Date/Time Viewer"
+    },
+    "post_composer": {
+      "new_post_title": "New Post",
+      "edit_post_title": "Edit Post",
+      "post_action": "Post",
+      "save_action": "Save"
+    },
+    "tools": {
+      "page_title": "Tools"
+    },
+    "color_view": {
+      "preview_sample_1": "Configured sample text from language/english.json.",
+      "preview_sample_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "set_background": "Set Background",
+      "format_hex": "HEX",
+      "format_decimal": "DEC",
+      "format_selector_accessibility_label": "Color number format",
+      "export_color": "Export Color",
+      "copy": "Copy",
+      "background_set": "Background set",
+      "copied": "Copied",
+      "copy_failed": "Copy failed",
+      "sv_field_accessibility_label": "Saturation and brightness color field",
+      "hue_accessibility_label": "Hue",
+      "rgb_values_accessibility_label": "RGB values",
+      "red_accessibility_label": "Red",
+      "green_accessibility_label": "Green",
+      "blue_accessibility_label": "Blue"
+    },
+    "date_time_viewer": {
+      "reset": "Reset",
+      "pattern_label": "Date/time format pattern",
+      "preview_label": "Live preview",
+      "common_tokens": "Common pattern letters",
+      "tap_to_insert": "Tap to insert",
+      "literal_hint": "Literal text can be wrapped in single quotes.",
+      "set": "Set",
+      "applied": "Applied",
+      "invalid_pattern": "Invalid pattern"
     }
   },
   "ui_string_storage_rule": {
-    "english": "Runtime user-visible wording belongs in assets/language/english.json. config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration. This document is human-readable development guidance only and must not be loaded by the APK."
+    "english": "User-visible wording belongs in assets/language/english.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
   },
   "interaction_rules": {
     "color_view_radix_selector": {
@@ -506,5 +718,141 @@
   "interaction_transition_configuration": {
     "display_name": "Interaction Transition Configuration",
     "description": "Transient interaction feedback is configured in config.json. Post editor caret color and visible/hidden durations, Color View Copied color stages, and normal/super star activation border transitions are configuration values rather than UI strings."
+  },
+  "color_view_global_appearance_and_bottom_controls": {
+    "display_name": "Color View Global Appearance and Bottom Controls",
+    "description": "Color View only picks, formats, and copies a color. It no longer changes the application Background or Body. Those global colors are configured by config.json global_set_background and global_set_body.",
+    "config": {
+      "global_set_background": "Global Set Background color. Authoritative application Background source.",
+      "global_set_body": "Global Set Body color. Authoritative application Body source.",
+      "color_view_picker_after_reset": "Color loaded into Color View when Reset is pressed."
+    },
+    "actual_code_locations": {
+      "markup": "app/settings/settings.html -> #colorViewCard -> .color-view-format-copy-layout",
+      "layout_and_selection_visuals": "app/settings/settings.css -> .color-view-format-copy-layout, .color-view-format-pill, .color-view-copy-column",
+      "behavior": "app/settings/appearance.js -> ColorViewTool",
+      "global_appearance_loading": "app/settings/appearance.js -> loadAppearanceDefaults()"
+    },
+    "layout_contract": [
+      "Below the picker, divide the available width into two equal columns.",
+      "Left column is one vertical Jet Note capsule containing HEX Format and DEC Format; its existing selected-state effect remains.",
+      "Right column shows the current formatted color as plain text above a fixed-position Copy capsule.",
+      "The two-column parent and the current-color text must not have a visually prominent border.",
+      "Copy success continues to show the existing Copied feedback transition."
+    ]
+  },
+  "long_press_interactions": {
+    "display_name": "Long-press interaction language",
+    "description": "Canonical Jet Note long-press behaviors. A short press keeps the primary action; a deliberate long press activates the secondary maintenance/download action without also firing the short-press action.",
+    "threshold_ms": 550,
+    "rules": {
+      "image_viewer_close": {
+        "target": "Image Viewer upper-right close (×) button",
+        "short_press": "Close Image Viewer.",
+        "long_press": "Download the currently viewed image to the device Downloads/Jet Note folder.",
+        "completion_feedback": "After a successful or failed save, Android shows a native rounded Jet Note notice. A long press must not close the Viewer.",
+        "actual_code_locations": [
+          "app/media/image_viewer.html #imageViewerClose",
+          "app/media/image_viewer.js close-button long-press binding",
+          "NativeBridge.downloadViewerMedia(...) / downloadViewerImage(...) and MediaDownloadController"
+        ]
+      },
+      "video_viewer_close": {
+        "target": "Video Viewer upper-right close (×) button",
+        "short_press": "Close Video Viewer and return its playback position to the Post UI.",
+        "long_press": "Download the currently viewed video to the device Downloads/Jet Note folder.",
+        "completion_feedback": "After a successful or failed save, Android shows a native rounded Jet Note notice. A long press must not close the Viewer.",
+        "actual_code_locations": [
+          "NativeVideoViewerActivity close ImageButton",
+          "MediaDownloadController"
+        ]
+      },
+      "home_video": {
+        "target": "Inline video surface in the Home/main_posts feed.",
+        "short_press": "Keep the normal video tap/play/viewer behavior.",
+        "long_press": "Cold-refresh the video: destroy the current decoder/surface pipeline and reset the card to its first-frame poster. The reset is committed when the finger is released after the long-press threshold.",
+        "important_semantics": "This refreshes the video playback pipeline only; it does not reload the Jet Note page or erase the Post.",
+        "actual_code_locations": [
+          "NativeVideoPlayer LONG_PRESS_MS / armLongPressReset() / coldResetFromLongPress()",
+          "app/video/video_player.js window.__jetNativeVideoReset"
+        ]
+      },
+      "toolbox_page_source_action": {
+        "canonical_scope": "Every current and future toolbox_N page",
+        "target": "Native audio/note source-action button in ToolPageController.",
+        "short_press": "Run the page-audio discovery/action flow.",
+        "long_press": "Reload/refresh the currently opened toolbox_* web page.",
+        "actual_code_locations": [
+          "ToolPageController.createToolbar()",
+          "ToolPageController.reloadCurrentPage()",
+          "ToolPageController.runGetScript()"
+        ]
+      },
+      "toolbox_captured_source": {
+        "canonical_scope": "Every current and future New/Edit Post toolbox_N source-result sheet.",
+        "target": "Captured resource filename, including green audio resources and red non-audio resources.",
+        "short_press": "Keep the resource primary action (for recognized audio, add it to the current Post). Do not open the legacy SAVE AS / NOT NOW / DOWNLOAD dialog.",
+        "long_press": "Save the captured resource directly to Downloads/Jet Note through the shared native MediaDownloadController.",
+        "completion_feedback": "Use the same rounded Android-native Jet Note Download successful / Download failed notice as Image Viewer and Video Viewer. Legacy per-tool download feedback must not be reintroduced.",
+        "maintenance_contract": "Resource capture/result rendering is centralized in assets/get_source/. Every toolbox_N page reuses ToolPageController plus the shared core and four type modules; never copy a per-site capture implementation.",
+        "actual_code_locations": [
+          "assets/get_source/get_source.js",
+          "ToolPageController.runGetScript() / injectAudioObserver() / handleSaveScheme(...)",
+          "MediaDownloadController.saveUrl(...)"
+        ]
+      }
+    }
+  },
+  "post_editor_tools_and_toolbox": {
+    "canonical_scope": "New Post and Edit Post tool row",
+    "maximum_visible_tools_config": "config.json -> new_post_tools.maximum_visible_tools",
+    "current_maximum_visible_tools": 6,
+    "model": {
+      "tool": "Normal primary toolbar item (tool_1, tool_2, tool_3, ...).",
+      "toolbox": "Tool subclass/anchor represented by tool_m1.",
+      "toolbox_child": "Child entry represented by toolbox_1, toolbox_2, toolbox_3, ..."
+    },
+    "left_cover_expansion": "tool_m1 is the fixed Toolbox anchor. On expansion, child 1 occupies anchor-1, child 2 anchor-2, and so on. Those children temporarily cover old primary Tool slots to the LEFT. Do not append Toolbox children to the right and do not mutate the canonical tools[] array.",
+    "collapsed_example": "[tool_1 Video] [tool_2 Image] [tool_3 Audio] [tool_m1 Toolbox]",
+    "expanded_example": "[toolbox_3 Google] [toolbox_2 Sentence] [toolbox_1 Dictionary] [tool_m1 Toolbox]",
+    "keyboard_rule": "Pointer-down on tool_m1 must not transfer focus away from the editor; opening/closing Toolbox must not dismiss Gboard.",
+    "extension_rule": "Add a new primary Tool to tools[] or append a new child to tool_m1.children. Rendering is calculated from data and the config maximum; do not hard-code new HTML buttons.",
+    "toolbox_page_template": {
+      "host": "ToolPageController.java",
+      "back": "Native back control closes the current toolbox_N page and resumes the Post editor.",
+      "source_action_short_press": "Run the shared modular get_source resource capture/results UI.",
+      "source_action_long_press": "Refresh/reload only the current toolbox_N web page.",
+      "captured_source_short_press": "Keep the primary action; recognized audio is added to the current Post. Never reopen the legacy Save-As dialog.",
+      "captured_source_long_press": "Save green audio or red non-audio resources directly to Downloads/Jet Note through MediaDownloadController.",
+      "download_feedback": "Use the shared Android-native rounded Jet Note Download successful / Download failed notice."
+    },
+    "toolbox_3_network_fallback": {
+      "primary": "https://www.google.com/",
+      "fallback": "https://www.baidu.com/",
+      "timeout_config": "config.json -> new_post_tools.network_probe_timeout_ms",
+      "failure": "If both HTTP probes fail, show Android-native rounded Jet Note: Network unavailable. Do not show a WebView alert."
+    },
+    "actual_code_locations": [
+      "app/post_editor/tools/tools.json",
+      "app/post_editor/tools/tool_loader.js",
+      "app/post_editor/tools.js",
+      "app/post_editor/tools_unfold_animation.js",
+      "assets/get_source/get_source.js",
+      "ToolPageController.java",
+      "MediaDownloadController.java"
+    ]
+  },
+  "captured_source_interaction_maintenance": {
+    "play_pause_icons": "Captured-audio preview uses shared/icons/play.svg and shared/icons/pause.svg. get_audio.js must reuse shared/icons/play.svg and shared/icons/pause.svg; do not use Unicode play/pause glyphs.",
+    "filename_short_press": "Recognized green audio keeps its primary Add to Post action. Red non-audio resources have no Add to Post action.",
+    "filename_long_press": "Long-press any captured filename for about 550 ms to save it through MediaDownloadController to Downloads/Jet Note.",
+    "selection_rule": "Captured filenames are controls, not selectable webpage text. Suppress text selection, touch callout, context menu and drag during long press; a completed long press must not fire the short action."
+  },
+  "date_time_format_pattern": {
+    "display_name": "Date/Time Format Pattern",
+    "description": "Shared formatter used by the home status bar and Settings Date/Time Viewer. Common Java/Android-style pattern letters are supported; HH is 24-hour and hh is 12-hour.",
+    "config_key": "main_status_bar._main_status_bar_datetime_format_pattern",
+    "implementation": "shared/core/date_time_format.js",
+    "viewer": "app/settings/date_time_viewer.js"
   }
 }

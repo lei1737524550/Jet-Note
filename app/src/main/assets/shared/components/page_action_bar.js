@@ -2,15 +2,28 @@
   'use strict';
 
   let configPromise = null;
+  let componentPromise = null;
 
+  // Global config remains the source for genuinely runtime-tunable editor values
+  // (for example caret appearance). Page-header structure lives in its own file.
   function loadConfig() {
     if (!configPromise) {
       configPromise = fetch('config.json', { cache: 'no-store' }).then(response => {
-        if (!response.ok) throw new Error(`Page action bar config unavailable: ${response.status}`);
+        if (!response.ok) throw new Error(`Global config unavailable: ${response.status}`);
         return response.json();
       });
     }
     return configPromise;
+  }
+
+  function loadComponentConfig() {
+    if (!componentPromise) {
+      componentPromise = fetch('shared/components/page_action_bar.json', { cache: 'no-store' }).then(response => {
+        if (!response.ok) throw new Error(`Page action bar component config unavailable: ${response.status}`);
+        return response.json();
+      });
+    }
+    return componentPromise;
   }
 
   function px(value) { return `${Number(value) || 0}px`; }
@@ -143,15 +156,15 @@
     if (actionName === 'close_settings') return window.closeSettings?.();
     if (actionName === 'close_tools') return window.closeTools?.();
     if (actionName === 'open_settings') return window.openSettings?.();
-    console.warn(`Jet Note: unknown buttom_string_buttom_bar action: ${actionName}`);
+    console.warn(`Jet Note: unknown page action bar action: ${actionName}`);
   }
 
   async function renderBar(bar, pageKey) {
     if (!bar) return;
-    const config = await loadConfig();
-    const spec = config?.buttom_string_buttom_bar?.[pageKey];
+    const component = await loadComponentConfig();
+    const spec = component?.pages?.[pageKey];
     if (!spec) {
-      console.warn(`Jet Note: buttom_string_buttom_bar page config not found: ${pageKey}`);
+      console.warn(`Jet Note: page action bar page config not found: ${pageKey}`);
       return;
     }
     bar.dataset.buttomStringButtomBarPage = pageKey;
@@ -185,18 +198,18 @@
 
   async function initialize() {
     try {
-      const config = await loadConfig();
-      apply(config.page_action_bar);
-      applyEditorAppearance(config);
+      const [globalConfig, component] = await Promise.all([loadConfig(), loadComponentConfig()]);
+      apply(component.appearance);
+      applyEditorAppearance(globalConfig);
       bindConfiguredActions();
       await window.JetNoteUiLanguage?.apply?.(document);
       await renderAll();
     } catch (error) {
-      console.error('Jet Note: page action bar config failed', error);
+      console.error('Jet Note: page action bar initialization failed', error);
     }
   }
 
-  window.JetPageActionBar = { initialize, apply, applyEditorAppearance, loadConfig };
+  window.JetPageActionBar = { initialize, apply, applyEditorAppearance, loadConfig, loadComponentConfig };
   window.JetBottomStringBottomBar = { renderBar, renderAll };
   initialize();
 })();

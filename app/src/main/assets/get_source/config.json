@@ -1,0 +1,155 @@
+{
+  "maximum_candidates": 160,
+  "colors": {
+    "matched": "#168A45",
+    "unmatched": "#C73737",
+    "text": "#202124",
+    "border": "#C8CBD0"
+  },
+  "text": {
+    "extensions": [
+      "txt",
+      "md",
+      "markdown",
+      "html",
+      "htm",
+      "xhtml",
+      "css",
+      "js",
+      "mjs",
+      "cjs",
+      "json",
+      "xml",
+      "yaml",
+      "yml",
+      "csv",
+      "tsv",
+      "c",
+      "h",
+      "cc",
+      "cpp",
+      "cxx",
+      "hpp",
+      "java",
+      "kt",
+      "kts",
+      "py",
+      "pyw",
+      "sh",
+      "bash",
+      "zsh",
+      "fish",
+      "go",
+      "rs",
+      "php",
+      "rb",
+      "pl",
+      "swift",
+      "sql",
+      "ini",
+      "cfg",
+      "conf",
+      "properties",
+      "gradle",
+      "toml",
+      "log"
+    ],
+    "priority": [
+      "txt",
+      "md",
+      "markdown",
+      "html",
+      "htm",
+      "json",
+      "xml",
+      "yaml",
+      "yml",
+      "css",
+      "js",
+      "mjs",
+      "py",
+      "java",
+      "kt",
+      "c",
+      "h",
+      "cpp",
+      "hpp"
+    ]
+  },
+  "audio": {
+    "extensions": [
+      "mp3",
+      "m4a",
+      "aac",
+      "wav",
+      "ogg",
+      "opus",
+      "flac",
+      "oga",
+      "weba"
+    ],
+    "priority": [
+      "mp3",
+      "m4a",
+      "aac",
+      "wav",
+      "ogg",
+      "opus",
+      "flac"
+    ]
+  },
+  "image": {
+    "extensions": [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+      "gif",
+      "svg",
+      "avif",
+      "bmp",
+      "ico"
+    ],
+    "priority": [
+      "png",
+      "jpg",
+      "jpeg",
+      "webp",
+      "avif",
+      "gif",
+      "svg"
+    ]
+  },
+  "video": {
+    "extensions": [
+      "mp4",
+      "webm",
+      "mkv",
+      "mov",
+      "m4v",
+      "ogv",
+      "3gp",
+      "ts",
+      "m3u8"
+    ],
+    "priority": [
+      "mp4",
+      "webm",
+      "mkv",
+      "mov",
+      "m4v",
+      "m3u8"
+    ]
+  },
+  "layers": {
+    "get_source_panel_z_index": 2147483000,
+    "get_source_image_video_viewer_z_index": 2147483647
+  },
+  "background_policy": {
+    "default_source": "global_set_body",
+    "whitelist_exemptions": [
+      "image_video_viewer_backdrop",
+      "video_preview_surface"
+    ]
+  }
+}

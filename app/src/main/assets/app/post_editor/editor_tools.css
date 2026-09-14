@@ -1,8 +1,4 @@
-/* toolbox_tool entries extend the primary tools row without leaving the editor. */
-.toolbox_tool[hidden] {
-    display: none !important;
-}
-
+/* Toolbox children are real slot replacements, not an appended second row. */
 .toolbox-trigger[aria-expanded="true"] {
     background: var(--jet-note-type-edit-post-right-side-tools-expanded-button-background,#f5f6f7);
 }
@@ -13,7 +9,11 @@
     color: var(--jet-note-type-body-foreground-color,#111111);
 }
 
-/* toolbox_tool entries unfold horizontally from the tools row. */
-@keyframes toolbox-tool-unfold { from { opacity:0; transform:translateX(-6px); } to { opacity:1; transform:translateX(0); } }
-.toolbox-tool-unfolding { animation:toolbox-tool-unfold 160ms ease-out both; }
-
+/* Children appear from the toolbox anchor toward the left. */
+@keyframes toolbox-tool-unfold {
+    from { opacity:0; transform:translateX(8px); }
+    to { opacity:1; transform:translateX(0); }
+}
+.toolbox-tool-unfolding {
+    animation:toolbox-tool-unfold 160ms ease-out var(--toolbox-unfold-delay,0ms) both;
+}

@@ -8,11 +8,11 @@
 
     <div class="post-compose-body">
       <div class="post-input-row">
-        <textarea id="postComposerText" placeholder="Share something..." data-i18n-placeholder="share"></textarea>
+        <textarea id="postComposerText" placeholder="" data-language-placeholder="share"></textarea>
 
         <!-- Two fixed attachment rows intentionally consume the height removed from
              the text editor. The Tools row itself is not moved or resized. -->
-        <div class="post-compose-attachment-stack" aria-label="Post attachments">
+        <div class="post-compose-attachment-stack" aria-label="" data-language-aria-label="postAttachmentsAccessibilityLabel">
           <div class="post-compose-attachment-row post-compose-audio-row">
             <div id="postAudioDraft"></div>
           </div>
@@ -22,8 +22,8 @@
           </div>
         </div>
 
-        <!-- Primary tools (tool_*) and toolbox tools (toolbox_tool_*) are rendered from tools/tools.json. -->
-        <div class="tools" id="postEditorTools" aria-label="Post tools" data-i18n-aria-label="postTools"></div>
+        <!-- Tool/Toolbox slots are rendered from tools/tools.json; tool_m1 expands toolbox_* children leftward over primary slots. -->
+        <div class="tools" id="postEditorTools" aria-label="" data-language-aria-label="postTools"></div>
       </div>
 
     </div>

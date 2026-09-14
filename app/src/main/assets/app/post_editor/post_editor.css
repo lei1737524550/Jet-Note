@@ -18,6 +18,33 @@
   background: var(--jet-note-type-edit-post-background,var(--page-background));
 }
 
+/* New Post split entrance ---------------------------------------------------
+   The editor no longer appears as one instant full-screen cover. During a
+   user-open transition its upper and lower regions enter from opposite screen
+   edges and meet at their normal layout positions. Only transforms are
+   animated, so final geometry is unchanged and layout/reflow work stays low. */
+.post-compose-screen.composer-split-enter .post-compose-header,
+.post-compose-screen.composer-split-enter .post-compose-body {
+  will-change: transform;
+  transition: transform 320ms cubic-bezier(.22,.72,.22,1);
+}
+.post-compose-screen.composer-split-enter:not(.composer-split-enter-active) .post-compose-header {
+  transform: translate3d(0, -100vh, 0);
+}
+.post-compose-screen.composer-split-enter:not(.composer-split-enter-active) .post-compose-body {
+  transform: translate3d(0, 100vh, 0);
+}
+.post-compose-screen.composer-split-enter.composer-split-enter-active .post-compose-header,
+.post-compose-screen.composer-split-enter.composer-split-enter-active .post-compose-body {
+  transform: translate3d(0, 0, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-compose-screen.composer-split-enter .post-compose-header,
+  .post-compose-screen.composer-split-enter .post-compose-body {
+    transition-duration: 1ms;
+  }
+}
+
 /* New Post only supplies its page-specific control width/color. Its geometry
    comes entirely from the shared Jet Note Page Action Bar above. */
 .post-compose-header { }
@@ -81,11 +108,12 @@
 #postComposerText {
   display: block;
   width: 100%;
-  /* Single source of truth: config.json -> --new-post-text-area-height.
-     The tools row is intentionally outside this height so moving tools below the
-     editor never changes the configured text-area geometry. */
-  flex: 0 0 var(--new-post-text-area-height, 400px);
-  height: var(--new-post-text-area-height, 400px);
+  /* Responsive source of truth:
+     config.json new_post_text_area_height -> editor_config.js -> resolved CSS px.
+     The resolved value is clamp(viewport height * ratio, minimum_px, maximum_px).
+     Tools remain outside this geometry. */
+  flex: 0 0 var(--new-post-text-area-height, 262px);
+  height: var(--new-post-text-area-height, 262px);
   max-height: 100%;
   min-height: 0;
   box-sizing: border-box;
@@ -102,7 +130,8 @@
   font: inherit;
   font-size: var(--new-post-font-size, 17px);
   line-height: 1.55;
-  caret-color: transparent;
+  /* Native WebView caret: position stays aligned with Android selection handle. */
+  caret-color: var(--post-compose-caret-color,#14A89A);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-all;
@@ -112,15 +141,8 @@
   color: #a5a8ad;
 }
 #postComposerText::selection { background:var(--cursor-drop-color,#14A89A); color:#fff; }
-.post-compose-caret {
-  display:inline-block;
-  box-sizing:border-box;
-  width:var(--post-compose-caret-width,4px);
-  min-width:var(--post-compose-caret-width,4px);
-  height:1em;
-  background:var(--post-compose-caret-color,#14A89A);
-}
-.post-compose-caret-layer{position:absolute;z-index:2;overflow:hidden;pointer-events:none}.post-compose-caret-mirror{position:absolute;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;color:transparent;pointer-events:none}
+/* Legacy custom mirror-caret DOM is no longer rendered. Native caret positioning
+   avoids cross-WebView cumulative text-metric drift. */
 
 .post-input-row .tool,
 .post-input-row .toolbox_tool,
@@ -245,7 +267,7 @@
 
 /* Edit Post only: the musical-note glyph is optically right-heavy. Correct the
    glyph, not the button geometry, so the already-correct Tools row stays put. */
-#postEditorTools .tool[data-tool-action="sound"] svg {
+#postEditorTools .tool[data-tool-action="sound"] svg, #postEditorTools .tool[data-tool-action="sound"] img {
   transform: translateX(-1.5px);
 }
 
@@ -274,7 +296,7 @@
 .post-compose-audio-row #postAudioDraft .audio-token-play {
   margin: 0;
 }
-.post-compose-audio-row #postAudioDraft .audio-token-play svg {
+.post-compose-audio-row #postAudioDraft .audio-token-play svg, .post-compose-audio-row #postAudioDraft .audio-token-play img {
   /* Speaker path is optically right-heavy in its viewBox. Correct only the
      glyph; the button/cell geometry remains unchanged. */
   transform: translateX(-1.5px);

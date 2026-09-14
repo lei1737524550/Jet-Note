@@ -10,7 +10,7 @@ const audioLoadToken={
 };
 let postDraftMediaLoading=false;
 function isPostDraftMediaLoading(){return postDraftMediaLoading;}
-const VOLUME_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+const VOLUME_ICON='<img src="shared/icons/volume.svg" alt="" aria-hidden="true">';
 const activeAudioPlayers=[];
 let audioPlaybackConfigPromise=null;
 let cachedAudioPlaybackConfig={maxConcurrentPlayingAudios:2};
@@ -177,7 +177,7 @@ function renderAttachments(items,editable=false){
   const audio=(items||[]).filter(item=>item.type==='audio');
   const other=(items||[]).filter(item=>item.type!=='audio'&&item.type!=='image'&&item.type!=='video');
   if(!audio.length&&!other.length)return '';
-  return '<div class="attachment-strip">'+audio.map((item,index)=>`<div class="audio-token attachment-item common_border" data-media-id="${escapeHTML(item.id)}"><button class="audio-token-play common_border" type="button" aria-label="${escapeHTML(t('audioPlay'))}" title="${escapeHTML(item.originalName||t('audioPlay'))}">${VOLUME_ICON}<sub>${index+1}</sub></button><audio preload="metadata"></audio>${editable?'<button class="audio-token-remove" type="button" aria-label="'+escapeHTML(t('remove'))+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6L18 18M18 6L6 18"/></svg></button>':''}</div>`).join('')+other.map(item=>`<span class="attachment-unknown attachment-item common_border" data-media-id="${escapeHTML(item.id)}">${escapeHTML(item.type||'file')}</span>`).join('')+'</div>';
+  return '<div class="attachment-strip">'+audio.map((item,index)=>`<div class="audio-token attachment-item common_border" data-media-id="${escapeHTML(item.id)}"><button class="audio-token-play common_border" type="button" aria-label="${escapeHTML(t('audioPlay'))}" title="${escapeHTML(item.originalName||t('audioPlay'))}">${VOLUME_ICON}<sub>${index+1}</sub></button><audio preload="metadata"></audio>${editable?'<button class="audio-token-remove" type="button" aria-label="'+escapeHTML(t('remove'))+'"><img src="shared/icons/close_x.svg" alt="" aria-hidden="true"></button>':''}</div>`).join('')+other.map(item=>`<span class="attachment-unknown attachment-item common_border" data-media-id="${escapeHTML(item.id)}">${escapeHTML(item.type||'file')}</span>`).join('')+'</div>';
 }
 function releaseAttachmentUrls(container){
   if(!container)return;

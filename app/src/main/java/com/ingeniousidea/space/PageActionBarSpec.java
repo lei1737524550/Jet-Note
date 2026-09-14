@@ -10,9 +10,9 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Single native view of config.json -> page_action_bar.
- * The bundled Web UI reads the same object in page_action_bar.js, so New Post and
- * native tool pages share one geometry/visual specification instead of copied constants.
+ * Native reader for assets/shared/components/page_action_bar.json.
+ * The WebView reads the same component file, keeping native tool pages and
+ * Web page headers aligned without exposing structural UI data in config.json.
  */
 final class PageActionBarSpec {
     final int height;
@@ -54,26 +54,14 @@ final class PageActionBarSpec {
     }
 
     static PageActionBarSpec load(Context context) {
-        try {
-            // Debug config is a runtime override of the same config.json used by the
-            // Web UI. Native tool pages must read the same source or the two sides
-            // drift after a Debug Post save.
-            String source = context.getSharedPreferences("jet_note_debug_config", Context.MODE_PRIVATE)
-                    .getString("current", null);
-
-            if (source == null) {
-                try (InputStream in = context.getAssets().open("config.json")) {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[4096];
-                    int count;
-                    while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-                    source = out.toString(StandardCharsets.UTF_8.name());
-                }
-            }
-
-            JSONObject root = new JSONObject(source);
-            JSONObject pageActionBar = root.optJSONObject("page_action_bar");
-            return new PageActionBarSpec(pageActionBar == null ? new JSONObject() : pageActionBar);
+        try (InputStream input = context.getAssets().open("shared/components/page_action_bar.json");
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            JSONObject root = new JSONObject(output.toString(StandardCharsets.UTF_8.name()));
+            JSONObject appearance = root.optJSONObject("appearance");
+            return new PageActionBarSpec(appearance == null ? new JSONObject() : appearance);
         } catch (Exception ignored) {
             return new PageActionBarSpec(new JSONObject());
         }

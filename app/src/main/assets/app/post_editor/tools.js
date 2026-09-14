@@ -1,56 +1,140 @@
 /**
- * New/Edit Post tools + toolbox renderer.
+ * New/Edit Post tools renderer.
  *
- * Stable naming:
- *   tools[]         => tool_1, tool_2, tool_3, ...
- *   toolbox_tools[] => toolbox_tool_1, toolbox_tool_2, ...
+ * Canonical model:
+ *   tools = [tool_1, tool_2, tool_3, tool_m1]
+ *   tool_m1 is a Toolbox anchor.
  *
- * `name` exists only to help maintainers read/search the configuration.
- * Runtime behavior MUST NOT branch on `name`.
+ * Expanded Toolbox behavior:
+ *   child 1 occupies anchor-1, child 2 occupies anchor-2, ...
+ *   therefore expansion visually grows LEFT and temporarily covers old tools.
+ *   The canonical tools[] array is never mutated.
  */
 let toolboxUnfoldAnimationPromise = null;
 let currentToolsConfig = null;
-let currentToolsLayout = null;
+let toolboxExpanded = false;
+const animatedToolIconTimers = new Set();
 
 function toolIcon(name) {
-  const paths = {
-    video: '<rect x="3" y="5" width="13" height="14" rx="3"/><path d="m16 10 5-3v10l-5-3z"/>',
-    photo: '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/>',
-    sound: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-    tools: '<path d="M8 7V5.8C8 4.8 8.8 4 9.8 4h4.4C15.2 4 16 4.8 16 5.8V7"/><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M3 12.5h18M9.5 12.5v2h5v-2"/>',
-    dictionary: '<path d="M12 5Q7 2.5 3 4.5V20q4-2 9 1 5-3 9-1V4.5Q17 2.5 12 5v16"/>',
-    sentence: '<path d="M4 5h16v12H9l-5 4V5Z"/><path d="M8 9h8M8 13h5"/>',
+  const files = {
+    video: 'tool_video.svg',
+    photo: 'tool_photo.svg',
+    sound: 'tool_sound.svg',
+    tools: 'toolbox.svg',
+    dictionary: 'dictionary.svg',
+    sentence: 'sentences.svg',
   };
-  const path = paths[name] || paths.tools;
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+  if (name === 'google_search') return '';
+  const file = files[name] || files.tools;
+  return `<img src="shared/icons/${file}" alt="" aria-hidden="true">`;
+}
+
+function stopAnimatedToolIcons() {
+  for (const timer of animatedToolIconTimers) clearTimeout(timer);
+  animatedToolIconTimers.clear();
+}
+
+function normalizeAnimatedIconSequence(rule) {
+  const raw = Array.isArray(rule?.sequence) ? rule.sequence : [];
+  return raw.map(item => ({
+    asset: typeof item?.asset === 'string' ? item.asset.trim() : '',
+    durationMs: Math.max(0, Math.min(Number(item?.duration_ms) || 0, 86400000)),
+  })).filter(item => item.asset);
+}
+
+function applyAnimatedToolIcon(img, rule) {
+  const sequence = normalizeAnimatedIconSequence(rule);
+  if (!img || !sequence.length) return;
+
+  const changeCount = Number(rule?.change_count);
+  const mode = changeCount === -1 ? -1 : changeCount === 1 ? 1 : 0;
+  let index = 0;
+
+  const show = () => {
+    const item = sequence[index];
+    img.src = item.asset;
+
+    if (mode === 0 || sequence.length === 1 || (mode === 1 && index === sequence.length - 1)) return;
+
+    const wait = mode === -1 ? Math.max(16, item.durationMs) : item.durationMs;
+    const timer = setTimeout(() => {
+      animatedToolIconTimers.delete(timer);
+      index = (index + 1) % sequence.length;
+      show();
+    }, wait);
+    animatedToolIconTimers.add(timer);
+  };
+
+  show();
 }
 
 function toolLabel(tool) {
   return tool.labelKey ? t(tool.labelKey) : (tool.label || tool.id);
 }
 
-/** URL-based toolbox tool entry point. */
-async function openConfiguredTool(tool) {
+/** Generic URL-tool entry point shared by toolbox buttons and Browser Mode. */
+async function openConfiguredTool(tool, options = {}) {
   if (!tool?.url?.startsWith('https://')) {
     throw new Error(`Invalid configured toolbox tool: ${tool?.id}`);
   }
 
-  await EditorController.suspend(tool.id);
+  const browserMode = options?.browserMode === true;
+  if (!browserMode && options?.skipEditorSuspend !== true) {
+    await EditorController.suspend(tool.id);
+  }
   document.activeElement?.blur?.();
   const title = toolLabel(tool);
+  const fallbackTitle = String(tool?.fallbackTitle || '').trim()
+    || (() => {
+      try {
+        const host = new URL(tool?.fallbackUrl || '').hostname.toLowerCase();
+        if (host === 'baidu.com' || host.endsWith('.baidu.com')) return 'Baidu';
+      } catch (_) {}
+      return title;
+    })();
+  const fallbackBackground =
+    getComputedStyle(document.documentElement).getPropertyValue('--page-background').trim()
+    || 'rgb(255,255,255)';
+  const background =
+    (await window.JetNoteType?.toolBackground?.(tool.id)) || fallbackBackground;
+  const borderColor =
+    (await window.JetNoteType?.toolBorderColor?.(tool.id)) || '#bfc1c4';
+
+  if (window.JetNoteNative?.openToolWithFallbackMode && tool.fallbackUrl) {
+    JetNoteNative.openToolWithFallbackMode(
+      tool.url,
+      tool.fallbackUrl,
+      title,
+      fallbackTitle,
+      'en',
+      background,
+      borderColor,
+      currentToolsConfig?.networkProbeTimeoutMs || 3500,
+      browserMode
+    );
+    return;
+  }
+
+  // Compatibility path for older native hosts. Browser Mode still opens the
+  // same tool core, but title switching needs the newer bridge above.
+  if (window.JetNoteNative?.openToolWithFallback && tool.fallbackUrl) {
+    JetNoteNative.openToolWithFallback(
+      tool.url,
+      tool.fallbackUrl,
+      title,
+      'en',
+      background,
+      borderColor,
+      currentToolsConfig?.networkProbeTimeoutMs || 3500
+    );
+    return;
+  }
 
   if (window.JetNoteNative?.openTool) {
-    const fallbackBackground =
-      getComputedStyle(document.documentElement).getPropertyValue('--page-background').trim()
-      || 'rgb(255,255,255)';
-    const background =
-      (await window.JetNoteType?.toolBackground?.(tool.id)) || fallbackBackground;
-    const borderColor =
-      (await window.JetNoteType?.toolBorderColor?.(tool.id)) || '#bfc1c4';
-
     JetNoteNative.openTool(tool.url, title, 'en', background, borderColor);
     return;
   }
+
   window.open(tool.url, '_blank', 'noopener');
 }
 
@@ -61,42 +145,90 @@ function registerBuiltInToolActions() {
   ToolActions.register('sound', () => pickEntryAudio('post'));
 }
 
-function createToolButton(tool, belongsToToolbox) {
+function createToolButton(tool) {
   const button = document.createElement('button');
-  const isToolboxTrigger = tool.action === 'toolbox';
+  const isToolboxTrigger = tool.type === 'toolbox' || tool.action === 'toolbox';
+  const isToolboxChild = tool.type === 'toolbox_tool';
 
   button.type = 'button';
   button.id = tool.id;
   button.className = [
     'tool',
     'common_border',
-    belongsToToolbox ? 'toolbox_tool' : '',
+    isToolboxChild ? 'toolbox_tool' : '',
     isToolboxTrigger ? 'toolbox-trigger' : '',
   ].filter(Boolean).join(' ');
-
   button.dataset.toolId = tool.id;
+  button.dataset.toolType = tool.type || 'tool';
   button.dataset.toolAction = tool.action || '';
   button.title = toolLabel(tool);
   button.setAttribute('aria-label', button.title);
-  button.innerHTML = toolIcon(tool.icon);
-  button.hidden = belongsToToolbox;
+
+  if (tool.icon === 'google_search') {
+    const icon = document.createElement('img');
+    icon.alt = '';
+    icon.setAttribute('aria-hidden', 'true');
+    button.appendChild(icon);
+    applyAnimatedToolIcon(icon, currentToolsConfig?.googleSearchIconRule);
+  } else {
+    button.innerHTML = toolIcon(tool.icon);
+  }
 
   if (isToolboxTrigger) {
     button.dataset.collapsedIcon = tool.icon || 'tools';
-    button.setAttribute('aria-expanded', 'false');
+    button.setAttribute('aria-expanded', String(toolboxExpanded));
+    // Keep Gboard open while toggling the toolbox.
+    button.addEventListener('pointerdown', event => event.preventDefault());
   }
   if (tool.action === 'video') button.dataset.addVideo = 'post';
   if (tool.action === 'sound') button.dataset.addAudio = 'post';
 
-  /* tool_4 only toggles toolbox UI. Prevent it from taking focus away from the
-     textarea on pointer-down, so Android/Gboard stays open while the toolbox is
-     opened or closed. The click event still fires and performs the toggle. */
-  if (isToolboxTrigger) {
-    button.addEventListener('pointerdown', event => event.preventDefault());
-  }
-
   button.addEventListener('click', () => void ToolActions.run(tool));
   return button;
+}
+
+function renderTools({ animate = false } = {}) {
+  const toolsElement = document.getElementById('postEditorTools');
+  if (!toolsElement || !currentToolsConfig) return;
+
+  stopAnimatedToolIcons();
+  const visibleTools = ToolLoader.buildVisibleTools(currentToolsConfig, toolboxExpanded);
+  const buttons = visibleTools.map(createToolButton);
+  toolsElement.replaceChildren(...buttons);
+  toolsElement.dataset.toolCount = String(visibleTools.length);
+  toolsElement.dataset.maximumVisibleTools = String(currentToolsConfig.maximumVisibleTools);
+  toolsElement.dataset.toolboxExpanded = String(toolboxExpanded);
+
+  // Reserve geometry for the configured maximum so layouts remain stable when
+  // primary tools are added later; never render more than the config maximum.
+  const max = currentToolsConfig.maximumVisibleTools;
+  const maxRowWidth = max > 0 ? (max * 48) + ((max - 1) * 8) : 0;
+  toolsElement.style.setProperty('--tools-maximum-row-width', `${maxRowWidth}px`);
+
+  const trigger = toolsElement.querySelector('.toolbox-trigger');
+  if (trigger) {
+    trigger.setAttribute('aria-expanded', String(toolboxExpanded));
+    trigger.innerHTML = toolboxExpanded && currentToolsConfig.toolbox?.unfoldIcon
+      ? `<img class="toolbox-unfold-icon" src="${currentToolsConfig.toolbox.unfoldIcon}" alt="">`
+      : toolIcon(trigger.dataset.collapsedIcon || 'tools');
+  }
+
+  EditorController.setToolsExpanded(toolboxExpanded);
+
+  if (animate) {
+    const changed = [...toolsElement.querySelectorAll('.toolbox_tool')];
+    void loadToolboxUnfoldAnimation().then(animation => {
+      animation?.apply?.({ expanded: toolboxExpanded, buttons: changed });
+    });
+  }
+}
+
+async function openToolboxToolById(toolId, options = {}) {
+  if (!currentToolsConfig) currentToolsConfig = await ToolLoader.load();
+  const child = currentToolsConfig?.toolbox?.children?.find?.(tool => tool && tool.id === toolId);
+  if (!child || child.enabled === false) throw new Error(`Toolbox child is unavailable: ${toolId}`);
+  if (options?.browserMode === true) return openConfiguredTool(child, options);
+  return ToolActions.run(child);
 }
 
 async function initializeTools() {
@@ -105,27 +237,9 @@ async function initializeTools() {
 
   try {
     currentToolsConfig = await ToolLoader.load();
-    currentToolsLayout = ToolLoader.layout(currentToolsConfig);
-
-    const buttons = [
-      ...currentToolsLayout.tools.map(tool => createToolButton(tool, false)),
-      ...currentToolsLayout.toolboxTools.map(tool => createToolButton(tool, true)),
-    ];
-
-    toolsElement.replaceChildren(...buttons);
-    toolsElement.dataset.toolCount = String(currentToolsLayout.tools.length);
-    toolsElement.dataset.toolboxToolCount = String(currentToolsLayout.toolboxTools.length);
-
-    /* Anchor the primary tool_* row to the position it occupies when every
-       toolbox_tool_* is visible. Button geometry is 48px with an 8px gap. */
-    const expandedToolCount = currentToolsLayout.tools.length + currentToolsLayout.toolboxTools.length;
-    const expandedRowWidth = expandedToolCount > 0
-      ? (expandedToolCount * 48) + ((expandedToolCount - 1) * 8)
-      : 0;
-    toolsElement.style.setProperty('--tools-expanded-row-width', `${expandedRowWidth}px`);
-
+    toolboxExpanded = false;
     toolsElement.removeAttribute('data-render-error');
-    await setToolboxExpanded(false, true);
+    renderTools();
   } catch (error) {
     toolsElement.dataset.renderError = String(error?.message || error);
     console.error('Jet Note: tools renderer failed', error);
@@ -147,40 +261,21 @@ function loadToolboxUnfoldAnimation() {
   return toolboxUnfoldAnimationPromise;
 }
 
-async function setToolboxExpanded(expanded, skipAnimation = false) {
-  const toolsElement = document.getElementById('postEditorTools');
-  if (!toolsElement) return;
-
-  const trigger = toolsElement.querySelector('.toolbox-trigger');
-  const toolboxTools = [...toolsElement.querySelectorAll('.toolbox_tool')];
-  if (!trigger) return;
-
-  trigger.setAttribute('aria-expanded', String(expanded));
-  trigger.innerHTML = expanded && currentToolsConfig?.toolbox?.unfoldIcon
-    ? `<img class="toolbox-unfold-icon" src="${currentToolsConfig.toolbox.unfoldIcon}" alt="">`
-    : toolIcon(trigger.dataset.collapsedIcon || 'tools');
-
-  for (const button of toolboxTools) button.hidden = !expanded;
-
-  EditorController.setToolsExpanded(expanded);
-
-  if (!skipAnimation) {
-    const animation = await loadToolboxUnfoldAnimation();
-    animation?.apply?.({ expanded, buttons: toolboxTools });
-  }
+function setToolboxExpanded(expanded, skipAnimation = false) {
+  const composer = document.getElementById('postComposeScreen');
+  if (!composer?.classList.contains('open') && expanded) return;
+  toolboxExpanded = Boolean(expanded);
+  renderTools({ animate: !skipAnimation });
 }
 
 function toggleToolbox() {
   const composer = document.getElementById('postComposeScreen');
   if (!composer?.classList.contains('open')) return;
-
-  const trigger = composer.querySelector('.toolbox-trigger');
-  const expanded = trigger?.getAttribute('aria-expanded') === 'true';
-  void setToolboxExpanded(!expanded);
+  setToolboxExpanded(!toolboxExpanded);
 }
 
 function closeToolbox() {
-  void setToolboxExpanded(false, true);
+  setToolboxExpanded(false, true);
 }
 
 async function reloadTools() {
@@ -189,8 +284,11 @@ async function reloadTools() {
   await initializeTools();
 }
 
+window.addEventListener('pagehide', stopAnimatedToolIcons);
+
 registerBuiltInToolActions();
 window.initializeTools = initializeTools;
 window.reloadTools = reloadTools;
 window.closeToolbox = closeToolbox;
+window.openToolboxToolById = openToolboxToolById;
 void initializeTools();

@@ -71,11 +71,11 @@ async function loadAppearanceDefaults(){
   try {
     const response=await fetch('config.json',{cache:'no-store'});
     if(!response.ok)throw new Error(`config.json ${response.status}`);
-    const configured=(await response.json())?.appearance_default_colors||{};
+    const configured=await response.json();
     appearanceDefaults={
-      background:colorHexToAppearance(configured.background,DEFAULT_BACKGROUND),
-      body:colorHexToAppearance(configured.body,DEFAULT_BODY),
-      picker:colorHexToAppearance(configured.color_view_picker_after_reset,{rgb:{r:0,g:0,b:0}})
+      background:colorHexToAppearance(configured?.global_set_background,DEFAULT_BACKGROUND),
+      body:colorHexToAppearance(configured?.global_set_body,DEFAULT_BODY),
+      picker:colorHexToAppearance(configured?.color_view_picker_after_reset,{rgb:{r:0,g:0,b:0}})
     };
   } catch(error) { console.warn('Appearance defaults unavailable',error); }
   return appearanceDefaults;
@@ -84,9 +84,14 @@ function applyBackground(value){
   currentBackground=normalizeBackground(value);const {r,g,b}=currentBackground.rgb;const color=`rgb(${r},${g},${b})`;
   document.documentElement.style.setProperty('--page-background',color);
   document.documentElement.style.setProperty('--page-background-image','none');
-  // Resolve every Jet Note visual type from one background source. Components can
-  // opt into current_background in config.json without each page duplicating logic.
   const bodyColor=`rgb(${currentBody.rgb.r},${currentBody.rgb.g},${currentBody.rgb.b})`;
+  // Publish the two canonical appearance colors synchronously. `setting_*`
+  // deliberately binds to the Body source directly, so opening Settings never
+  // depends on an asynchronous config-resolution pass to paint module boxes.
+  document.documentElement.style.setProperty('--jet-note-current-background',color);
+  document.documentElement.style.setProperty('--jet-note-current-body-background',bodyColor);
+  // Resolve other Jet Note visual types from the same two sources. Components can
+  // still opt into current_background/current_body through config.json.
   window.JetNoteType?.apply?.(color,bodyColor).catch?.(error=>console.warn('Jet Note type appearance failed',error));
   const theme=document.querySelector('meta[name="theme-color"]');if(theme)theme.content=color;
 }
@@ -114,21 +119,26 @@ const cachedBackground=readAppearanceCache(APPEARANCE_CACHE_KEYS.background);
 const cachedBody=readAppearanceCache(APPEARANCE_CACHE_KEYS.body);
 if(cachedBody)currentBody=cachedBody;
 if(cachedBackground)applyBackground(cachedBackground);
-loadAppearanceDefaults().then(defaults=>Promise.all([AppearanceRepository.getBackground(),AppearanceRepository.getBody()])
-  .then(([background,body])=>{
-    currentBody=normalizeBackground(body||defaults.body);
-    currentBackground=normalizeBackground(background||defaults.background);
-    writeAppearanceCache(APPEARANCE_CACHE_KEYS.body,currentBody);
-    writeAppearanceCache(APPEARANCE_CACHE_KEYS.background,currentBackground);
-    applyBackground(currentBackground);
-    refreshAppearanceSettings();
-  }))
-  .catch(error=>console.warn('Appearance restore failed',error));
+loadAppearanceDefaults().then(async defaults=>{
+  // global_set_background / global_set_body are authoritative. Color View no
+  // longer mutates application appearance; it is only a picker/formatter.
+  currentBody=normalizeBackground(defaults.body);
+  currentBackground=normalizeBackground(defaults.background);
+  writeAppearanceCache(APPEARANCE_CACHE_KEYS.body,currentBody);
+  writeAppearanceCache(APPEARANCE_CACHE_KEYS.background,currentBackground);
+  applyBackground(currentBackground);
+  refreshAppearanceSettings();
+  try {
+    await Promise.all([
+      AppearanceRepository.putBackground(currentBackground),
+      AppearanceRepository.putBody(currentBody)
+    ]);
+  } catch(error) { console.warn('Appearance config mirror failed',error); }
+}).catch(error=>console.warn('Appearance restore failed',error));
 
 
-/* Color View is the single color utility. One current color drives the HSV
-   picker, RGB/HEX editor, preview text, application background action, and
-   exported color value. */
+/* Color View is a picker/formatter only. Global application Background and
+   Body colors come from config.json global_set_background/global_set_body. */
 const ColorViewTool = (() => {
   let initialized = false;
   let hue = 0;
@@ -137,20 +147,14 @@ const ColorViewTool = (() => {
   let currentRgb = {r:255,g:0,b:0};
   let numericMode = 'decimal';
   let labels = {
-    setBackground:'Set Background',
-    setBody:'Set Body',
     reset:'Reset',
-    hex:'HEX',
-    decimal:'DEC',
-    exportColor:'Export Color',
+    hex:'HEX Format',
+    decimal:'DEC Format',
     copy:'Copy',
-    backgroundSet:'Background set',
-    bodySet:'Body color set',
-    resetComplete:'Background and body reset',
+    resetComplete:'Color picker reset',
     copied:'Copied',
     copyFailed:'Copy failed'
   };
-  let exportVisible = false;
   let copyFeedbackGeneration = 0;
   let copyFeedbackTimers = [];
   let copyFeedbackConfig = {
@@ -217,15 +221,6 @@ const ColorViewTool = (() => {
   }
   function byteToHex(v){ return clampByte(v).toString(16).toUpperCase().padStart(2,'0'); }
   function rgbToHex(rgb){ return `#${byteToHex(rgb.r)}${byteToHex(rgb.g)}${byteToHex(rgb.b)}`; }
-  function formatColorValue(rgb){
-    return numericMode==='hex' ? rgbToHex(rgb) : `${rgb.r},${rgb.g},${rgb.b}`;
-  }
-  function refreshSavedColorDisplays(){
-    const backgroundValue=document.getElementById('colorViewBackgroundValue');
-    const bodyValue=document.getElementById('colorViewBodyValue');
-    if(backgroundValue)backgroundValue.textContent=formatColorValue(currentBackground.rgb);
-    if(bodyValue)bodyValue.textContent=formatColorValue(currentBody.rgb);
-  }
 
   function hsvToRgb(h, s, v) {
     const hh = ((Number(h) % 360) + 360) % 360;
@@ -297,19 +292,24 @@ const ColorViewTool = (() => {
   }
 
   function refreshModeSelector() {
+    const selector=document.getElementById('colorViewRadixSwitch');
     const hexButton=document.getElementById('colorViewHexButton');
     const decimalButton=document.getElementById('colorViewDecimalButton');
+    const hexActive=numericMode==='hex';
+    const decimalActive=numericMode==='decimal';
+    if(selector) {
+      selector.classList.toggle('format-selected-hex',hexActive);
+      selector.classList.toggle('format-selected-decimal',decimalActive);
+    }
     if(hexButton) {
-      const active=numericMode==='hex';
       hexButton.textContent=labels.hex;
-      hexButton.classList.toggle('is-active',active);
-      hexButton.setAttribute('aria-pressed',String(active));
+      hexButton.classList.toggle('is-active',hexActive);
+      hexButton.setAttribute('aria-pressed',String(hexActive));
     }
     if(decimalButton) {
-      const active=numericMode==='decimal';
       decimalButton.textContent=labels.decimal;
-      decimalButton.classList.toggle('is-active',active);
-      decimalButton.setAttribute('aria-pressed',String(active));
+      decimalButton.classList.toggle('is-active',decimalActive);
+      decimalButton.setAttribute('aria-pressed',String(decimalActive));
     }
   }
 
@@ -364,10 +364,56 @@ const ColorViewTool = (() => {
   }
   function bindPointerDrag(el, update) {
     let dragging=false;
-    el.addEventListener('pointerdown',event=>{dragging=true;el.setPointerCapture?.(event.pointerId);update(event,el);});
-    el.addEventListener('pointermove',event=>{if(dragging)update(event,el);});
-    const finish=event=>{if(!dragging)return;dragging=false;try{el.releasePointerCapture?.(event.pointerId);}catch(_){}};
-    el.addEventListener('pointerup',finish); el.addEventListener('pointercancel',finish);
+
+    // Modern Android WebView: Pointer Events give the cleanest drag behavior.
+    if (typeof window.PointerEvent === 'function') {
+      el.addEventListener('pointerdown',event=>{
+        dragging=true;
+        try { if(el.setPointerCapture) el.setPointerCapture(event.pointerId); } catch(_) {}
+        update(event,el);
+      });
+      el.addEventListener('pointermove',event=>{if(dragging)update(event,el);});
+      const finish=event=>{
+        if(!dragging)return;
+        dragging=false;
+        try { if(el.releasePointerCapture) el.releasePointerCapture(event.pointerId); } catch(_) {}
+      };
+      el.addEventListener('pointerup',finish);
+      el.addEventListener('pointercancel',finish);
+      return;
+    }
+
+    // Older Android System WebView fallback. Touch events are translated into
+    // the same clientX/clientY shape used by the picker math. Mouse support is
+    // retained for desktop/debug environments.
+    const touchPoint=event=>{
+      const list=event.touches&&event.touches.length?event.touches:event.changedTouches;
+      const touch=list&&list[0];
+      return touch?{clientX:touch.clientX,clientY:touch.clientY}:null;
+    };
+    const onTouchStart=event=>{
+      const point=touchPoint(event);
+      if(!point)return;
+      dragging=true;
+      if(event.cancelable)event.preventDefault();
+      update(point,el);
+    };
+    const onTouchMove=event=>{
+      if(!dragging)return;
+      const point=touchPoint(event);
+      if(!point)return;
+      if(event.cancelable)event.preventDefault();
+      update(point,el);
+    };
+    const onTouchEnd=()=>{dragging=false;};
+    el.addEventListener('touchstart',onTouchStart,{passive:false});
+    el.addEventListener('touchmove',onTouchMove,{passive:false});
+    el.addEventListener('touchend',onTouchEnd,false);
+    el.addEventListener('touchcancel',onTouchEnd,false);
+
+    el.addEventListener('mousedown',event=>{dragging=true;update(event,el);});
+    window.addEventListener('mousemove',event=>{if(dragging)update(event,el);});
+    window.addEventListener('mouseup',()=>{dragging=false;});
   }
 
   async function loadUiLanguage() {
@@ -377,81 +423,36 @@ const ColorViewTool = (() => {
         const pairs=await Promise.all([
           get('color_view.preview_sample_1',''),
           get('color_view.preview_sample_2','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-          get('color_view.set_background','Set Background'),
-          get('color_view.set_body','Set Body'),
           get('color_view.reset','Reset'),
-          get('color_view.format_hex','HEX'),
-          get('color_view.format_decimal','DEC'),
-          get('color_view.export_color','Export Color'),
+          get('color_view.format_hex','HEX Format'),
+          get('color_view.format_decimal','DEC Format'),
           get('color_view.copy','Copy'),
-          get('color_view.background_set','Background set'),
-          get('color_view.body_set','Body color set'),
-          get('color_view.reset_complete','Background and body reset'),
+          get('color_view.reset_complete','Color picker reset'),
           get('color_view.copied','Copied'),
           get('color_view.copy_failed','Copy failed')
         ]);
-        const [preview1,preview2,setBackgroundLabel,setBodyLabel,resetLabel,hexLabel,decimalLabel,exportLabel,copyLabel,backgroundSet,bodySet,resetComplete,copied,copyFailed]=pairs;
+        const [preview1,preview2,resetLabel,hexLabel,decimalLabel,copyLabel,resetComplete,copied,copyFailed]=pairs;
         const one=document.getElementById('colorViewTextPreview1'), two=document.getElementById('colorViewTextPreview2');
         if(one) one.textContent=preview1;
         if(two) two.textContent=preview2;
-        labels={setBackground:setBackgroundLabel,setBody:setBodyLabel,reset:resetLabel,hex:hexLabel,decimal:decimalLabel,exportColor:exportLabel,copy:copyLabel,backgroundSet,bodySet,resetComplete,copied,copyFailed};
+        labels={reset:resetLabel,hex:hexLabel,decimal:decimalLabel,copy:copyLabel,resetComplete,copied,copyFailed};
       }
-      const setButton=document.getElementById('colorViewSetBackgroundButton'); if(setButton)setButton.textContent=labels.setBackground;
-      const setBodyButton=document.getElementById('colorViewSetBodyButton'); if(setBodyButton)setBodyButton.textContent=labels.setBody;
       const resetButton=document.getElementById('colorViewResetButton'); if(resetButton)resetButton.textContent=labels.reset;
-      const exportButton=document.getElementById('colorViewExportButton'); if(exportButton)exportButton.textContent=labels.exportColor;
       const copyButton=document.getElementById('colorViewCopyButton'); if(copyButton)copyButton.textContent=labels.copy;
       refreshModeSelector();
-      refreshSavedColorDisplays();
       await window.JetNoteUiLanguage?.apply?.(document);
     } catch(error) { console.warn('Color View UI language failed',error); }
   }
 
-  async function setBackground() {
-    clearCopyFeedback();
-    const next={rgb:{...currentRgb}};
-    try {
-      await AppearanceRepository.putBackground(next);
-      writeAppearanceCache(APPEARANCE_CACHE_KEYS.background,next);
-      applyBackground(next);
-      refreshSavedColorDisplays();
-      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.backgroundSet;
-    } catch(error) {
-      console.error('Background save failed',error); alert(t('storageFull'));
-    }
-  }
-
-  async function setBody() {
-    clearCopyFeedback();
-    const next={rgb:{...currentRgb}};
-    try {
-      await AppearanceRepository.putBody(next);
-      writeAppearanceCache(APPEARANCE_CACHE_KEYS.body,next);
-      applyBody(next);
-      refreshSavedColorDisplays();
-      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.bodySet;
-    } catch(error) {
-      console.error('Body save failed',error); alert(t('storageFull'));
-    }
-  }
 
   async function resetAppearance() {
     clearCopyFeedback();
     try {
       const defaults=await loadAppearanceDefaults();
-      await Promise.all([
-        AppearanceRepository.putBackground(defaults.background),
-        AppearanceRepository.putBody(defaults.body)
-      ]);
-      currentBody=normalizeBackground(defaults.body);
-      writeAppearanceCache(APPEARANCE_CACHE_KEYS.background,defaults.background);
-      writeAppearanceCache(APPEARANCE_CACHE_KEYS.body,defaults.body);
-      applyBackground(defaults.background);
       commitFromRgb(defaults.picker.rgb,true);
-      refreshSavedColorDisplays();
       const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.resetComplete;
     } catch(error) {
-      console.error('Appearance reset failed',error); alert(t('storageFull'));
+      console.error('Color picker reset failed',error);
     }
   }
 
@@ -462,7 +463,7 @@ const ColorViewTool = (() => {
     numericMode=mode;
     writeColorInputs(currentRgb,true);
     refreshModeSelector();
-    refreshSavedColorDisplays();
+   
     refreshExportDisplay();
   }
 
@@ -470,22 +471,103 @@ const ColorViewTool = (() => {
     return numericMode==='hex' ? rgbToHex(currentRgb) : `${currentRgb.r},${currentRgb.g},${currentRgb.b}`;
   }
 
-  function refreshExportDisplay() {
-    if(!exportVisible) return;
-    const row=document.getElementById('colorViewExportRow');
+  function refreshExportDisplay(force=false) {
     const valueEl=document.getElementById('colorViewExportValue');
-    if(row) row.hidden=false;
-    if(valueEl) valueEl.textContent=exportText();
+    if(!valueEl) return;
+    if(force || document.activeElement!==valueEl) valueEl.value=exportText();
   }
 
-  function exportColor() {
-    clearCopyFeedback();
-    exportVisible=!exportVisible;
-    const row=document.getElementById('colorViewExportRow');
-    const button=document.getElementById('colorViewExportButton');
-    if(row) row.hidden=!exportVisible;
-    if(button) button.setAttribute('aria-expanded',String(exportVisible));
-    if(exportVisible) refreshExportDisplay();
+  function parseExportEditorValue(raw) {
+    const text=String(raw??'').trim();
+    if(!text) return null;
+
+    // A leading # is an explicit HEX signal. Support the common #RGB and
+    // #RRGGBB forms; the display is normalized back to #RRGGBB on blur.
+    if(text.startsWith('#')) {
+      const body=text.slice(1).trim();
+      if(/^[0-9a-fA-F]{3}$/.test(body)) {
+        return {
+          mode:'hex',
+          rgb:{
+            r:parseInt(body[0]+body[0],16),
+            g:parseInt(body[1]+body[1],16),
+            b:parseInt(body[2]+body[2],16)
+          }
+        };
+      }
+      if(/^[0-9a-fA-F]{6}$/.test(body)) {
+        return {
+          mode:'hex',
+          rgb:{r:parseInt(body.slice(0,2),16),g:parseInt(body.slice(2,4),16),b:parseInt(body.slice(4,6),16)}
+        };
+      }
+      return null;
+    }
+
+    // A half-width comma is an explicit DEC signal. Full-width comma is also
+    // accepted because it is easy to enter from a CJK keyboard.
+    if(text.includes(',') || text.includes('，')) {
+      const parts=text.split(/[,，]/).map(part=>part.trim());
+      if(parts.length!==3 || parts.some(part=>!/^[0-9]{1,3}$/.test(part))) return null;
+      const values=parts.map(Number);
+      if(values.some(value=>!Number.isInteger(value)||value<0||value>255)) return null;
+      return {mode:'decimal',rgb:{r:values[0],g:values[1],b:values[2]}};
+    }
+
+    // Three obvious decimal bytes separated by spaces/slashes/semicolons are
+    // also treated as DEC. This makes "129 239 112" behave like 129,239,112.
+    const decimalParts=text.split(/[\s/;]+/).filter(Boolean);
+    if(decimalParts.length===3 && decimalParts.every(part=>/^[0-9]{1,3}$/.test(part))) {
+      const values=decimalParts.map(Number);
+      if(values.every(value=>Number.isInteger(value)&&value>=0&&value<=255)) {
+        return {mode:'decimal',rgb:{r:values[0],g:values[1],b:values[2]}};
+      }
+    }
+
+    // A plain 6-character hexadecimal value containing A-F is unambiguous.
+    if(/^[0-9a-fA-F]{6}$/.test(text) && /[a-fA-F]/.test(text)) {
+      return {mode:'hex',rgb:{r:parseInt(text.slice(0,2),16),g:parseInt(text.slice(2,4),16),b:parseInt(text.slice(4,6),16)}};
+    }
+    return null;
+  }
+
+  function inferExportEditorMode(raw) {
+    const text=String(raw??'').trim();
+    if(!text) return null;
+    if(text.startsWith('#')) return 'hex';
+    if(text.includes(',') || text.includes('，')) return 'decimal';
+    const decimalParts=text.split(/[\s/;]+/).filter(Boolean);
+    if(decimalParts.length===3 && decimalParts.every(part=>/^[0-9]{1,3}$/.test(part))) {
+      const values=decimalParts.map(Number);
+      if(values.every(value=>Number.isInteger(value)&&value>=0&&value<=255)) return 'decimal';
+    }
+    if(/^[0-9a-fA-F]{1,6}$/.test(text) && /[a-fA-F]/.test(text)) return 'hex';
+    return null;
+  }
+
+  function commitFromExportEditor(normalize=false) {
+    const valueEl=document.getElementById('colorViewExportValue');
+    if(!valueEl) return false;
+
+    // Switch the left HEX/DEC selector as soon as the syntax reveals intent,
+    // even while the user is still typing an incomplete color.
+    const inferredMode=inferExportEditorMode(valueEl.value);
+    if(inferredMode && inferredMode!==numericMode) {
+      numericMode=inferredMode;
+      writeColorInputs(currentRgb,true);
+      refreshModeSelector();
+    }
+
+    const parsed=parseExportEditorValue(valueEl.value);
+    if(!parsed) {
+      if(normalize) refreshExportDisplay(true);
+      return false;
+    }
+    numericMode=parsed.mode;
+    commitFromRgb(parsed.rgb,true);
+    refreshModeSelector();
+    if(normalize) refreshExportDisplay(true);
+    return true;
   }
 
   async function copyExportColor() {
@@ -493,7 +575,7 @@ const ColorViewTool = (() => {
     // invalidates stale async clipboard feedback when HEX/DEC changes mid-copy.
     const generation=clearCopyFeedback();
     const valueEl=document.getElementById('colorViewExportValue');
-    const text=(valueEl?.textContent || exportText()).trim();
+    const text=(valueEl?.value || exportText()).trim();
     let copied=false;
     try { if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);copied=true;} } catch(_) {}
     if(!copied){
@@ -530,17 +612,26 @@ const ColorViewTool = (() => {
         input.addEventListener('blur',()=>commitColorInputs(true));
         input.addEventListener('keydown',event=>{if(event.key!=='Enter')return;event.preventDefault();commitColorInputs(true);input.blur();});
       }
-      document.getElementById('colorViewSetBackgroundButton')?.addEventListener('click',setBackground);
-      document.getElementById('colorViewSetBodyButton')?.addEventListener('click',setBody);
       document.getElementById('colorViewResetButton')?.addEventListener('click',resetAppearance);
       document.getElementById('colorViewHexButton')?.addEventListener('click',()=>setNumericMode('hex'));
       document.getElementById('colorViewDecimalButton')?.addEventListener('click',()=>setNumericMode('decimal'));
-      document.getElementById('colorViewExportButton')?.addEventListener('click',exportColor);
       document.getElementById('colorViewCopyButton')?.addEventListener('click',copyExportColor);
+      const exportEditor=document.getElementById('colorViewExportValue');
+      if(exportEditor) {
+        exportEditor.addEventListener('input',()=>commitFromExportEditor(false));
+        exportEditor.addEventListener('change',()=>commitFromExportEditor(true));
+        exportEditor.addEventListener('blur',()=>commitFromExportEditor(true));
+        exportEditor.addEventListener('keydown',event=>{
+          if(event.key!=='Enter') return;
+          event.preventDefault();
+          commitFromExportEditor(true);
+          exportEditor.blur();
+        });
+      }
     }
     loadUiLanguage();
     loadCopyFeedbackConfig();
-    writeColorInputs(currentRgb,true); refreshModeSelector(); commitFromRgb(currentRgb,true); refreshSavedColorDisplays(); refreshExportDisplay();
+    writeColorInputs(currentRgb,true); refreshModeSelector(); commitFromRgb(currentRgb,true); refreshExportDisplay(true);
   }
 
   return {init};

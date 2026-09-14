@@ -20,7 +20,7 @@ final class NativeBridge {
     private final Activity activity;
     private final WebView webView;
     private int videoHapticGuardGeneration = 0;
-    private final DictionaryController dictionary;
+    private final ToolPageController toolPages;
     private final MediaWriteController mediaWriter;
     private final Runnable ready;
     private final AttachmentPickerController picker;
@@ -31,14 +31,14 @@ final class NativeBridge {
     NativeBridge(
             Activity activity,
             WebView webView,
-            DictionaryController dictionary,
+            ToolPageController toolPages,
             AttachmentPickerController picker,
             AttachmentStore store,
             JetNoteArchiveController archive, MediaWriteController mediaWriter, NativeVideoPlayer videoPlayer, Runnable ready
     ) {
         this.activity = activity;
         this.webView = webView;
-        this.dictionary = dictionary;this.mediaWriter=mediaWriter;this.ready=ready;
+        this.toolPages = toolPages;this.mediaWriter=mediaWriter;this.ready=ready;
         this.picker = picker;
         this.store = store;
         this.archive = archive;
@@ -46,62 +46,68 @@ final class NativeBridge {
     }
 
 
-    private static final String DEBUG_PREFS = "jet_note_debug_config";
-    private static final String DEBUG_CURRENT = "current";
-    private static final String DEBUG_PREVIOUS = "previous";
-
-    private String bundledConfig() throws Exception {
-        try (InputStream in = activity.getAssets().open("config.json")) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[8192]; int n;
-            while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
-            return out.toString("UTF-8");
-        }
+    @JavascriptInterface public String getBundledConfigJson() {
+        try { return RuntimeConfigStore.readBundled(activity); }
+        catch (Exception error) { return "{}"; }
     }
 
     @JavascriptInterface public String getRuntimeConfigJson() {
-        try {
-            android.content.SharedPreferences prefs =
-                    activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
-            String saved = prefs.getString(DEBUG_CURRENT, null);
-            if (saved != null && !saved.trim().isEmpty()) {
-                try {
-                    new JSONObject(saved);
-                    return saved;
-                } catch (Exception invalidRuntimeConfiguration) {
-                    // Runtime config is recoverable state. Never return malformed JSON to
-                    // the frontend; discard it and fall back to the shipped configuration.
-                    prefs.edit().remove(DEBUG_CURRENT).apply();
-                }
-            }
-            return bundledConfig();
-        } catch (Exception error) { return "{}"; }
+        return RuntimeConfigStore.readEffective(activity);
     }
 
     @JavascriptInterface public boolean setRuntimeConfigJson(String json) {
-        try {
-            JSONObject parsed = new JSONObject(json);
-            String normalized = parsed.toString(2);
-            android.content.SharedPreferences prefs = activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
-            String current = prefs.getString(DEBUG_CURRENT, null);
-            if (current == null) current = bundledConfig();
-            return prefs.edit().putString(DEBUG_PREVIOUS, current).putString(DEBUG_CURRENT, normalized).commit();
-        } catch (Exception error) { return false; }
+        return RuntimeConfigStore.saveRuntime(activity, json);
     }
 
     @JavascriptInterface public boolean undoRuntimeConfigJson() {
+        return RuntimeConfigStore.undoRuntime(activity);
+    }
+
+    /**
+     * Re-read/validate the current effective config and rebuild the whole Jet Note
+     * activity stack. This intentionally creates a fresh WebView so JS config
+     * promises, CSS variables, toolbox state and other config-derived runtime
+     * state cannot survive the reload.
+     */
+    @JavascriptInterface public void relaunchForConfigReload() {
+        activity.runOnUiThread(() -> {
+            // Force validation now. RuntimeConfigStore itself has no in-memory cache;
+            // this also discards a stale/corrupt runtime override when necessary.
+            RuntimeConfigStore.readEffective(activity);
+
+            Intent launchIntent = activity.getPackageManager()
+                    .getLaunchIntentForPackage(activity.getPackageName());
+            if (launchIntent == null) {
+                activity.recreate();
+                return;
+            }
+
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            activity.startActivity(launchIntent);
+            activity.finishAffinity();
+        });
+    }
+
+    @JavascriptInterface public boolean saveEffectiveConfigJsonToDownloads() {
         try {
-            android.content.SharedPreferences prefs = activity.getSharedPreferences(DEBUG_PREFS, Activity.MODE_PRIVATE);
-            String previous = prefs.getString(DEBUG_PREVIOUS, null);
-            if (previous == null) return false;
-            String current = prefs.getString(DEBUG_CURRENT, null);
-            android.content.SharedPreferences.Editor edit = prefs.edit().putString(DEBUG_CURRENT, previous);
-            if (current != null) edit.putString(DEBUG_PREVIOUS, current); else edit.remove(DEBUG_PREVIOUS);
-            return edit.commit();
-        } catch (Exception error) { return false; }
+            String effective = RuntimeConfigStore.readEffective(activity);
+            new JSONObject(effective);
+            FileTaskManager.saveTextExport(activity, "config.json", "application/json", effective);
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
+
+    /** Sync Browser res-Filter into the reusable Tool WebView host. */
+    @JavascriptInterface
+    public void setGetSourceExtensionFilterJson(String json) {
+        toolPages.setGetSourceExtensionFilterJson(json);
+    }
 
     /** Enable IME rich-image commits only while the Post Composer textarea is focused. */
     @JavascriptInterface
@@ -174,7 +180,76 @@ final class NativeBridge {
         if (url == null || !url.startsWith("https://")) return;
         String safeTitle = title == null || title.trim().isEmpty() ? "Tool" : title.trim();
         String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-        dictionary.open(url, safeTitle, safeLanguage, backgroundColor, borderColor);
+        toolPages.open(url, safeTitle, safeLanguage, backgroundColor, borderColor);
+    }
+
+    @JavascriptInterface
+    public void openToolWithFallback(
+            String primaryUrl,
+            String fallbackUrl,
+            String title,
+            String language,
+            String backgroundColor,
+            String borderColor,
+            int timeoutMs
+    ) {
+        if (primaryUrl == null || !primaryUrl.startsWith("https://")) return;
+        if (fallbackUrl == null || !fallbackUrl.startsWith("https://")) {
+            openTool(primaryUrl, title, language, backgroundColor, borderColor);
+            return;
+        }
+        String safeTitle = title == null || title.trim().isEmpty() ? "Tool" : title.trim();
+        String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+        toolPages.openWithFallback(
+                primaryUrl,
+                fallbackUrl,
+                safeTitle,
+                safeLanguage,
+                backgroundColor,
+                borderColor,
+                timeoutMs
+        );
+    }
+
+
+    /**
+     * Shared toolbox-page core with explicit primary/fallback titles and a
+     * Browser Mode flag. Browser Mode bypasses New Post integration while
+     * retaining the same ToolPageController, fallback and Get Source stack.
+     */
+    @JavascriptInterface
+    public void openToolWithFallbackMode(
+            String primaryUrl,
+            String fallbackUrl,
+            String primaryTitle,
+            String fallbackTitle,
+            String language,
+            String backgroundColor,
+            String borderColor,
+            int timeoutMs,
+            boolean browserMode
+    ) {
+        if (primaryUrl == null || !primaryUrl.startsWith("https://")) return;
+        if (fallbackUrl == null || !fallbackUrl.startsWith("https://")) {
+            String safeTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
+            String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+            toolPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, browserMode);
+            return;
+        }
+        String safePrimaryTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
+        String safeFallbackTitle = fallbackTitle == null || fallbackTitle.trim().isEmpty() ? safePrimaryTitle : fallbackTitle.trim();
+        String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+        toolPages.openWithFallback(
+                primaryUrl,
+                fallbackUrl,
+                safePrimaryTitle,
+                safeFallbackTitle,
+                safeLanguage,
+                backgroundColor,
+                borderColor,
+                timeoutMs,
+                browserMode
+        );
     }
 
     @JavascriptInterface
@@ -193,6 +268,44 @@ final class NativeBridge {
             } catch (Exception ignored) { }
             return result.toString();
         }
+    }
+
+
+    @JavascriptInterface
+    public void downloadViewerMedia(String source, String mediaType) {
+        final String safeType = "video".equals(mediaType) ? "video" : "image";
+        if (source == null || source.trim().isEmpty()) {
+            MediaDownloadController.saveFile(activity, null, null, safeType);
+            return;
+        }
+        final String value = source.trim();
+        activity.runOnUiThread(() -> {
+            try {
+                if (value.startsWith("data:")) {
+                    MediaDownloadController.saveDataUrl(activity, value, safeType);
+                    return;
+                }
+                final String appAssetsPrefix = "https://appassets.androidplatform.net/";
+                final String localPrefix = "https://jetnote.local/";
+                String archivePath = null;
+                if (value.startsWith(appAssetsPrefix)) archivePath = value.substring(appAssetsPrefix.length());
+                else if (value.startsWith(localPrefix)) archivePath = value.substring(localPrefix.length());
+                if (archivePath != null) {
+                    java.io.File file = store.fileForArchivePath(archivePath);
+                    String mime = file == null ? null : store.mimeForFileName(file.getName());
+                    MediaDownloadController.saveFile(activity, file, mime, safeType);
+                    return;
+                }
+                MediaDownloadController.saveFile(activity, null, null, safeType);
+            } catch (Exception ignored) {
+                MediaDownloadController.saveFile(activity, null, null, safeType);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void downloadViewerImage(String source) {
+        downloadViewerMedia(source, "image");
     }
 
     @JavascriptInterface

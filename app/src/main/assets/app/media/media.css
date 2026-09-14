@@ -113,7 +113,7 @@ button:disabled {
   height:32px;
   padding:6px;
 }
-.post > .attachment-strip .audio-token-play svg{
+.post > .attachment-strip .audio-token-play svg, .post > .attachment-strip .audio-token-play img{
   width:18px;
   height:18px;
   /* The speaker glyph is visually left-heavy inside its 24x24 viewBox.
@@ -152,7 +152,7 @@ button:disabled {
   display:grid;
   place-items:center
 }
-.audio-token-play svg{
+.audio-token-play svg, .audio-token-play img{
   width:19px;
   height:19px;
   transform:translateX(0)
@@ -198,7 +198,7 @@ button:disabled {
   justify-content:center;
   box-sizing:border-box
 }
-.audio-token-remove svg{
+.audio-token-remove svg, .audio-token-remove img{
   display:block;
   width:10px;
   height:10px;
@@ -222,24 +222,18 @@ button:disabled {
   flex-direction:row;
   flex-wrap:nowrap;
   align-items:center;
-  /* Keep tool_* anchored at the same X positions used by the fully expanded row.
-     toolbox_tool_* only grows to the right; opening/closing the toolbox must not
-     recenter or shift the primary tools. --tools-expanded-row-width is set by tools.js. */
-  justify-content:flex-start;
+  /* The toolbar has a config-defined maximum capacity. The rendered slot list is
+     centered inside that maximum-width lane. Toolbox children replace slots to
+     the LEFT of tool_m1 instead of growing the row to the right. */
+  justify-content:center;
   gap:8px;
-  width:100%;
+  width:min(100%, var(--tools-maximum-row-width, 328px));
   min-height:48px;
-  margin:0;
-  padding:0 0 0 max(0px, calc((100% - var(--tools-expanded-row-width, 328px)) / 2));
+  margin:0 auto;
+  padding:0;
   box-sizing:border-box;
   border:0;
-  overflow-x:auto;
-  overflow-y:hidden;
-  scrollbar-width:none;
-  -webkit-overflow-scrolling:touch
-}
-.post-input-row .tools::-webkit-scrollbar{
-  display:none
+  overflow:hidden
 }
 .post-input-row .tool{
   width:48px;
@@ -250,7 +244,7 @@ button:disabled {
   display:grid;
   place-items:center
 }
-.post-input-row .tool svg{
+.post-input-row .tool svg, .post-input-row .tool img{
   width:24px;
   height:24px
 }
@@ -278,6 +272,20 @@ button:disabled {
 .top-post-super .top-post-content > .attachment-strip{
   justify-content:flex-end;
 }
-.top-post-super .top-post-content .audio-token-play svg{
+.top-post-super .top-post-content .audio-token-play svg, .top-post-super .top-post-content .audio-token-play img{
   transform:translateX(-2px);
+}
+
+
+/* 3 Post One Body integration: published audio speaker controls are ordinary
+   Post-internal controls, not background-whitelist exceptions. Playing state keeps
+   its semantic foreground/indicator behavior, but the button surface follows
+   current_body. */
+.three-posts-one-body .post > .attachment-strip .audio-token-play,
+.three-posts-one-body #topPostCard .attachment-strip .audio-token-play {
+  background: var(--three-post-internal-surface-background) !important;
+}
+.three-posts-one-body .post > .attachment-strip .audio-token-play.playing,
+.three-posts-one-body #topPostCard .attachment-strip .audio-token-play.playing {
+  background: var(--three-post-internal-surface-background) !important;
 }

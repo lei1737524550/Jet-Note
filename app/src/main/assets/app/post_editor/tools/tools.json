@@ -1,12 +1,9 @@
 {
-  "_comment": "Stable runtime identifiers use tool_1, tool_2... and toolbox_tool_1, toolbox_tool_2.... The name field is documentation-only metadata for maintainers and MUST NOT be used for behavior, dispatch, ordering, styling, or lookup.",
-  "toolbox": {
-    "unfoldAnimation": "app/post_editor/tools_unfold_animation.js",
-    "unfoldIcon": "shared/icons/is_unfold.svg"
-  },
+  "_comment": "The top-level tools[] is the canonical toolbar model. tool_m1 is the toolbox anchor node. When expanded, toolbox children occupy slots immediately to the LEFT of tool_m1 and temporarily cover primary tools without mutating the original tools[] model. name is maintainer-only metadata.",
   "tools": [
     {
       "id": "tool_1",
+      "type": "tool",
       "name": "AddVideoButton",
       "enabled": true,
       "action": "video",
@@ -15,6 +12,7 @@
     },
     {
       "id": "tool_2",
+      "type": "tool",
       "name": "AddImageButton",
       "enabled": true,
       "action": "photo",
@@ -23,6 +21,7 @@
     },
     {
       "id": "tool_3",
+      "type": "tool",
       "name": "AddAudioButton",
       "enabled": true,
       "action": "sound",
@@ -30,30 +29,46 @@
       "labelKey": "addAudio"
     },
     {
-      "id": "tool_4",
+      "id": "tool_m1",
+      "type": "toolbox",
       "name": "ToolboxButton",
       "enabled": true,
       "action": "toolbox",
       "icon": "tools",
-      "labelKey": "tools"
-    }
-  ],
-  "toolbox_tools": [
-    {
-      "id": "toolbox_tool_1",
-      "name": "DictionaryButton",
-      "enabled": true,
-      "url": "https://www.merriam-webster.com/",
-      "icon": "dictionary",
-      "labelKey": "toolbox_tool_1"
-    },
-    {
-      "id": "toolbox_tool_2",
-      "name": "SentencesButton",
-      "enabled": true,
-      "url": "https://soundoftext.com/",
-      "icon": "sentence",
-      "labelKey": "toolbox_tool_2"
+      "labelKey": "tools",
+      "unfoldAnimation": "app/post_editor/tools_unfold_animation.js",
+      "unfoldIcon": "shared/icons/is_unfold.svg",
+      "children": [
+        {
+          "id": "toolbox_1",
+          "type": "toolbox_tool",
+          "name": "DictionaryButton",
+          "enabled": true,
+          "url": "https://www.merriam-webster.com/",
+          "icon": "dictionary",
+          "labelKey": "toolbox_1"
+        },
+        {
+          "id": "toolbox_2",
+          "type": "toolbox_tool",
+          "name": "SentencesButton",
+          "enabled": true,
+          "url": "https://soundoftext.com/",
+          "icon": "sentence",
+          "labelKey": "toolbox_2"
+        },
+        {
+          "id": "toolbox_3",
+          "type": "toolbox_tool",
+          "name": "GoogleButton",
+          "enabled": true,
+          "url": "https://www.google.com/",
+          "fallbackUrl": "https://www.baidu.com/",
+          "icon": "google_search",
+          "labelKey": "toolbox_3",
+          "fallbackTitle": "Baidu"
+        }
+      ]
     }
   ]
 }

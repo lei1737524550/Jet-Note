@@ -18,3 +18,10 @@
 .tools-screen{background:var(--jet-note-type-tools-background,var(--page-background));}
 .tools-screen .settings-body{background:var(--jet-note-type-tools-background,var(--page-background));}
 .tools-screen .common_border{border-color:var(--jet-note-type-tools-border-color,var(--common-border-color));}
+
+.tools-grid .tool-choice img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  object-fit: contain;
+}

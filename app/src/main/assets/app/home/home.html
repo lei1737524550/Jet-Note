@@ -23,7 +23,7 @@
 })();
 </script>
 
-<title>Jet Note</title>
+<title data-language-text="fileTaskFeedbackAppTitle"></title>
 <link rel="stylesheet" href="shared/styles/base.css?v=20260913-feature-layout">
 <link rel="stylesheet" href="shared/components/components.css?v=20260913-feature-layout">
 <link rel="stylesheet" href="shared/styles/layout.css?v=20260913-feature-layout">
@@ -37,6 +37,7 @@
 <link rel="stylesheet" href="app/video/video.css?v=20260913-video-layer-font-wrap-v1">
 <link rel="stylesheet" href="app/archive/archive.css?v=20260913-feature-layout">
 <link rel="stylesheet" href="app/debug_post/debug_post.css?v=20260914-debug-layout-v3">
+<script src="shared/core/compatibility.js?v=20260914-webview-compat-v1"></script>
 <script src="shared/core/viewport.js"></script>
 </head>
 
@@ -48,57 +49,28 @@
 
   <section class="header"><div class="wave3"></div></section>
 
-  <!-- main_status_bar: home-only battery / HH:mm / Settings component.
+  <!-- main_status_bar: home-only battery / configurable date-time / Settings component.
        main_status_bar_height controls only this section box height.
        main_status_bar_vertical_move moves only this row vertically without moving Three Posts, One Body.
        Android system_safe_area is applied separately by .phone. -->
-  <section class="main-status-bar" id="mainStatusBar" aria-label="Device status and settings">
-    <div class="main-status-bar-battery-region" id="mainStatusBarBatteryRegion">
-      <img class="main-status-bar-battery-icon" id="mainStatusBarBatteryIcon" src="shared/icons/battery_75.svg" alt="">
-      <span class="main-status-bar-battery-percentage" id="mainStatusBarBatteryPercentage">--%</span>
-    </div>
-    <div class="main-status-bar-empty-region" aria-hidden="true"></div>
-    <div class="main-status-bar-time-region" id="mainStatusBarTimeRegion">
-      <span id="mainStatusBarTime">--:--</span>
-    </div>
-    <div class="main-status-bar-settings-region" id="mainStatusBarSettingsRegion">
-      <button class="main-status-bar-settings-button" type="button" onclick="openSettings()" aria-label="Settings" data-ui-aria-label="home.settings_accessibility_label">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.1 7.1 0 0 0-1.62-.94L14.4 2.81A.48.48 0 0 0 13.92 2h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.48.48 0 0 0-.59.22L2.72 8.47a.49.49 0 0 0 .12.61l2.03 1.58c-.05.31-.08.65-.08.97 0 .31.03.62.07.92l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.31.59.22l2.39-.96c.5.39 1.04.71 1.62.95l.36 2.53c.04.24.24.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.53c.58-.24 1.12-.56 1.62-.95l2.39.96c.22.09.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z"/></svg>
-      </button>
-    </div>
+  <section class="main-status-bar" id="mainStatusBar" aria-label="" data-language-aria-label="homeStatusAccessibilityLabel">
+    <img class="main-status-bar-battery-icon" id="mainStatusBarBatteryIcon" src="shared/icons/battery_75.svg" alt="">
+    <span class="main-status-bar-battery-percentage" id="mainStatusBarBatteryPercentage">--%</span>
+    <span class="main-status-bar-time" id="mainStatusBarTime">--:--</span>
+    <button class="main-status-bar-settings-button" type="button" onclick="openSettings()" aria-label="" data-ui-aria-label="home.settings_accessibility_label">
+      <img src="shared/icons/settings_gear.svg" alt="">
+    </button>
   </section>
 
   <!-- Three Posts, One Body: move only Top Post, Post Composer and Main Posts
        as a single unit; the independent top status row is intentionally excluded. -->
   <div class="three-posts-one-body" id="threePostsOneBody">
-    <div class="home-actions" aria-label="Top post">
-      <section class="top-post-card common_border" id="topPostCard" aria-live="polite"></section>
+    <div class="home-actions three-posts-one-body__layout" aria-label="" data-language-aria-label="homeTopPostAccessibilityLabel">
+      <section class="top-post-card three-posts-one-body__box common_border" id="topPostCard" aria-live="polite"></section>
     </div>
-    <div class="composer-area" id="mainComposerArea">
-      <div class="composer common_border">
-        <button class="composer-main" type="button" data-editor-open="create" data-i18n="share" data-i18n-mode="text">Share something...</button>
-        <button class="composer-photo" onclick="openPostComposerWithVideoPicker()" aria-label="add video">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="11" width="25" height="26" rx="5"/>
-            <path d="M32 19l9-5v20l-9-5z"/>
-          </svg>
-        </button>
-        <button class="composer-photo" onclick="openPostComposerWithImagePicker()" aria-label="add image">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="7" y="7" width="34" height="34" rx="6"/>
-            <circle cx="18" cy="18" r="3.4"/>
-            <path d="M10 35l9-9 7 6 5-5 8 8"/>
-          </svg>
-        </button>
-        <button class="composer-photo" onclick="openPostComposerWithAudioPicker()" aria-label="add audio">
-          <svg viewBox="0 0 48 48" fill="none" stroke="#111" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 36V13l20-4v23"/><circle cx="14" cy="36" r="5"/><circle cx="34" cy="32" r="5"/>
-          </svg>
-        </button>
-      </div>
-    </div>
+    <div class="post-composer-wrap three-posts-one-body__layout" id="postComposerMount"></div>
 
-    <main class="feed" id="postList"></main>
+    <main class="main-posts three-posts-one-body__layout" id="mainPosts"></main>
   </div>
 
 
@@ -135,6 +107,7 @@
     });
 
     await window.JetNoteViewLoader.loadScripts([
+      'shared/core/language_catalog.js',
       'shared/core/ui_language.js',
       'shared/components/notice.js',
       'shared/components/page_action_bar.js',
@@ -153,7 +126,10 @@
       'shared/core/dom.js',
       'shared/components/post_menu_icon.js',
       'shared/core/language.js',
+      'shared/core/date_time_format.js',
       'app/settings/settings.js',
+      'app/settings/browser_settings.js',
+      'app/settings/date_time_viewer.js',
       'app/debug_post/debug_post.js',
       // Post editor is deliberately split into small modules; keep this order.
       'app/post_editor/editor_config.js',
@@ -165,6 +141,9 @@
       'app/post_editor/tools/tool_actions.js',
       'app/post_editor/tools.js',
       'app/media/post_media.js',
+      'app/media/image_viewer/configuration.js',
+      'app/media/image_viewer/background_control.js',
+      'app/media/image_viewer/close_control.js',
       'app/media/image_viewer.js',
       'shared/components/delete_confirm_dialog.js',
       'app/home/posts.js',

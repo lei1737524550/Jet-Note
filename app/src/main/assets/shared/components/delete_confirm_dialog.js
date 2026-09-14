@@ -2,6 +2,10 @@ let pendingDeleteRequest = null;
 
 function openDeleteConfirm(type, id, anchorRect = null) {
   if (!isWorkspaceWritable()) return;
+
+  // Native inline video is outside WebView stacking. Hide it before showing
+  // the confirmation surface so the entire menu remains clickable.
+  window.JetNoteVideoOverlay?.suspend?.();
   pendingDeleteRequest = { type, id };
 
   const backdrop = document.getElementById('deleteConfirmBackdrop');
@@ -32,6 +36,7 @@ function cancelDeleteConfirm() {
     panel.style.removeProperty('top');
     panel.style.removeProperty('transform');
   }
+  window.__jetSyncNativeVideoVisibility?.();
 }
 
 function handleDeleteConfirmBackdrop(event) {

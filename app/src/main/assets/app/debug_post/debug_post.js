@@ -25,10 +25,7 @@
           <div class="debug-configuration-post-header">
             <div class="debug-configuration-post-filename">config.json</div>
             <button class="more debug-configuration-post-edit-button" type="button" data-debug-configuration-post-action="edit" aria-label="Edit config.json" title="Edit config.json">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 20l4.2-1 10.6-10.6a2.1 2.1 0 0 0 0-3l-.2-.2a2.1 2.1 0 0 0-3 0L5 15.8 4 20z"/>
-                <path d="M14.5 6.3l3.2 3.2"/>
-              </svg>
+              <img src="shared/icons/edit_pencil.svg" alt="" aria-hidden="true">
             </button>
           </div>
           <div class="debug-configuration-post-json-preview">${escapeHtmlForDebugPreview(this.configurationJsonText)}</div>
@@ -249,23 +246,20 @@
       return Boolean(debugConfigurationEditorController?.isOpen());
     },
 
-    undo(){
+    saveJsonToDownloads(){
       const debugSettingsStatus = document.getElementById('debugSettingsStatus');
       if (debugSettingsStatus) debugSettingsStatus.textContent = '';
 
       try {
-        if (window.JetNoteNative?.undoRuntimeConfigJson?.()) {
-          location.reload();
-          return;
+        const nativeBridge = window.JetNoteNative;
+        if (!nativeBridge || typeof nativeBridge.saveEffectiveConfigJsonToDownloads !== 'function') {
+          throw new Error('Config export bridge is unavailable.');
         }
+        const accepted = nativeBridge.saveEffectiveConfigJsonToDownloads();
+        if (!accepted && debugSettingsStatus) debugSettingsStatus.textContent = 'Unable to save config.json.';
       } catch (error) {
-        if (debugSettingsStatus) {
-          debugSettingsStatus.textContent = error?.message || 'Unable to restore the previous config.json.';
-        }
-        return;
+        if (debugSettingsStatus) debugSettingsStatus.textContent = error?.message || 'Unable to save config.json.';
       }
-
-      if (debugSettingsStatus) debugSettingsStatus.textContent = 'No previous config.json version.';
     },
 
     refreshSettings(){

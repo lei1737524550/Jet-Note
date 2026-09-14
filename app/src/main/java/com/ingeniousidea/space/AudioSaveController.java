@@ -22,13 +22,13 @@ final class AudioSaveController {
     private volatile boolean destroyed;
     AudioSaveController(Activity activity){this.activity=activity;}
     void choose(String url,WebView web,String name,String mime){
-        if(selectedAudio!=null){toast("Finish the current audio save first.");return;}
-        if(url==null||!url.startsWith("https://")){toast("Only HTTPS audio is supported.");return;}
+        if(selectedAudio!=null){toast(UiLanguage.text(activity, "audioSaveBusy"));return;}
+        if(url==null||!url.startsWith("https://")){toast(UiLanguage.text(activity, "audioSaveHttpsOnly"));return;}
         selectedAudio=url;cookie=CookieManager.getInstance().getCookie(url);
         referer=web==null?null:web.getUrl();agent=web==null?"Jet Note":web.getSettings().getUserAgentString();
         Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType(mime);intent.putExtra(Intent.EXTRA_TITLE,name);
-        try{activity.startActivityForResult(intent,SAVE_AUDIO);}catch(RuntimeException e){selectedAudio=null;toast("Unable to open a save location.");}
+        try{activity.startActivityForResult(intent,SAVE_AUDIO);}catch(RuntimeException e){selectedAudio=null;toast(UiLanguage.text(activity, "audioSaveDestinationUnavailable"));}
     }
     boolean handles(int code){return code==SAVE_AUDIO;}
     void onActivityResult(int request,int result,Intent data){
@@ -54,8 +54,8 @@ final class AudioSaveController {
                     if(out==null)throw new Exception("Unable to write file");byte[] buffer=new byte[65536];int n;
                     while((n=input.read(buffer))!=-1)out.write(buffer,0,n);out.flush();
                 }
-                toast("Audio saved. You can add it to a post.");
-            }catch(Exception e){toast("Audio save failed: "+e.getMessage());}
+                toast(UiLanguage.text(activity, "audioSaveCompleted"));
+            }catch(Exception e){toast(UiLanguage.format(activity, "audioSaveFailed", "reason", e.getMessage()));}
             finally{if(connection!=null)connection.disconnect();activity.runOnUiThread(()->selectedAudio=null);}
         });
     }

@@ -7,79 +7,118 @@
     </div>
 
     <div class="settings-body">
-      <div class="settings-card backup-card common_border" id="backupSettingsCard">
-        <div class="settings-row-title" data-ui-string="settings.backup_title">Backup</div>
-        <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main" data-ui-string="settings.export_jnote">Export .jnote</span></button>
-          <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main" data-ui-string="settings.import_jnote">Import .jnote</span></button>
-        </div>
-        <p id="archiveStatus" role="status"></p>
-        <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel" data-ui-string="settings.preparing">Preparing…</span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div class="archive-progress-bottom"><div id="archiveProgressBytes" class="archive-progress-bytes"></div><button id="archiveProgressCancelButton" class="archive-progress-cancel common_border" type="button" hidden onclick="cancelArchiveOperation()" data-i18n="archiveCancelOperation">Cancel</button></div></div>
-      </div>
-      <div class="settings-card debug-settings-card common_border" id="debugSettingsCard">
-        <div class="settings-row-title" data-ui-string="settings.debug_title">Debug</div>
-        <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" id="enableDebugButton" type="button" onclick="DebugConfigurationFeature.setEnabled(!DebugConfigurationFeature.enabled())"><span class="settings-choice-main" data-ui-string="settings.enable_debug">Enable Debug</span></button>
-          <button class="settings-choice settings-action-choice common_border" type="button" onclick="DebugConfigurationFeature.undo()"><span class="settings-choice-main" data-ui-string="settings.undo_changes">Undo Changes</span></button>
-        </div>
-        <p id="debugSettingsStatus" role="status"></p>
-      </div>
-      <div class="settings-card color-view-card common_border" id="colorViewCard">
+      
+      <!-- Settings modules: stable code identity is setting_N; visible/developer name is metadata. -->
+      <div class="settings-card setting-box color-view-card common_border" id="colorViewCard" data-setting-id="setting_1" data-setting-name="Color View">
         <div class="color-view-title-row">
-          <div class="settings-row-title" data-ui-string="settings.color_view_title">Color View</div>
-          <button class="color-view-reset-button common_border" id="colorViewResetButton" type="button" data-ui-string="color_view.reset" aria-label="Reset background, body, and color picker" data-ui-aria-label="color_view.reset_accessibility_label">Reset</button>
+          <div class="settings-row-title" data-ui-string="settings.color_view_title"></div>
+          <button class="color-view-reset-button common_border" id="colorViewResetButton" type="button" data-ui-string="color_view.reset" aria-label="" data-ui-aria-label="color_view.reset_accessibility_label"></button>
         </div>
         <div class="color-view-tool common_border">
+          <div class="color-view-preview-column">
+            <div class="color-view-text-preview common_border settings-background-exempt" id="colorViewTextPreview1" data-settings-background-exempt="true" data-ui-string="color_view.preview_sample_1"></div>
+            <div class="color-view-text-preview color-view-text-preview-latin common_border settings-background-exempt" id="colorViewTextPreview2" data-settings-background-exempt="true" data-ui-string="color_view.preview_sample_2"></div>
+
+            <div class="color-view-rgb-grid" aria-label="" data-ui-aria-label="color_view.rgb_values_accessibility_label">
+              <div class="color-view-rgb-label color-view-rgb-label-r">R</div>
+              <div class="color-view-rgb-label color-view-rgb-label-g">G</div>
+              <div class="color-view-rgb-label color-view-rgb-label-b">B</div>
+              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="" data-ui-aria-label="color_view.red_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="" data-ui-aria-label="color_view.green_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="" data-ui-aria-label="color_view.blue_accessibility_label">
+            </div>
+          </div>
+
           <div class="color-view-picker-column">
-            <div class="color-view-field common_border" id="colorViewField" role="application" aria-label="Saturation and brightness color field" data-ui-aria-label="color_view.sv_field_accessibility_label" tabindex="0">
+            <div class="color-view-field common_border" id="colorViewField" role="application" aria-label="" data-ui-aria-label="color_view.sv_field_accessibility_label" tabindex="0">
               <div class="color-view-field-handle" id="colorViewFieldHandle" aria-hidden="true"></div>
             </div>
             <div class="color-view-hue-control">
-              <div class="color-view-hue common_border" id="colorViewHue" role="slider" aria-label="Hue" data-ui-aria-label="color_view.hue_accessibility_label" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
+              <div class="color-view-hue common_border" id="colorViewHue" role="slider" aria-label="" data-ui-aria-label="color_view.hue_accessibility_label" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
                 <div class="color-view-hue-handle" id="colorViewHueHandle" aria-hidden="true"></div>
               </div>
               <div class="color-view-hue-caret" id="colorViewHueCaret" aria-hidden="true"></div>
             </div>
           </div>
 
-          <div class="color-view-preview-column">
-            <div class="color-view-text-preview common_border" id="colorViewTextPreview1" data-ui-string="color_view.preview_sample_1"></div>
-            <div class="color-view-text-preview color-view-text-preview-latin common_border" id="colorViewTextPreview2" data-ui-string="color_view.preview_sample_2">ABCDEFGHIJKLMNOPQRSTUVWXYZ</div>
-
-            <div class="color-view-rgb-grid" aria-label="RGB values" data-ui-aria-label="color_view.rgb_values_accessibility_label">
-              <div class="color-view-rgb-label color-view-rgb-label-r">R</div>
-              <div class="color-view-rgb-label color-view-rgb-label-g">G</div>
-              <div class="color-view-rgb-label color-view-rgb-label-b">B</div>
-              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="Red" data-ui-aria-label="color_view.red_accessibility_label">
-              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Green" data-ui-aria-label="color_view.green_accessibility_label">
-              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="Blue" data-ui-aria-label="color_view.blue_accessibility_label">
+          <div class="color-view-format-copy-layout">
+            <div class="jet-note-vertical-pill color-view-format-pill common_border" id="colorViewRadixSwitch" role="group" aria-label="" data-ui-aria-label="color_view.format_selector_accessibility_label">
+              <button class="jet-note-pill-part color-view-radix-option" id="colorViewHexButton" type="button" data-color-view-radix="hex" aria-pressed="false" data-ui-string="color_view.format_hex"></button>
+              <button class="jet-note-pill-part color-view-radix-option" id="colorViewDecimalButton" type="button" data-color-view-radix="decimal" aria-pressed="true" data-ui-string="color_view.format_decimal"></button>
             </div>
-          </div>
-
-          <div class="color-view-actions">
-            <div class="jet-note-vertical-pill common_border">
-              <button class="jet-note-pill-part color-view-action-button" id="colorViewSetBackgroundButton" type="button"></button>
-              <output class="jet-note-pill-part color-view-saved-value" id="colorViewBackgroundValue" aria-label="Saved background color" data-ui-aria-label="color_view.saved_background_color_accessibility_label"></output>
-            </div>
-            <div class="jet-note-vertical-pill common_border">
-              <button class="jet-note-pill-part color-view-action-button" id="colorViewSetBodyButton" type="button"></button>
-              <output class="jet-note-pill-part color-view-saved-value" id="colorViewBodyValue" aria-label="Saved body color" data-ui-aria-label="color_view.saved_body_color_accessibility_label"></output>
-            </div>
-            <div class="jet-note-vertical-pill common_border">
-              <button class="jet-note-pill-part color-view-action-button" id="colorViewExportButton" type="button" aria-controls="colorViewExportRow" aria-expanded="false"></button>
-              <div class="jet-note-pill-part jet-note-horizontal-pill color-view-radix-switch" id="colorViewRadixSwitch" role="group" aria-label="Color number format" data-ui-aria-label="color_view.format_selector_accessibility_label">
-                <button class="color-view-radix-option" id="colorViewHexButton" type="button" data-color-view-radix="hex" aria-pressed="false" data-ui-string="color_view.format_hex">HEX</button>
-                <button class="color-view-radix-option" id="colorViewDecimalButton" type="button" data-color-view-radix="decimal" aria-pressed="true" data-ui-string="color_view.format_decimal">DEC</button>
+            <div class="color-view-copy-column">
+              <input class="color-view-export-value common_border" id="colorViewExportValue" type="text" inputmode="text" autocomplete="off" spellcheck="false" aria-live="polite" aria-label="" data-ui-aria-label="color_view.current_color_value_accessibility_label">
+              <div class="color-view-copy-slot">
+                <button class="color-view-copy-button common_border" id="colorViewCopyButton" type="button" data-ui-string="color_view.copy"></button>
               </div>
             </div>
-          </div>
-          <div class="color-view-export-row" id="colorViewExportRow" hidden>
-            <span class="color-view-export-value" id="colorViewExportValue"></span>
-            <button class="color-view-copy-button common_border" id="colorViewCopyButton" type="button" data-ui-string="color_view.copy">Copy</button>
           </div>
           <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
         </div>
       </div>
+      <div class="settings-card setting-box date-time-viewer-card common_border" id="dateTimeViewerCard" data-setting-id="setting_2" data-setting-name="Date/Time Viewer">
+        <div class="date-time-viewer-title-row">
+          <div class="settings-row-title" data-ui-string="settings.date_time_viewer_title"></div>
+          <div class="date-time-viewer-title-actions">
+            <button class="date-time-viewer-set-button common_border" id="dateTimeViewerSetButton" type="button" data-ui-string="date_time_viewer.set"></button>
+            <button class="date-time-viewer-reset-button common_border" id="dateTimeViewerResetButton" type="button" data-ui-string="date_time_viewer.reset"></button>
+          </div>
+        </div>
+        <div class="date-time-viewer-tool common_border">
+          <label class="date-time-viewer-label" for="dateTimePatternInput" data-ui-string="date_time_viewer.pattern_label"></label>
+          <input class="date-time-viewer-pattern-input common_border" id="dateTimePatternInput" type="text" autocomplete="off" spellcheck="false" inputmode="text" value="yyyy/MM/dd-HH-mm" aria-label="" data-ui-aria-label="date_time_viewer.pattern_accessibility_label">
+
+          <div class="date-time-viewer-preview-block settings-background-exempt common_border" data-settings-background-exempt="true">
+            <div class="date-time-viewer-preview-label" data-ui-string="date_time_viewer.preview_label"></div>
+            <div class="date-time-viewer-preview-value" id="dateTimeViewerPreview" aria-live="polite"></div>
+          </div>
+
+          <div class="date-time-viewer-reference-head">
+            <span data-ui-string="date_time_viewer.common_tokens"></span>
+            <span class="date-time-viewer-reference-hint" data-ui-string="date_time_viewer.tap_to_insert"></span>
+          </div>
+          <div class="date-time-viewer-token-grid" id="dateTimeViewerTokenGrid"></div>
+          <div class="date-time-viewer-explain-row">
+            <button class="date-time-viewer-explain-button common_border" id="dateTimeViewerExplainButton" type="button" aria-expanded="false" data-ui-string="date_time_viewer.explain"></button>
+          </div>
+          <div class="date-time-viewer-explanation common_border" id="dateTimeViewerExplanation" hidden></div>
+          <div class="date-time-viewer-literal-hint" data-ui-string="date_time_viewer.literal_hint"></div>
+        </div>
+      </div>
+      <div class="settings-card setting-box backup-card common_border" id="backupSettingsCard" data-setting-id="setting_3" data-setting-name="Backup">
+        <div class="backup-title-row">
+          <div class="settings-row-title" data-ui-string="settings.backup_title"></div>
+          <button class="backup-stop-button common_border" id="archiveStopButton" type="button" disabled onclick="cancelArchiveOperation()" data-ui-string="settings.stop" aria-label="" data-ui-aria-label="settings.stop_accessibility_label"></button>
+        </div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main" data-ui-string="settings.export_jnote"></span></button>
+          <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main" data-ui-string="settings.import_jnote"></span></button>
+        </div>
+        <p id="archiveStatus" role="status"></p>
+        <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel" data-ui-string="settings.preparing"></span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div class="archive-progress-bottom"><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div></div>
+      </div>
+      <div class="settings-card setting-box debug-settings-card common_border" id="debugSettingsCard" data-setting-id="setting_4" data-setting-name="Debug">
+        <div class="settings-row-title" data-ui-string="settings.debug_title"></div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice common_border" id="enableDebugButton" type="button" onclick="DebugConfigurationFeature.setEnabled(!DebugConfigurationFeature.enabled())"><span class="settings-choice-main" data-ui-string="settings.enable_debug"></span></button>
+          <button class="settings-choice settings-action-choice common_border" id="saveConfigJsonButton" type="button" onclick="DebugConfigurationFeature.saveJsonToDownloads()"><span class="settings-choice-main" data-ui-string="settings.save_json"></span></button>
+        </div>
+        <p id="debugSettingsStatus" role="status"></p>
+      </div>
+      <div class="settings-card setting-box browser-settings-card common_border" id="browserSettingsCard" data-setting-id="setting_5" data-setting-name="Browser">
+        <div class="backup-title-row browser-title-row">
+          <div class="settings-row-title" data-ui-string="settings.browser_title">Browser</div>
+          <button class="backup-stop-button browser-relaunch-button common_border" id="browserRelaunchButton" type="button" data-ui-string="settings.relaunch" aria-label="" data-ui-aria-label="settings.relaunch_accessibility_label">Relaunch</button>
+        </div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice common_border" id="enableBrowserButton" type="button"><span class="settings-choice-main">Enable Browser</span></button>
+          <button class="settings-choice settings-action-choice common_border" id="enableResourceFilterButton" type="button"><span class="settings-choice-main">Enable res-Filter</span></button>
+        </div>
+        <div class="browser-resource-filter" id="browserResourceFilter" hidden>
+          <div class="browser-resource-filter-grid" id="browserResourceFilterGrid" aria-label="Get Source file extension filter"></div>
+        </div>
+      </div>
+
     </div>
   </section>
   <input id="archivePicker" type="file" accept=".jnote,.jet-note,application/vnd.jnote+zip,application/vnd.jet-note+zip,application/zip,application/octet-stream" hidden onchange="selectArchive(event)">

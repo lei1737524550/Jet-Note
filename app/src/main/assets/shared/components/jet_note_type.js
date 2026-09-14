@@ -3,19 +3,18 @@
 
   const CURRENT_BACKGROUND_TOKEN = 'current_background';
   const CURRENT_BODY_TOKEN = 'current_body';
-  let configPromise = null;
+  let componentPromise = null;
   let latestBackground = 'rgb(255,255,255)';
   let latestBody = 'rgb(255,255,255)';
 
-  function loadConfig(){
-    if(window.JetPageActionBar?.loadConfig) return window.JetPageActionBar.loadConfig();
-    if(!configPromise){
-      configPromise=fetch('config.json',{cache:'no-store'}).then(response=>{
-        if(!response.ok) throw new Error(`Jet Note type config unavailable: ${response.status}`);
+  function loadComponentConfig(){
+    if(!componentPromise){
+      componentPromise=fetch('shared/components/jet_note_type.json',{cache:'no-store'}).then(response=>{
+        if(!response.ok) throw new Error(`Jet Note type component config unavailable: ${response.status}`);
         return response.json();
       });
     }
-    return configPromise;
+    return componentPromise;
   }
 
   function normalizeColor(value,fallback){
@@ -24,9 +23,6 @@
     if(text===CURRENT_BACKGROUND_TOKEN) return latestBackground;
     if(text===CURRENT_BODY_TOKEN) return latestBody;
     if(/^[0-9a-fA-F]{6}$/.test(text)) return `#${text}`;
-    // Never publish an unknown symbolic token as a CSS color. A defined but
-    // invalid custom property makes var(..., fallback) invalid as a whole and
-    // surfaces then become transparent.
     if(/^[a-z_][a-z0-9_-]*$/i.test(text) && !CSS.supports('color',text)) return fallback;
     return text;
   }
@@ -66,34 +62,29 @@
   async function apply(currentBackground=latestBackground,currentBody=latestBody){
     latestBackground=String(currentBackground||latestBackground).trim()||latestBackground;
     latestBody=String(currentBody||latestBody).trim()||latestBody;
-    const config=await loadConfig();
-    const type=config?.jet_note_type||{};
+    const type=await loadComponentConfig();
     const backgrounds=type.jet_note_type_background||{};
     const borders=type.jet_note_type_border_color||{};
 
     setVar('--jet-note-type-body-foreground-color',bodyForegroundColor(type));
 
     const backgroundMap={
-      '--jet-note-type-settings-background':['settings'],
+      '--jet-note-type-settings-set-background':['settings','set_background'],
       '--jet-note-type-edit-post-background':['edit_post'],
       '--jet-note-type-tools-background':['tools','fallback'],
       '--jet-note-type-page-action-bar-background':['page_action_bar'],
-      '--jet-note-type-top-post-background':['three_post_one_body','top_post'],
-      '--jet-note-type-post-composer-background':['three_post_one_body','post_composer'],
-      '--jet-note-type-main-posts-background':['three_post_one_body','main_posts'],
+      '--jet-note-type-three-post-set-background':['three_post_one_body','set_background'],
+      '--jet-note-type-three-post-set-body':['three_post_one_body','set_body'],
+      '--jet-note-type-three-post-internal-control-background':['three_post_one_body','internal_controls'],
       '--jet-note-type-edit-post-right-side-tool-button-background':['edit_post_right_side_tool_buttons','normal_background'],
       '--jet-note-type-edit-post-right-side-tools-expanded-button-background':['edit_post_right_side_tool_buttons','tools_expanded_background'],
-      '--jet-note-type-settings-backup-card-background':['settings_body_cards','backup'],
-      '--jet-note-type-settings-color-view-card-background':['settings_body_cards','color_view']
+      '--jet-note-type-settings-set-body':['settings','set_body']
     };
     const borderMap={
       '--jet-note-type-settings-border-color':['settings'],
       '--jet-note-type-edit-post-border-color':['edit_post'],
       '--jet-note-type-tools-border-color':['tools','fallback'],
-      '--jet-note-type-page-action-bar-border-color':['page_action_bar'],
-      '--jet-note-type-top-post-border-color':['three_post_one_body','top_post'],
-      '--jet-note-type-post-composer-border-color':['three_post_one_body','post_composer'],
-      '--jet-note-type-main-posts-border-color':['three_post_one_body','main_posts']
+      '--jet-note-type-page-action-bar-border-color':['page_action_bar']
     };
 
     for(const [cssVar,path] of Object.entries(backgroundMap)){
@@ -103,7 +94,6 @@
       setVar(cssVar,normalizeColor(readPath(borders,path),'#bfc1c4'));
     }
 
-    // Shared top-bar implementation consumes these existing variables.
     setVar('--page-action-bar-background',getComputedStyle(document.documentElement).getPropertyValue('--jet-note-type-page-action-bar-background').trim()||latestBackground);
     setVar('--page-action-bar-border-color',getComputedStyle(document.documentElement).getPropertyValue('--jet-note-type-page-action-bar-border-color').trim()||'#bfc1c4');
     window.dispatchEvent(new CustomEvent('jetnote:type-appearance-changed',{detail:{background:latestBackground}}));
@@ -115,8 +105,8 @@
     return match ? `tool_${match[1]}` : 'fallback';
   }
   async function resolveToolValue(groupName,toolId,fallback){
-    const config=await loadConfig();
-    const group=config?.jet_note_type?.[groupName]?.tools||{};
+    const type=await loadComponentConfig();
+    const group=type?.[groupName]?.tools||{};
     const raw=group?.[toolSlot(toolId)] ?? group?.fallback;
     return normalizeColor(raw,fallback);
   }
@@ -127,5 +117,5 @@
     return resolveToolValue('jet_note_type_border_color',toolId,'#bfc1c4');
   }
 
-  window.JetNoteType={apply,currentBackground,toolBackground,toolBorderColor,CURRENT_BACKGROUND_TOKEN,CURRENT_BODY_TOKEN};
+  window.JetNoteType={apply,currentBackground,toolBackground,toolBorderColor,CURRENT_BACKGROUND_TOKEN,CURRENT_BODY_TOKEN,loadComponentConfig};
 })();
