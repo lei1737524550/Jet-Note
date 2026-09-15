@@ -23,7 +23,7 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
         sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
       })
     }),
-    super_starred: Object.freeze({
+    super_star: Object.freeze({
       border_rule: Object.freeze({
         change_count: 1,
         sequence: Object.freeze([
@@ -48,14 +48,20 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
       delete_content_to_border_clear_delay_ms: 140,
       delete_border_clear_to_reflow_delay_ms: 140,
       post_delete_reflow_animation_duration_ms: 320,
-      post_reflow_animation_duration_ms: Object.freeze({
-        favorite: 320,
-        super_favorite: 320,
-        cancel_favorite: 320,
-        cancel_super_favorite: 320
+      post_reflow_animation: Object.freeze({
+        speed_or_duration: 'speed',
+        star_duration_ms: 900,
+        cancel_star_duration_ms: 900,
+        super_star_duration_ms: 900,
+        cancel_super_star_duration_ms: 900,
+        star_speed_px_per_second: 100,
+        cancel_star_speed_px_per_second: 100,
+        super_star_speed_px_per_second: 100,
+        cancel_super_star_speed_px_per_second: 100
       }),
-      post_favorite_highlight: Object.freeze({
+      post_star_highlight: Object.freeze({
         inset_width_px: 5,
+        display_delay_after_reflow_ms: 300,
         normal: Object.freeze({
           change_count: 1,
           sequence: Object.freeze([{color: '#ffff00', duration_ms: 500}])
@@ -75,7 +81,7 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
       time_stamp_top_margin: 3,
       time_stamp_bottom_margin: 3
     }),
-    starred: Object.freeze({
+    star: Object.freeze({
       border_rule: Object.freeze({
         change_count: 1,
         sequence: Object.freeze([
@@ -91,6 +97,22 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
 });
 
 let threePostOneBodyConfig = THREE_POST_ONE_BODY_DEFAULT_CONFIG;
+
+const HOME_DISPLAY_DEFAULTS = Object.freeze({
+  top_post: true,
+  post_composer: true,
+  main_posts: true,
+  star_post: true
+});
+let homeDisplayConfig = {...HOME_DISPLAY_DEFAULTS};
+
+function effectiveHomeDisplay()
+{
+  const configured = {...HOME_DISPLAY_DEFAULTS, ...(homeDisplayConfig || {})};
+  const debug = window.DebugConfigurationFeature?.enabled?.() === true;
+  if (!debug) return configured;
+  return {top_post:false, post_composer:false, main_posts:false, star_post:false};
+}
 
 // The IME is raised only after the split entrance settles. This timing is a
 // structural part of the animation, not a global config option; exposing values
@@ -114,7 +136,7 @@ function configuredThreePostOneBody(config) {
       ...THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post,
       ...configured.top_post,
       welcome: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.welcome, configured.top_post?.welcome),
-      super_starred: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred, configured.top_post?.super_starred)
+      super_star: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_star, configured.top_post?.super_star)
     },
     post_composer: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.post_composer, configured.post_composer),
     main_posts: {
@@ -122,7 +144,7 @@ function configuredThreePostOneBody(config) {
       ...configured.main_posts,
       interaction_timing: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.interaction_timing, configured.main_posts?.interaction_timing),
       non_star: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star, configured.main_posts?.non_star),
-      starred: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred, configured.main_posts?.starred)
+      star: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.star, configured.main_posts?.star)
     }
   };
 }
@@ -139,6 +161,7 @@ Promise.all([
     window.__jetRuntimeConfig = config;
     welcomePostDefaultString = defaultString || WELCOME_POST_DEFAULT_STRING;
     threePostOneBodyConfig = configuredThreePostOneBody(config);
+    homeDisplayConfig = {...HOME_DISPLAY_DEFAULTS, ...(config?.is_display || {})};
     applyThreePostOneBodyConfig();
     renderPosts();
   })
@@ -150,9 +173,9 @@ function getPostStarState(post) {
 
 function setPostStarState(post, state) {
   if (!post) return;
-  const normalized = state === 'super_starred' ? 'super_starred' : state === 'starred' ? 'starred' : 'none';
+  const normalized = state === 'super_star' ? 'super_star' : state === 'star' ? 'star' : 'none';
   post.starState = normalized;
-  delete post.favorite;
+  delete post.star;
 }
 
 function postPublishedAt(post) {
@@ -163,16 +186,19 @@ function postPublishedAt(post) {
 }
 
 function getSuperStarPost() {
-  return posts.find(post => getPostStarState(post) === 'super_starred') || null;
+  return posts.find(post => getPostStarState(post) === 'super_star') || null;
 }
 
-function getMainPosts() {
-  const visible = posts.filter(post => getPostStarState(post) !== 'super_starred');
-  const regular = visible.filter(post => getPostStarState(post) !== 'starred');
-  const starred = visible
-    .filter(post => getPostStarState(post) === 'starred')
-    .sort((a, b) => postPublishedAt(b) - postPublishedAt(a));
-  return starred.concat(regular);
+function getMainPosts()
+{
+  const display = effectiveHomeDisplay();
+  if (!display.main_posts) return [];
+  const visible = posts.filter(post => getPostStarState(post) !== 'super_star');
+  const regular = visible.filter(post => getPostStarState(post) !== 'star');
+  const star = display.star_post
+    ? visible.filter(post => getPostStarState(post) === 'star').sort((a, b) => postPublishedAt(b) - postPublishedAt(a))
+    : [];
+  return star.concat(regular);
 }
 
 function welcomePostFontSize(value) {
@@ -204,11 +230,11 @@ function configFontSize(value, fallback = 17) {
 }
 
 function postVisualConfigForState(state) {
-  if (state === 'super_starred') {
-    return threePostOneBodyConfig.top_post?.super_starred || THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred;
+  if (state === 'super_star') {
+    return threePostOneBodyConfig.top_post?.super_star || THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_star;
   }
-  if (state === 'starred') {
-    return threePostOneBodyConfig.main_posts?.starred || THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred;
+  if (state === 'star') {
+    return threePostOneBodyConfig.main_posts?.star || THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.star;
   }
   return threePostOneBodyConfig.main_posts?.non_star || THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star;
 }
@@ -219,17 +245,53 @@ function configPixelMargin(value, fallback = 0) {
   return Math.max(-1000, Math.min(number, 1000));
 }
 
-function postVisualStyle(state) {
+function normalizeRuleChangeCount(value) {
+  const count = Number(value);
+  if (count === -1) return -1;
+  if (Number.isInteger(count) && count > 0) return count;
+  return 0;
+}
+
+function resolvePostVisualState(state) {
   const config = postVisualConfigForState(state);
-  const defaults = state === 'super_starred'
-    ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_starred
-    : state === 'starred'
-      ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred
+  const defaults = state === 'super_star'
+    ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.top_post.super_star
+    : state === 'star'
+      ? THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.star
       : THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star;
   const timeColor = configBorderColor(config.time_stamp_color, configBorderColor(defaults.time_stamp_color, '#999da2'));
   const top = configPixelMargin(config.time_stamp_top_margin, defaults.time_stamp_top_margin);
   const bottom = configPixelMargin(config.time_stamp_bottom_margin, defaults.time_stamp_bottom_margin);
-  return `--post-state-time-color:${timeColor};--post-state-time-top-margin:${top}px;--post-state-time-bottom-margin:${bottom}px`;
+
+  const result = {
+    state,
+    timeColor,
+    timeTopMargin: top,
+    timeBottomMargin: bottom,
+    highlight: null
+  };
+
+  if (state !== 'star' && state !== 'super_star') return result;
+
+  const highlightConfig = threePostOneBodyConfig.main_posts?.interaction_timing?.post_star_highlight || {};
+  const fallbackColor = state === 'super_star' ? '#ff0000' : '#ffff00';
+  const fallbackRule = {change_count: 1, sequence: [{color: fallbackColor, duration_ms: 500}]};
+  const rule = (state === 'super_star' ? highlightConfig.super : highlightConfig.normal) || fallbackRule;
+  const configuredWidth = Number(highlightConfig.inset_width_px);
+  const width = Math.max(0, Number.isFinite(configuredWidth) ? configuredWidth : 5);
+
+  result.highlight = {
+    width,
+    mode: normalizeRuleChangeCount(rule?.change_count),
+    sequence: normalizedBorderSequence(rule, fallbackColor),
+    fallbackColor
+  };
+  return result;
+}
+
+function postVisualStyle(state) {
+  const visual = resolvePostVisualState(state);
+  return `--post-state-time-color:${visual.timeColor};--post-state-time-top-margin:${visual.timeTopMargin}px;--post-state-time-bottom-margin:${visual.timeBottomMargin}px`;
 }
 
 function normalizedBorderSequence(rule, fallbackColor) {
@@ -239,6 +301,85 @@ function normalizedBorderSequence(rule, fallbackColor) {
     duration_ms: Math.max(0, Math.min(Number(item?.duration_ms) || 0, 86400000))
   })).filter(item => item.color);
   return sequence.length ? sequence : [{color: fallbackColor, duration_ms: 1000}];
+}
+
+
+// Star/Super-Star Shadow Insert is state-derived paint. DOM nodes are
+// disposable: Debug toggles, imports and re-renders may replace them at any time.
+// This controller is the single owner of highlight paint and animation lifetime.
+const postHighlightRuns = new Map();
+const postHighlightDeferredIds = new Set();
+
+function cancelPostHighlightRun(key) {
+  const run = postHighlightRuns.get(String(key));
+  if (run) run.cancelled = true;
+  postHighlightRuns.delete(String(key));
+}
+
+function cancelAllPostHighlightRuns() {
+  for (const run of postHighlightRuns.values()) run.cancelled = true;
+  postHighlightRuns.clear();
+}
+
+function postHighlightCardFor(post) {
+  const state = getPostStarState(post);
+  if (state === 'super_star') return document.getElementById('topPostCard');
+  if (state === 'star') {
+    const id = String(post.id).replace(/["']/g, '\\$&');
+    return document.querySelector(`#mainPosts article.post[data-post-id="${id}"]`);
+  }
+  return null;
+}
+
+function applyResolvedHighlight(card, highlight, color) {
+  if (!card || !highlight || highlight.width <= 0) return;
+  card.style.setProperty('box-shadow', `inset 0 0 0 ${highlight.width}px ${color}`, 'important');
+}
+
+function reconcilePostHighlight(post) {
+  if (!post) return;
+  const key = String(post.id);
+  cancelPostHighlightRun(key);
+
+  if (postHighlightDeferredIds.has(key)) return;
+
+  const state = getPostStarState(post);
+  const visual = resolvePostVisualState(state);
+  const card = postHighlightCardFor(post);
+  if (!card || !visual.highlight || visual.highlight.width <= 0) return;
+
+  const highlight = visual.highlight;
+  const sequence = highlight.sequence;
+  if (!sequence.length) return;
+
+  // count=0 is a semantic persistent state. It is reconstructed from data and
+  // config every time a card is rendered; no DOM inline state is authoritative.
+  if (highlight.mode === 0) {
+    applyResolvedHighlight(card, highlight, sequence[0].color);
+    return;
+  }
+
+  // Infinite rules are stateful visuals too. A legitimate DOM rebuild starts a
+  // fresh run on the replacement node and cancels the old node's run.
+  if (highlight.mode === -1) {
+    const run = {cancelled: false};
+    postHighlightRuns.set(key, run);
+    (async () => {
+      let index = 0;
+      while (!run.cancelled && card.isConnected && getPostStarState(post) === state) {
+        const item = sequence[index];
+        applyResolvedHighlight(card, highlight, item.color);
+        await new Promise(resolve => setTimeout(resolve, Math.max(16, item.duration_ms)));
+        index = (index + 1) % sequence.length;
+      }
+      if (postHighlightRuns.get(key) === run) postHighlightRuns.delete(key);
+    })();
+  }
+}
+
+function reconcileAllPostHighlights() {
+  cancelAllPostHighlightRuns();
+  for (const post of posts) reconcilePostHighlight(post);
 }
 
 function stopThreePostOneBodyBorderRule(name) {
@@ -283,19 +424,19 @@ function applyThreePostOneBodyBorderRule(name, rule, cssVariable, fallbackColor 
 }
 
 function restartThreePostOneBodyStateBorderRule(state) {
-  if (state === 'starred') {
+  if (state === 'star') {
     applyThreePostOneBodyBorderRule(
-      'main_posts.starred',
-      threePostOneBodyConfig.main_posts?.starred?.border_rule,
-      '--three-post-one-body-main-posts-starred-border-color'
+      'main_posts.star',
+      threePostOneBodyConfig.main_posts?.star?.border_rule,
+      '--three-post-one-body-main-posts-star-border-color'
     );
     return;
   }
-  if (state === 'super_starred') {
+  if (state === 'super_star') {
     applyThreePostOneBodyBorderRule(
-      'top_post.super_starred',
-      threePostOneBodyConfig.top_post?.super_starred?.border_rule,
-      '--three-post-one-body-top-post-super-starred-border-color'
+      'top_post.super_star',
+      threePostOneBodyConfig.top_post?.super_star?.border_rule,
+      '--three-post-one-body-top-post-super-star-border-color'
     );
   }
 }
@@ -317,9 +458,9 @@ function applyThreePostOneBodyConfig() {
     '--three-post-one-body-top-post-welcome-border-color'
   );
   applyThreePostOneBodyBorderRule(
-    'top_post.super_starred',
-    threePostOneBodyConfig.top_post?.super_starred?.border_rule,
-    '--three-post-one-body-top-post-super-starred-border-color'
+    'top_post.super_star',
+    threePostOneBodyConfig.top_post?.super_star?.border_rule,
+    '--three-post-one-body-top-post-super-star-border-color'
   );
   applyThreePostOneBodyBorderRule(
     'post_composer',
@@ -332,13 +473,14 @@ function applyThreePostOneBodyConfig() {
     '--three-post-one-body-main-posts-non-star-border-color'
   );
   applyThreePostOneBodyBorderRule(
-    'main_posts.starred',
-    threePostOneBodyConfig.main_posts?.starred?.border_rule,
-    '--three-post-one-body-main-posts-starred-border-color'
+    'main_posts.star',
+    threePostOneBodyConfig.main_posts?.star?.border_rule,
+    '--three-post-one-body-main-posts-star-border-color'
   );
 }
 
 window.addEventListener('pagehide', () => {
+  cancelAllPostHighlightRuns();
   for (const name of [...threePostOneBodyBorderTimers.keys()]) stopThreePostOneBodyBorderRule(name);
 });
 
@@ -346,9 +488,19 @@ function renderPublishedPostFooter(post) {
   return `<div class="post-footer-row"><div class="time">${escapeHTML(formatPostTimestamp(post))}</div></div>`;
 }
 
-function renderTopPost() {
+function renderTopPost()
+{
   const card = document.getElementById('topPostCard');
   if (!card) return;
+  const visible = effectiveHomeDisplay().top_post;
+  card.hidden = !visible;
+  if (card.parentElement) card.parentElement.hidden = !visible;
+  if (!visible)
+  {
+    releaseAttachmentUrls(card);
+    card.innerHTML = '';
+    return;
+  }
   releaseAttachmentUrls(card);
 
   const post = getSuperStarPost();
@@ -366,10 +518,10 @@ function renderTopPost() {
   const postId = escapeHTML(String(post.id));
   const images = Array.isArray(post.images) ? post.images : [];
   card.className = 'top-post-card top-post-super three-posts-one-body__box common_border';
-  card.setAttribute('style', postVisualStyle('super_starred'));
+  card.setAttribute('style', postVisualStyle('super_star'));
   card.innerHTML = `
     <div class="top-post-layout">
-      <div class="top-post-content" data-post-id="${postId}">
+      <div class="top-post-content published-post-surface" data-post-id="${postId}">
         ${renderAttachments(post.attachments)}
         <div class="text-content">${escapeHTML(post.text || '')}</div>
         <div class="post-content-clear" aria-hidden="true"></div>
@@ -408,7 +560,7 @@ function renderPosts(options = {}) {
   const composerMount = document.getElementById('postComposerMount');
   if (!list || !composerMount) return;
 
-  const composerHTML = isWorkspaceWritable() ? `
+  const composerHTML = (isWorkspaceWritable() && effectiveHomeDisplay().post_composer) ? `
       <div class="post-composer three-posts-one-body__box common_border">
         <button class="post-composer-main"
                 type="button"
@@ -440,7 +592,7 @@ function renderPosts(options = {}) {
     const postId=escapeHTML(String(post.id));
 
     return `
-      <article class="post post-state-${getPostStarState(post) === 'starred' ? 'starred' : 'not-starred'} three-posts-one-body__box common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post))}">
+      <article class="post published-post-surface post-state-${getPostStarState(post) === 'star' ? 'star' : 'not-star'} three-posts-one-body__box common_border" data-post-id="${postId}" style="${postVisualStyle(getPostStarState(post))}">
         <div class="post-head post-head-minimal">
           ${isWorkspaceWritable() ? `<button class="more"
                   data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)"
@@ -461,6 +613,7 @@ function renderPosts(options = {}) {
   composerMount.innerHTML = composerHTML;
   list.innerHTML = debugPostHTML + postsHTML;
   renderTopPost();
+  reconcileAllPostHighlights();
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
   bindPublishedInlineImageZoom?.(list);
@@ -697,26 +850,26 @@ async function openPostComposerWithVideoPicker() {
   setTimeout(() => pickPostVideos(), 60);
 }
 
-function removePostDraftImage(index) {
-  postDraftImages.splice(index, 1);
-  renderPostImagePreview();
+function removePostDraftImage(indexOrId) {
+  const id = String(indexOrId);
+  const attachmentIndex = draftAttachments.post.findIndex(item => item?.type === 'image' && String(item.id) === id);
+  if (attachmentIndex >= 0) {
+    const item = draftAttachments.post[attachmentIndex];
+    const url = NativeMedia.url(item);
+    draftAttachments.post.splice(attachmentIndex, 1);
+    draftMedia.post.delete(id);
+    const imageIndex = postDraftImages.indexOf(url);
+    if (imageIndex >= 0) postDraftImages.splice(imageIndex, 1);
+  } else {
+    const legacyIndex = Number(indexOrId);
+    if (Number.isInteger(legacyIndex) && legacyIndex >= 0) postDraftImages.splice(legacyIndex, 1);
+  }
+  renderPostVisualMediaPreview();
   syncPostEditorDraft();
 }
 
 function renderPostImagePreview() {
-  const box = document.getElementById('postImagePreview');
-  if (!box) return;
-
-  box.innerHTML = postDraftImages.map((src, index) => `
-    <div class="compose-image-item common_border">
-      <img src="${src}"
-           alt=""
-           onclick="openImageViewer(this.src)">
-      <button class="compose-image-remove"
-              onclick="event.stopPropagation(); removePostDraftImage(${index})"
-              aria-label="remove">×</button>
-    </div>
-  `).join('');
+  renderPostVisualMediaPreview();
 }
 
 async function handlePostVideos(event) {
@@ -724,80 +877,77 @@ async function handlePostVideos(event) {
   if (!isWorkspaceWritable()) { picker.value = ''; return; }
   const files = Array.from(picker.files || []);
   picker.value = '';
-
   const policy = window.JetNotePostAttachmentPolicy;
   await policy?.ready;
-  if (policy?.conflict('video', postDraftImages, draftAttachments.post)) {
-    alert(t('imageVideoExclusive'));
-    return;
-  }
-
   const remaining = policy?.remaining('video', postDraftImages, draftAttachments.post) ?? 0;
-  if (remaining <= 0) {
-    alert(t('videoLimit'));
-    return;
-  }
-
+  if (remaining <= 0) { alert(t('videoLimit')); return; }
   if (files.length > remaining) alert(t('videoLimit'));
-  const selected = files.slice(0, remaining);
-
   try {
-    for (const file of selected) {
+    for (const file of files.slice(0, remaining)) {
       if (!file.type.startsWith('video/')) throw Error(t('videoOnly'));
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const meta = {
-        id: entryUuid(),
-        type: 'video',
-        mimeType: file.type || 'video/mp4',
-        originalName: file.name,
-        sourceMimeType: file.type || null,
-        lastModified: file.lastModified,
-        size: bytes.length,
-        sha256: sha256(bytes)
-      };
-      draftMedia.post.set(meta.id, {
-        ...meta,
-        blob: new Blob([bytes], {type: meta.mimeType})
-      });
+      const meta = { id: entryUuid(), type:'video', mimeType:file.type || 'video/mp4', originalName:file.name,
+        sourceMimeType:file.type || null, lastModified:file.lastModified, size:bytes.length, sha256:sha256(bytes) };
+      draftMedia.post.set(meta.id, {...meta, blob:new Blob([bytes], {type:meta.mimeType})});
       draftAttachments.post.push(meta);
     }
-    renderPostVideoPreview();
+    renderPostVisualMediaPreview();
     renderAudioDraft('post');
     syncPostEditorDraft();
-  } catch (error) {
-    alert(error.message);
-  }
+  } catch (error) { alert(error.message); }
 }
 
 function removePostDraftVideo(id) {
   draftAttachments.post = draftAttachments.post.filter(item => String(item.id) !== String(id));
   draftMedia.post.delete(String(id));
-  renderPostVideoPreview();
+  renderPostVisualMediaPreview();
   renderAudioDraft('post');
   syncPostEditorDraft();
 }
 
 function renderPostVideoPreview() {
-  const box = document.getElementById('postVideoPreview');
-  if (!box) return;
+  renderPostVisualMediaPreview();
+}
 
+function renderPostVisualMediaPreview() {
+  const box = document.getElementById('postVisualMediaPreview');
+  if (!box) return;
   releaseVideoAttachmentUrls(box);
-  const videos = draftAttachments.post.filter(item => item.type === 'video');
-  box.innerHTML = videos.map(item => `
-    <div class="video-attachment-shell compose-video-shell common_border">
-      <div class="compose-video-item video-attachment-item native-video-card" data-media-id="${escapeHTML(item.id)}">
-        <img class="video-poster" alt="" draggable="false">
-        <button class="compose-image-remove"
-                type="button"
-                onclick="event.stopPropagation(); removePostDraftVideo('${escapeHTML(item.id)}')"
-                aria-label="${escapeHTML(t('remove'))}">×</button>
-      </div>
-      <div class="video-progress-track" role="slider" tabindex="0" aria-label="video position" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0">
-        <div class="video-progress-fill"></div>
-      </div>
-      <div class="video-inline-time">0:00/0:00</div>
-    </div>
-  `).join('');
+
+  const representedImages = new Set();
+  const visualItems = [];
+  for (const item of draftAttachments.post || []) {
+    if (item?.type === 'video') {
+      visualItems.push({type:'video', item});
+    } else if (item?.type === 'image') {
+      const src = NativeMedia.url(item);
+      representedImages.add(src);
+      visualItems.push({type:'image', item, src});
+    }
+  }
+  // Backward compatibility for posts created before image attachments carried
+  // IDs. New media always follows draftAttachments order exactly.
+  postDraftImages.forEach((src, index) => {
+    if (!representedImages.has(src)) visualItems.push({type:'legacy-image', src, index});
+  });
+
+  box.innerHTML = visualItems.map(entry => {
+    if (entry.type === 'video') {
+      const id = escapeHTML(entry.item.id);
+      return `<div class="video-attachment-shell compose-video-shell common_border">
+        <div class="compose-video-item video-attachment-item native-video-card" data-media-id="${id}">
+          <img class="video-poster" alt="" draggable="false">
+          <button class="compose-image-remove adaptive-complement-remove" type="button"
+                  onclick="event.stopPropagation(); removePostDraftVideo('${id}')" aria-label="${escapeHTML(t('remove'))}">×</button>
+        </div>
+        <div class="video-progress-track" role="slider" tabindex="0" aria-label="video position" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0"><div class="video-progress-fill"></div></div>
+        <div class="video-inline-time">0:00/0:00</div>
+      </div>`;
+    }
+    const key = entry.item ? `'${escapeHTML(entry.item.id)}'` : String(entry.index);
+    return `<div class="compose-image-item common_border"><img src="${escapeHTML(entry.src)}" alt="" onclick="openImageViewer(this.src)">
+      <button class="compose-image-remove adaptive-complement-remove" onclick="event.stopPropagation(); removePostDraftImage(${key})" aria-label="remove">×</button></div>`;
+  }).join('') + (visualItems.length > 3 ? '<div class="compose-media-more-indicator" aria-hidden="true"><img src="shared/icons/more_vertical.svg" alt=""></div>' : '');
 
   hydrateVideoAttachments(box, draftMedia.post);
 }
@@ -867,9 +1017,9 @@ function schedulePostHorizontalEllipsisDismiss(postId) {
 }
 
 const POST_UI_SOUND_PATHS = Object.freeze({
-  starred: 'shared/sounds/starred.ogg',
-  super_starred: 'shared/sounds/super_starred.ogg',
-  cancel_starred: 'shared/sounds/cancel_starred.ogg',
+  star: 'shared/sounds/star.ogg',
+  super_star: 'shared/sounds/super_star.ogg',
+  cancel_star: 'shared/sounds/cancel_star.ogg',
   open_trash: 'shared/sounds/open_trash.ogg',
   delete_it: 'shared/sounds/delete_it.ogg',
   send_post: 'shared/sounds/send_post.ogg',
@@ -896,163 +1046,412 @@ function closePostActionPanel() {
   window.__jetSyncNativeVideoVisibility?.();
 }
 
-function syncPostFavoriteAction() {
-  const button = document.getElementById('postFavoriteAction');
+function syncPostStarAction() {
+  const button = document.getElementById('postStarAction');
   if (!button) return;
 
   const post = posts.find(item => String(item.id) === String(activePostActionId));
   const state = getPostStarState(post);
-  button.classList.toggle('active', state === 'starred');
-  button.classList.toggle('super-active', state === 'super_starred');
+  button.classList.toggle('active', state === 'star');
+  button.classList.toggle('super-active', state === 'super_star');
   button.setAttribute('aria-pressed', state === 'none' ? 'false' : 'true');
   button.setAttribute('data-star-state', state);
   const icon = button.querySelector('.post-action-star');
-  if (icon) icon.src = state === 'super_starred' ? 'shared/icons/star_super.svg' : state === 'starred' ? 'shared/icons/star_active.svg' : 'shared/icons/star.svg';
+  if (icon) icon.src = state === 'super_star' ? 'shared/icons/star_super.svg' : state === 'star' ? 'shared/icons/star_active.svg' : 'shared/icons/star.svg';
 }
 
-function captureMainPostRects() {
+let postReflowTransactionActive = false;
+
+function nextAnimationFrame() {
+  return new Promise(resolve => requestAnimationFrame(resolve));
+}
+
+// Star/Super-Star camera -------------------------------------------------------
+// The post being acted on is the camera target for the entire reflow. The hard
+// invariant is that the target may never leave the visual viewport. Whenever
+// document bounds permit it, keep the target's visual centre on the viewport
+// centre; near the top/bottom bounds, clamp the camera while preserving full
+// target visibility. This applies equally to star, super-star and both cancel
+// paths because they all pass through animatePostReflow().
+function postReflowCameraViewport() {
+  const viewport = window.visualViewport;
+  return {
+    top: viewport?.offsetTop || 0,
+    height: Math.max(1, viewport?.height || window.innerHeight || document.documentElement.clientHeight || 1)
+  };
+}
+
+function postReflowCameraTarget(postId) {
+  if (postId === null || postId === undefined) return null;
+  const id = String(postId);
+  return postReflowCards().find(item => item.id === id)?.card || null;
+}
+
+function followPostReflowCamera(postId) {
+  const card = postReflowCameraTarget(postId);
+  if (!card || !card.isConnected) return false;
+
+  const rect = card.getBoundingClientRect();
+  const viewport = postReflowCameraViewport();
+  const viewportCenter = viewport.top + viewport.height / 2;
+  const targetCenter = rect.top + rect.height / 2;
+  const maxScrollY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+
+  // Centre first. Clamping at document edges is the only reason the target may
+  // not be exactly centred. scrollTo is synchronous in Android WebView, so the
+  // next painted frame already uses the corrected camera position.
+  let desiredScrollY = Math.max(0, Math.min(maxScrollY, window.scrollY + targetCenter - viewportCenter));
+  window.scrollTo(window.scrollX, desiredScrollY);
+
+  // Re-read after clamping and enforce the absolute no-out-of-frame condition.
+  // This also handles a target taller than the usable viewport as gracefully as
+  // possible by pinning its nearest edge rather than allowing camera drift.
+  const corrected = card.getBoundingClientRect();
+  const visibleTop = viewport.top;
+  const visibleBottom = viewport.top + viewport.height;
+  if (corrected.top < visibleTop) {
+    desiredScrollY = Math.max(0, window.scrollY + corrected.top - visibleTop);
+    window.scrollTo(window.scrollX, desiredScrollY);
+  } else if (corrected.bottom > visibleBottom) {
+    desiredScrollY = Math.min(maxScrollY, window.scrollY + corrected.bottom - visibleBottom);
+    window.scrollTo(window.scrollX, desiredScrollY);
+  }
+  return true;
+}
+
+function startPostReflowCamera(postId) {
+  if (postId === null || postId === undefined) return () => {};
+  let active = true;
+  let frame = 0;
+  const tick = () => {
+    if (!active) return;
+    followPostReflowCamera(postId);
+    frame = requestAnimationFrame(tick);
+  };
+  followPostReflowCamera(postId);
+  frame = requestAnimationFrame(tick);
+  return () => {
+    active = false;
+    if (frame) cancelAnimationFrame(frame);
+    // Final stable composition: target centred whenever document bounds allow.
+    followPostReflowCamera(postId);
+  };
+}
+
+function postReflowCards() {
+  const cards = [];
+  document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach(card => {
+    cards.push({id: String(card.dataset.postId), card, index: cards.length, surface: 'main'});
+  });
+  const topCard = document.getElementById('topPostCard');
+  const topContent = topCard?.querySelector('.top-post-content[data-post-id]');
+  if (topCard && topContent) {
+    cards.push({id: String(topContent.dataset.postId), card: topCard, index: -1, surface: 'top'});
+  }
+  return cards;
+}
+
+function capturePostReflowRects() {
   const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
   const rects = new Map();
   const indexes = new Map();
-  document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach((card, index) => {
-    const postId = String(card.dataset.postId);
-    indexes.set(postId, index);
-    const r = card.getBoundingClientRect();
-    if (r.bottom >= -64 && r.top <= viewportHeight + 64) rects.set(postId, r);
-  });
-  return { rects, indexes, viewportHeight, scrollX: window.scrollX, scrollY: window.scrollY };
+  const surfaces = new Map();
+  for (const item of postReflowCards()) {
+    indexes.set(item.id, item.index);
+    surfaces.set(item.id, item.surface);
+    const r = item.card.getBoundingClientRect();
+    // Keep off-screen cards too. Star speed is defined in viewport pixels per
+    // second, so an active Post far below the viewport must retain its full First
+    // position instead of falling back to an effectively instantaneous reorder.
+    rects.set(item.id, r);
+  }
+  return {rects, indexes, surfaces, viewportHeight, scrollX: window.scrollX, scrollY: window.scrollY};
 }
 
-async function animateMainPostReflow(snapshot, actionName, fallback = 320) {
+function resolvePostReflowTiming(actionName, movements, activePostId = null, fallback = 900) {
+  const config = threePostOneBodyConfig.main_posts?.interaction_timing?.post_reflow_animation || {};
+  const choice = String(config.speed_or_duration || 'duration').trim().toLowerCase();
+  const maximumDistance = movements.reduce((maximum, item) => Math.max(maximum, Number(item.distance) || 0), 0);
+
+  let commonDurationMs = 0;
+  if (choice === 'speed') {
+    const configuredReferenceSpeed = Number(config[`${actionName}_speed_px_per_second`]);
+    if (Number.isFinite(configuredReferenceSpeed) && configuredReferenceSpeed > 0 && maximumDistance > 0) {
+      // Jet Note maximum-distance shared-duration model:
+      // D_max = max(D_i), T = D_max / V_ref, T_i = T, V_i = D_i / T.
+      // The configured speed belongs only to the farthest-moving Post in this
+      // transaction. Every shorter movement derives its speed from the shared T.
+      commonDurationMs = (maximumDistance / configuredReferenceSpeed) * 1000;
+    }
+  } else {
+    const configuredDuration = Number(config[`${actionName}_duration_ms`]);
+    commonDurationMs = Math.max(0, Number.isFinite(configuredDuration) ? configuredDuration : fallback);
+  }
+
+  return movements.map(item => ({
+    ...item,
+    duration: commonDurationMs,
+    effectiveSpeedPxPerSecond: commonDurationMs > 0
+      ? (Number(item.distance) || 0) / (commonDurationMs / 1000)
+      : 0
+  }));
+}
+
+async function animatePostReflow(snapshot, actionName, activePostId = null, fallback = 900) {
   if (!snapshot) return;
   window.scrollTo(snapshot.scrollX, snapshot.scrollY);
-  const configuredDuration = threePostOneBodyConfig.main_posts?.interaction_timing?.post_reflow_animation_duration_ms?.[actionName];
-  const duration = Math.max(0, Number.isFinite(Number(configuredDuration)) ? Number(configuredDuration) : fallback);
-  if (duration <= 0) return;
-  const animations = [];
-  document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach((card, afterIndex) => {
-    const postId = String(card.dataset.postId);
-    const before = snapshot.rects.get(postId);
-    if (!before) return;
 
-    // Reflow animation represents an actual list reorder, not incidental geometry
-    // changes caused by state styling, fit(), menus, shadows, or font/layout rounding.
-    // If a Post keeps the same list slot, it must remain visually stationary.
-    const beforeIndex = snapshot.indexes?.get(postId);
-    if (Number.isInteger(beforeIndex) && beforeIndex === afterIndex) return;
-
-    const after = card.getBoundingClientRect();
-    if (after.bottom < -64 || after.top > snapshot.viewportHeight + 64) return;
-    const dx = before.left - after.left, dy = before.top - after.top;
-    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
-    // Moving Posts are exactly one content layer above stationary Posts.
-    card.style.zIndex = 'calc(var(--z-axis-height-content, 0) + 1)';
-    card.style.willChange = 'transform';
-    const animation = card.animate(
-      [{transform:`translate(${dx}px, ${dy}px)`},{transform:'translate(0px, 0px)'}],
-      {duration, easing:'cubic-bezier(0.22, 0.72, 0.22, 1)', fill:'none'}
-    );
-    animations.push(animation.finished.catch(()=>{}).finally(()=>{
-      card.style.willChange='';
-      card.style.zIndex='';
-    }));
-  });
-  if (animations.length) await Promise.all(animations);
-}
-
-async function highlightStarredPost(postId, superStarred) {
-  const selector = superStarred
-    ? '#topPostCard'
-    : `#mainPosts article.post[data-post-id="${String(postId).replace(/["']/g, '\\$&')}"]`;
-  const card = document.querySelector(selector);
-  if (!card) return;
-
-  const highlightConfig = threePostOneBodyConfig.main_posts?.interaction_timing?.post_favorite_highlight || {};
-  const configuredWidth = Number(highlightConfig.inset_width_px);
-  const width = Math.max(0, Number.isFinite(configuredWidth) ? configuredWidth : 5);
-  if (width <= 0) return;
-  const fallbackColor = superStarred ? '#ff0000' : '#ffff00';
-  const fallbackRule = {change_count: 1, sequence: [{color: fallbackColor, duration_ms: 500}]};
-  const rule = (superStarred ? highlightConfig.super : highlightConfig.normal) || fallbackRule;
-  const sequence = normalizedBorderSequence(rule, fallbackColor);
-  const rawCount = Number(rule?.change_count);
-  const changeCount = rawCount === -1 ? -1 : Number.isInteger(rawCount) && rawCount > 0 ? rawCount : 0;
-  const oldShadow = card.style.boxShadow;
-  const apply = color => { card.style.boxShadow = `inset 0 0 0 ${width}px ${color}`; };
-
-  // 0 = permanent selection: keep the first configured highlight state.
-  if (changeCount === 0 || sequence.length === 0) {
-    apply(sequence[0]?.color || fallbackColor);
-    return;
+  // FLIP cards can live in different stacking contexts. In particular, Main
+  // Posts is intentionally isolated, so a large z-index on an active Main card
+  // cannot outrank a sibling Top Post by itself. Promote the active card's whole
+  // surface for the duration of the transaction; the active card still outranks
+  // passive cards inside that surface below. This prevents one/few-frame paint
+  // flashes where a passive Post crosses over the Post the user just acted on.
+  const activeId = activePostId === null || activePostId === undefined ? null : String(activePostId);
+  const activeSurfaceItem = activeId === null ? null : postReflowCards().find(item => item.id === activeId);
+  const promotedSurface = activeSurfaceItem?.surface === 'main'
+    ? document.getElementById('mainPosts')
+    : activeSurfaceItem?.surface === 'top'
+      ? document.querySelector('.home-actions')
+      : null;
+  const previousSurfacePosition = promotedSurface?.style.position || '';
+  const previousSurfaceZIndex = promotedSurface?.style.zIndex || '';
+  if (promotedSurface) {
+    if (getComputedStyle(promotedSurface).position === 'static') promotedSurface.style.position = 'relative';
+    promotedSurface.style.zIndex = '20000';
   }
-
-  const runPass = async () => {
-    for (const item of sequence) {
-      apply(item.color);
-      const wait = Math.max(changeCount === -1 ? 16 : 0, item.duration_ms);
-      if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
-    }
+  const restorePromotedSurface = () => {
+    if (!promotedSurface) return;
+    promotedSurface.style.zIndex = previousSurfaceZIndex;
+    promotedSurface.style.position = previousSurfacePosition;
   };
 
-  if (changeCount === -1) {
-    // Infinite mode must never block saving, menu dismissal, or other UI work.
-    (async () => { while (card.isConnected) await runPass(); })();
+  const prepared = [];
+  for (const item of postReflowCards()) {
+    const postId = item.id;
+    const before = snapshot.rects.get(postId);
+    if (!before) continue;
+    const after = item.card.getBoundingClientRect();
+
+    const beforeSurface = snapshot.surfaces?.get(postId);
+    const beforeIndex = snapshot.indexes?.get(postId);
+    const changedSurface = beforeSurface !== item.surface;
+    const changedSlot = item.surface === 'main' && Number.isInteger(beforeIndex) && beforeIndex !== item.index;
+    if (!changedSurface && !changedSlot) continue;
+
+    const dx = before.left - after.left;
+    const dy = before.top - after.top;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+    const distance = Math.hypot(dx, dy);
+    if (distance <= 0) continue;
+
+    const isActivePost = activePostId !== null && postId === String(activePostId);
+    const card = item.card;
+
+    // z-index is ineffective on a static box. Make every moving card positioned,
+    // and give the actively stard card an unambiguous animation plane above
+    // all passive reflow cards. This is especially important for Main -> Top moves.
+    const previousPosition = card.style.position;
+    const previousZIndex = card.style.zIndex;
+    const previousTransition = card.style.transition;
+    const previousTransform = card.style.transform;
+    const previousWillChange = card.style.willChange;
+    card.style.position = 'relative';
+    card.style.zIndex = isActivePost ? '10000' : '1000';
+    card.style.willChange = 'transform';
+    card.style.transition = 'none';
+    card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    prepared.push({postId, card, dx, dy, distance, previousPosition, previousZIndex, previousTransition, previousTransform, previousWillChange});
+  }
+
+  if (!prepared.length) {
+    restorePromotedSurface();
+    return;
+  }
+  const timedPrepared = resolvePostReflowTiming(actionName, prepared, activePostId, fallback).filter(item => item.duration > 0);
+  if (!timedPrepared.length) {
+    followPostReflowCamera(activePostId);
+    restorePromotedSurface();
+    return;
+  }
+  const stopCameraFollow = startPostReflowCamera(activePostId);
+
+  // Transactional FLIP barrier for Android WebView:
+  // 1) synchronously commit every inverse transform, then
+  // 2) cross two compositor frame boundaries before Play.
+  // This prevents the rebuilt Last layout from leaking as a one-frame image.
+  void document.documentElement.offsetHeight;
+  await nextAnimationFrame();
+  // Re-read one animated box after the first frame. This keeps the inverse state
+  // materialized in layout/compositing before transition is enabled.
+  void timedPrepared[0].card.getBoundingClientRect().top;
+  await nextAnimationFrame();
+
+  const waits = timedPrepared.map(item => new Promise(resolve => {
+    const {card, duration} = item;
+    let finished = false;
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      card.removeEventListener('transitionend', onEnd);
+      clearTimeout(timer);
+      card.style.transition = item.previousTransition;
+      card.style.transform = item.previousTransform;
+      card.style.willChange = item.previousWillChange;
+      card.style.zIndex = item.previousZIndex;
+      card.style.position = item.previousPosition;
+      resolve();
+    };
+    const onEnd = event => {
+      if (event.target === card && event.propertyName === 'transform') cleanup();
+    };
+    card.addEventListener('transitionend', onEnd);
+    card.style.transition = `transform ${duration}ms linear`; // constant px/s requires linear interpolation
+    card.style.transform = 'translate3d(0, 0, 0)';
+    const timer = setTimeout(cleanup, duration + 120);
+  }));
+  try {
+    await Promise.all(waits);
+  } finally {
+    stopCameraFollow();
+    restorePromotedSurface();
+  }
+}
+
+function postStarHighlightDisplayDelayMs() {
+  const value = Number(threePostOneBodyConfig.main_posts?.interaction_timing?.post_star_highlight?.display_delay_after_reflow_ms);
+  return Math.max(0, Number.isFinite(value) ? value : 300);
+}
+
+async function highlightStarPost(postId, superStar) {
+  const post = posts.find(item => String(item.id) === String(postId));
+  if (!post) return;
+  const visual = resolvePostVisualState(superStar ? 'super_star' : 'star');
+  const highlight = visual.highlight;
+  if (!highlight || highlight.width <= 0) return;
+
+  // Persistent and infinite modes are owned by the reconciler, never by this
+  // interaction path. This prevents two competing animation loops.
+  if (highlight.mode <= 0) {
+    reconcilePostHighlight(post);
     return;
   }
 
-  for (let pass = 0; pass < changeCount; pass += 1) await runPass();
-  card.style.boxShadow = oldShadow;
-}
-async function commitStarStateChange(previous, reflowActionName, highlight = null) {
-  const snapshot = captureMainPostRects();
-  syncPostFavoriteAction();
+  const card = postHighlightCardFor(post);
+  if (!card) return;
+  const key = String(post.id);
+  cancelPostHighlightRun(key);
+  const run = {cancelled: false};
+  postHighlightRuns.set(key, run);
+  const originalShadow = card.style.getPropertyValue('box-shadow');
+  const originalPriority = card.style.getPropertyPriority('box-shadow');
 
-  // Rebuild the feed without scheduling fit() in the middle of FLIP. A viewport
-  // update during the transform animation made the border and inner content use
-  // different geometry for one or more frames.
-  renderPosts({scheduleFit: false});
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  await animateMainPostReflow(snapshot, reflowActionName, 320);
-  requestAnimationFrame(fit);
-  if (highlight) await highlightStarredPost(highlight.postId, highlight.superStarred);
+  for (let pass = 0; pass < highlight.mode && !run.cancelled; pass += 1) {
+    for (const item of highlight.sequence) {
+      if (run.cancelled || !card.isConnected) break;
+      applyResolvedHighlight(card, highlight, item.color);
+      if (item.duration_ms > 0) await new Promise(resolve => setTimeout(resolve, item.duration_ms));
+    }
+  }
+
+  if (postHighlightRuns.get(key) === run) postHighlightRuns.delete(key);
+  if (run.cancelled || !card.isConnected) return;
+  if (originalShadow) card.style.setProperty('box-shadow', originalShadow, originalPriority);
+  else card.style.removeProperty('box-shadow');
+}
+
+async function commitStarStateChange(previous, reflowActionName, activePostId, highlight = null) {
+  const snapshot = capturePostReflowRects();
+  if (highlight?.postId !== undefined && highlight?.postId !== null) postHighlightDeferredIds.add(String(highlight.postId));
+  syncPostStarAction();
+
+  const beforeMainIds = previous
+    .filter(post => getPostStarState(post) !== 'super_star')
+    .sort((a, b) => {
+      const as = getPostStarState(a) === 'star', bs = getPostStarState(b) === 'star';
+      if (as !== bs) return as ? -1 : 1;
+      return as ? postPublishedAt(b) - postPublishedAt(a) : 0;
+    })
+    .map(post => String(post.id));
+  const afterMainIds = getMainPosts().map(post => String(post.id));
+  const sameMainGeometry = beforeMainIds.length === afterMainIds.length
+    && beforeMainIds.every((id, index) => id === afterMainIds[index]);
+
+  if (sameMainGeometry) {
+    // No list slot changed. Rebuilding innerHTML here used to briefly remove the
+    // Post and expose the frame/background underneath, even though no movement
+    // was required. Update only state-dependent paint on the existing cards.
+    document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach(card => {
+      const post = posts.find(item => String(item.id) === String(card.dataset.postId));
+      if (!post) return;
+      const state = getPostStarState(post);
+      card.classList.toggle('post-state-star', state === 'star');
+      card.classList.toggle('post-state-not-star', state !== 'star');
+      card.setAttribute('style', postVisualStyle(state));
+    });
+    reconcileAllPostHighlights();
+    // Even when no slot changes, the acted-on Post remains the camera target.
+    followPostReflowCamera(activePostId);
+  } else {
+    // Rebuild only when the list really reorders. fit() remains outside FLIP so
+    // layout cannot change underneath a moving Post and leak an intermediate frame.
+    renderPosts({scheduleFit: false});
+    await animatePostReflow(snapshot, reflowActionName, activePostId, 900);
+    requestAnimationFrame(fit);
+  }
+  if (highlight) {
+    const highlightId = String(highlight.postId);
+    const delay = postStarHighlightDisplayDelayMs();
+    if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
+    postHighlightDeferredIds.delete(highlightId);
+    await highlightStarPost(highlight.postId, highlight.superStar);
+  }
   const saved = await savePosts();
   if (!saved) {
+    if (highlight?.postId !== undefined && highlight?.postId !== null) postHighlightDeferredIds.delete(String(highlight.postId));
     posts = previous;
     renderPosts();
-    syncPostFavoriteAction();
+    syncPostStarAction();
     return false;
   }
   return true;
 }
 
-async function toggleFavoriteActivePost() {
-  if (!isWorkspaceWritable() || activePostActionId === null) return;
+async function toggleStarActivePost() {
+  if (!isWorkspaceWritable() || activePostActionId === null || postReflowTransactionActive) return;
   const actionPostId = String(activePostActionId);
   const post = posts.find(item => String(item.id) === actionPostId);
   if (!post) return;
 
   const previous = structuredClone(posts);
   const state = getPostStarState(post);
-  const nextState = state === 'none' ? 'starred' : 'none';
+  const nextState = state === 'none' ? 'star' : 'none';
   setPostStarState(post, nextState);
-  if (nextState === 'starred') restartThreePostOneBodyStateBorderRule('starred');
+  if (nextState === 'star') restartThreePostOneBodyStateBorderRule('star');
 
   // Sound is direct interaction feedback: start it before persistence/render work.
-  playPostUiSound(nextState === 'starred' ? 'starred' : 'cancel_starred');
+  playPostUiSound(nextState === 'star' ? 'star' : 'cancel_star');
   schedulePostHorizontalEllipsisDismiss(actionPostId);
 
   // Keep the action surface visible after the state changes so the user can
   // perceive the result. The delay is a home-post setting in config.json.
-  const saved = await commitStarStateChange(
-    previous,
-    nextState === 'starred' ? 'favorite' : (state === 'super_starred' ? 'cancel_super_favorite' : 'cancel_favorite'),
-    nextState === 'starred' ? {postId: actionPostId, superStarred: false} : null
-  );
+  postReflowTransactionActive = true;
+  let saved = false;
+  try {
+    saved = await commitStarStateChange(
+      previous,
+      nextState === 'star' ? 'star' : (state === 'super_star' ? 'cancel_super_star' : 'cancel_star'),
+      actionPostId,
+      nextState === 'star' ? {postId: actionPostId, superStar: false} : null
+    );
+  } finally {
+    postReflowTransactionActive = false;
+  }
   if (!saved) return;
 }
 
 async function toggleSuperStarActivePost() {
-  if (!isWorkspaceWritable() || activePostActionId === null) return;
+  if (!isWorkspaceWritable() || activePostActionId === null || postReflowTransactionActive) return;
   const actionPostId = String(activePostActionId);
   const post = posts.find(item => String(item.id) === actionPostId);
   if (!post) return;
@@ -1060,18 +1459,25 @@ async function toggleSuperStarActivePost() {
   const previous = structuredClone(posts);
   // Long-press is an idempotent "make this the Super Star" action.
   for (const item of posts) {
-    if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
+    if (item !== post && getPostStarState(item) === 'super_star') setPostStarState(item, 'none');
   }
-  setPostStarState(post, 'super_starred');
-  restartThreePostOneBodyStateBorderRule('super_starred');
+  setPostStarState(post, 'super_star');
+  restartThreePostOneBodyStateBorderRule('super_star');
 
-  playPostUiSound('super_starred');
+  playPostUiSound('super_star');
   schedulePostHorizontalEllipsisDismiss(actionPostId);
-  const saved = await commitStarStateChange(
-    previous,
-    'super_favorite',
-    {postId: actionPostId, superStarred: true}
-  );
+  postReflowTransactionActive = true;
+  let saved = false;
+  try {
+    saved = await commitStarStateChange(
+      previous,
+      'super_star',
+      actionPostId,
+      {postId: actionPostId, superStar: true}
+    );
+  } finally {
+    postReflowTransactionActive = false;
+  }
   if (!saved) return;
 
   // Preserve the existing Super Star home-return behavior, but only after the
@@ -1120,7 +1526,7 @@ function openPostActionPanel(event, postId) {
     width: rect.width, height: rect.height
   };
   panel.classList.add('open');
-  syncPostFavoriteAction();
+  syncPostStarAction();
   positionMenuLeftOfAnchor(panel, activePostActionAnchor);
 }
 
@@ -1148,74 +1554,74 @@ function deleteActivePost() {
   openDeleteConfirm('post', postId, anchorRect);
 }
 
-const favoritePressState = {
+const starPressState = {
   pointerId: null,
   button: null,
   timer: null,
   longPressTriggered: false
 };
-let suppressFavoriteClick = false;
+let suppressStarClick = false;
 
-function clearFavoritePress({ releaseCapture = true } = {}) {
-  if (favoritePressState.timer !== null) {
-    clearTimeout(favoritePressState.timer);
-    favoritePressState.timer = null;
+function clearStarPress({ releaseCapture = true } = {}) {
+  if (starPressState.timer !== null) {
+    clearTimeout(starPressState.timer);
+    starPressState.timer = null;
   }
-  if (releaseCapture && favoritePressState.button && favoritePressState.pointerId !== null) {
+  if (releaseCapture && starPressState.button && starPressState.pointerId !== null) {
     try {
-      if (favoritePressState.button.hasPointerCapture?.(favoritePressState.pointerId)) {
-        favoritePressState.button.releasePointerCapture(favoritePressState.pointerId);
+      if (starPressState.button.hasPointerCapture?.(starPressState.pointerId)) {
+        starPressState.button.releasePointerCapture(starPressState.pointerId);
       }
     } catch (_) {}
   }
-  favoritePressState.pointerId = null;
-  favoritePressState.button = null;
-  favoritePressState.longPressTriggered = false;
+  starPressState.pointerId = null;
+  starPressState.button = null;
+  starPressState.longPressTriggered = false;
 }
 
 document.addEventListener('pointerdown', event => {
-  const button = event.target.closest('#postFavoriteAction[data-post-action="favorite"]');
+  const button = event.target.closest('#postStarAction[data-post-action="star"]');
   if (!button || event.button > 0 || event.isPrimary === false) return;
 
-  clearFavoritePress();
-  suppressFavoriteClick = false;
-  favoritePressState.pointerId = event.pointerId;
-  favoritePressState.button = button;
-  favoritePressState.longPressTriggered = false;
+  clearStarPress();
+  suppressStarClick = false;
+  starPressState.pointerId = event.pointerId;
+  starPressState.button = button;
+  starPressState.longPressTriggered = false;
 
   // Pointer capture keeps a small finger drift inside the same gesture instead
   // of letting WebView scrolling/media surfaces cancel the long press.
   try { button.setPointerCapture?.(event.pointerId); } catch (_) {}
 
-  favoritePressState.timer = setTimeout(() => {
-    if (favoritePressState.pointerId !== event.pointerId || favoritePressState.button !== button) return;
-    favoritePressState.timer = null;
-    favoritePressState.longPressTriggered = true;
-    suppressFavoriteClick = true;
+  starPressState.timer = setTimeout(() => {
+    if (starPressState.pointerId !== event.pointerId || starPressState.button !== button) return;
+    starPressState.timer = null;
+    starPressState.longPressTriggered = true;
+    suppressStarClick = true;
     if (navigator.vibrate) navigator.vibrate(28);
     void toggleSuperStarActivePost();
   }, 550);
 });
 
 document.addEventListener('pointerup', event => {
-  if (favoritePressState.pointerId !== event.pointerId) return;
-  clearFavoritePress();
+  if (starPressState.pointerId !== event.pointerId) return;
+  clearStarPress();
 });
 
 document.addEventListener('pointercancel', event => {
-  if (favoritePressState.pointerId !== event.pointerId) return;
+  if (starPressState.pointerId !== event.pointerId) return;
   // A browser/system cancellation before the timer means the long press did
   // not complete. Pointer capture + touch-action:none makes this rare.
-  clearFavoritePress();
+  clearStarPress();
 });
 
 document.addEventListener('lostpointercapture', event => {
-  if (favoritePressState.pointerId !== event.pointerId) return;
-  clearFavoritePress({ releaseCapture: false });
+  if (starPressState.pointerId !== event.pointerId) return;
+  clearStarPress({ releaseCapture: false });
 });
 
 document.addEventListener('contextmenu', event => {
-  if (event.target.closest('#postFavoriteAction')) event.preventDefault();
+  if (event.target.closest('#postStarAction')) event.preventDefault();
 });
 
 document.addEventListener('click', event => {
@@ -1229,9 +1635,9 @@ document.addEventListener('click', event => {
   if (action) {
     event.preventDefault();
     if (action === 'edit') void editActivePost();
-    if (action === 'favorite') {
-      if (suppressFavoriteClick) { suppressFavoriteClick = false; return; }
-      void toggleFavoriteActivePost();
+    if (action === 'star') {
+      if (suppressStarClick) { suppressStarClick = false; return; }
+      void toggleStarActivePost();
     }
     if (action === 'delete') void deleteActivePost();
     return;

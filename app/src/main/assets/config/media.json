@@ -1,0 +1,27 @@
+{
+  "post_attachment": {
+    "audio_max_quantity": 9,
+    "video_max_quantity": 9,
+    "photo_max_quantity": 9,
+    "video_photo_coexistence": true,
+    "video_photo_combined_max_quantity": 9
+  },
+  "videoPlayback": {
+    "maxConcurrentPlayingVideos": 1
+  },
+  "audioPlayback": {
+    "maxConcurrentPlayingAudios": 2
+  },
+  "published_single_media_spacing": {
+    "top_px": 3,
+    "right_px": 3,
+    "bottom_px": 3,
+    "left_px": 3
+  },
+  "published_post_media_max_height_px": 280,
+  "post_media_right_edge_gesture_yield_percent": {
+    "image": 7,
+    "video_surface": 7,
+    "video_seek": 7
+  }
+}

@@ -182,6 +182,11 @@ const ColorViewTool = (() => {
     copyFeedbackGeneration += 1;
     for(const timer of copyFeedbackTimers) clearTimeout(timer);
     copyFeedbackTimers=[];
+    const button=document.getElementById('colorViewCopyButton');
+    if(button){
+      button.textContent=labels.copy;
+      button.classList.remove('is-copied');
+    }
     const status=document.getElementById('colorViewStatus');
     if(status){status.textContent='';status.style.removeProperty('color');}
     return copyFeedbackGeneration;
@@ -189,20 +194,16 @@ const ColorViewTool = (() => {
 
   function showCopiedFeedback(generation) {
     if(generation!==copyFeedbackGeneration)return;
-    const status=document.getElementById('colorViewStatus');
-    if(!status)return;
-    status.textContent=labels.copied;
-    status.style.color=copyFeedbackConfig.copiedFirstTransitionColor;
-    const firstDelay=copyFeedbackConfig.firstTransitionColorDisplayDurationMs;
-    const secondDelay=copyFeedbackConfig.secondTransitionColorDisplayDurationMs;
+    const button=document.getElementById('colorViewCopyButton');
+    if(!button)return;
+    button.textContent=labels.copied;
+    button.classList.add('is-copied');
     copyFeedbackTimers.push(setTimeout(()=>{
       if(generation!==copyFeedbackGeneration)return;
-      status.style.color=copyFeedbackConfig.copiedSecondTransitionColor;
-    },firstDelay));
-    copyFeedbackTimers.push(setTimeout(()=>{
-      if(generation!==copyFeedbackGeneration)return;
-      status.style.color=copyFeedbackConfig.copiedFinalRestingColor;
-    },firstDelay+secondDelay));
+      button.textContent=labels.copy;
+      button.classList.remove('is-copied');
+      copyFeedbackTimers=[];
+    },1000));
   }
 
   function clamp(value, min, max) {

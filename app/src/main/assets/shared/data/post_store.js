@@ -1,23 +1,29 @@
 /* Post records and attachment metadata share one IndexedDB transaction. */
 
 function normalizeStarStateValue(value){
-  return value === 'super_starred' ? 'super_starred' : value === 'starred' ? 'starred' : 'none';
+  if(value === 'super_star' || value === 'super_starred') return 'super_star';
+  if(value === 'star' || value === 'starred') return 'star';
+  return 'none';
 }
-function normalizePostStarStateRecord(record,{allowLegacyFavorite=true}={}){
+
+function normalizePostStarStateRecord(record,{allowLegacyStar=true}={}){
   const result={...record};
   let state='none';
-  if(result.starState==='super_starred'||result.starState==='starred'||result.starState==='none'){
+  if(result.starState==='super_star'||result.starState==='star'||result.starState==='none'){
     state=result.starState;
-  }else if(allowLegacyFavorite&&result.favorite===true){
-    state='starred';
+  }else if(allowLegacyStar&&(result.starState==='super_starred'||result.starState==='starred')){
+    state=normalizeStarStateValue(result.starState);
+  }else if(allowLegacyStar&&(result.star===true||result.favorite===true)){
+    state='star';
   }
   result.starState=normalizeStarStateValue(state);
+  delete result.star;
   delete result.favorite;
   return result;
 }
 function enforceSingleSuperStar(records){
   const list=(Array.isArray(records)?records:[]).map(item=>normalizePostStarStateRecord(item));
-  const supers=list.filter(item=>item.starState==='super_starred');
+  const supers=list.filter(item=>item.starState==='super_star');
   if(supers.length<=1)return list;
   const score=item=>{
     const updated=Date.parse(item.updatedAt||'');
@@ -29,7 +35,7 @@ function enforceSingleSuperStar(records){
   };
   let winner=supers[0];
   for(const item of supers.slice(1))if(score(item)>score(winner))winner=item;
-  for(const item of list)if(item!==winner&&item.starState==='super_starred')item.starState='none';
+  for(const item of list)if(item!==winner&&item.starState==='super_star')item.starState='none';
   return list;
 }
 const EntryStore={

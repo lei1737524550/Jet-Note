@@ -26,6 +26,7 @@ final class NativeBridge {
     private final WebView webView;
     private int videoHapticGuardGeneration = 0;
     private final ToolPageController toolPages;
+    private final BrowserModeController browserPages;
     private final MediaWriteController mediaWriter;
     private final Runnable ready;
     private final AttachmentPickerController picker;
@@ -39,13 +40,14 @@ final class NativeBridge {
             Activity activity,
             WebView webView,
             ToolPageController toolPages,
+            BrowserModeController browserPages,
             AttachmentPickerController picker,
             AttachmentStore store,
             JetNoteArchiveController archive, MediaWriteController mediaWriter, NativeVideoPlayer videoPlayer, Runnable ready
     ) {
         this.activity = activity;
         this.webView = webView;
-        this.toolPages = toolPages;this.mediaWriter=mediaWriter;this.ready=ready;
+        this.toolPages = toolPages;this.browserPages = browserPages;this.mediaWriter=mediaWriter;this.ready=ready;
         this.picker = picker;
         this.store = store;
         this.archive = archive;
@@ -64,6 +66,18 @@ final class NativeBridge {
 
     @JavascriptInterface public boolean setRuntimeConfigJson(String json) {
         return RuntimeConfigStore.saveRuntime(activity, json);
+    }
+
+    @JavascriptInterface public String listRuntimeConfigSectionFilesJson() {
+        return RuntimeConfigStore.listBundledSectionsJson(activity);
+    }
+
+    @JavascriptInterface public String getRuntimeConfigSectionJson(String section) {
+        return RuntimeConfigStore.readEffectiveSection(activity, section);
+    }
+
+    @JavascriptInterface public boolean setRuntimeConfigSectionJson(String section, String json) {
+        return RuntimeConfigStore.saveRuntimeSection(activity, section, json);
     }
 
     /** Persist Browser Mode natively so MainActivity can route before Home is loaded. */
@@ -216,16 +230,36 @@ final class NativeBridge {
     /** Phase 2: target DOM is now stable but still hidden by the native cover. */
     @JavascriptInterface public void runPreparedFrozenSplitTransition(String targetKey) {
         activity.runOnUiThread(() -> {
-            FrameLayout oldCover = pendingTransitionCover;
+            final FrameLayout oldCover = pendingTransitionCover;
             pendingTransitionCover = null;
             pendingTransitionTarget = null;
-            runFrozenSplitTransitionFromZAxisHeight(targetKey, webView.getZ());
-            // runFrozenSplitTransitionFromZAxisHeight installs its own opaque
-            // background and frozen layers synchronously on this UI turn. The
-            // preparation cover can therefore be removed only afterwards.
-            if (oldCover != null && oldCover.getParent() instanceof FrameLayout) {
-                ((FrameLayout) oldCover.getParent()).removeView(oldCover);
-            }
+            final String resolvedTarget =
+                    (targetKey == null || targetKey.trim().isEmpty()) ? "x_to_home" : targetKey.trim();
+
+            // The JS target mutation can change page geometry on the same UI turn.
+            // Capturing immediately here used the previous layout in some returns
+            // from Editor, so the two frozen halves could merge to a size that did
+            // not match the first real Home frame. Wait until the target WebView has
+            // completed layout and is about to draw, then capture that exact geometry.
+            final ViewTreeObserver observer = webView.getViewTreeObserver();
+            final ViewTreeObserver.OnPreDrawListener[] listener =
+                    new ViewTreeObserver.OnPreDrawListener[1];
+            listener[0] = () -> {
+                ViewTreeObserver current = webView.getViewTreeObserver();
+                if (current.isAlive()) current.removeOnPreDrawListener(listener[0]);
+                webView.postOnAnimation(() -> {
+                    runFrozenSplitTransitionFromZAxisHeight(resolvedTarget, webView.getZ());
+                    // The new transition installs an opaque background and bitmap
+                    // layers synchronously before this preparation cover is removed.
+                    if (oldCover != null && oldCover.getParent() instanceof FrameLayout) {
+                        ((FrameLayout) oldCover.getParent()).removeView(oldCover);
+                    }
+                });
+                return true;
+            };
+            observer.addOnPreDrawListener(listener[0]);
+            webView.requestLayout();
+            webView.invalidate();
         });
     }
 
@@ -276,6 +310,7 @@ final class NativeBridge {
     @JavascriptInterface
     public void setGetSourceExtensionFilterJson(String json) {
         toolPages.setGetSourceExtensionFilterJson(json);
+        browserPages.setGetSourceExtensionFilterJson(json);
     }
 
     /** Enable IME rich-image commits only while the Post Composer textarea is focused. */
@@ -402,13 +437,14 @@ final class NativeBridge {
         if (fallbackUrl == null || !fallbackUrl.startsWith("https://")) {
             String safeTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
             String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-            toolPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, browserMode);
+            if (browserMode) browserPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, true);
+            else toolPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, false);
             return;
         }
         String safePrimaryTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
         String safeFallbackTitle = fallbackTitle == null || fallbackTitle.trim().isEmpty() ? safePrimaryTitle : fallbackTitle.trim();
         String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-        toolPages.openWithFallback(
+        if (browserMode) browserPages.openWithFallback(
                 primaryUrl,
                 fallbackUrl,
                 safePrimaryTitle,
@@ -417,7 +453,11 @@ final class NativeBridge {
                 backgroundColor,
                 borderColor,
                 timeoutMs,
-                browserMode
+                true
+        );
+        else toolPages.openWithFallback(
+                primaryUrl, fallbackUrl, safePrimaryTitle, safeFallbackTitle, safeLanguage,
+                backgroundColor, borderColor, timeoutMs, false
         );
     }
 

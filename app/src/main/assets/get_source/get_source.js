@@ -272,7 +272,7 @@
     toolbar.style.cssText = 'display:block;position:sticky;top:-18px;z-index:2;background:' + getSourceBodyColor() + ';padding:12px 0 14px;border-bottom:1px solid ' + (colors.border || '#c8cbd0') + ';';
 
     const tabs = document.createElement('div');
-    tabs.style.cssText = 'display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;';
+    tabs.style.cssText = 'display:grid;grid-template-columns:repeat(' + (window.JET_NOTE_BROWSER_MODE === true ? '5' : '4') + ',minmax(0,1fr));gap:6px;';
     toolbar.appendChild(tabs);
     panel.appendChild(toolbar);
 
@@ -321,6 +321,18 @@
       button.onclick = () => renderType(id);
       tabs.appendChild(button);
     });
+
+    if (window.JET_NOTE_BROWSER_MODE === true) {
+      const refresh = iconButton(window.JET_NOTE_SOURCE_ICONS && window.JET_NOTE_SOURCE_ICONS.refresh, ds('getSourceRefresh', 'Refresh'));
+      refresh.dataset.action = 'refresh';
+      refresh.style.width = '100%';
+      refresh.onclick = () => {
+        stopAudioPreview(panel);
+        panel.remove();
+        window.location.reload();
+      };
+      tabs.appendChild(refresh);
+    }
 
     document.body.appendChild(panel);
     promoteViewer();

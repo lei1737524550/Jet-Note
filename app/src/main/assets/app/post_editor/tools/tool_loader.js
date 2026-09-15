@@ -5,7 +5,7 @@
  * - Toolbox extends Tool: an anchor entry whose children temporarily occupy
  *   slots immediately to its LEFT while expanded.
  * - The original tools[] model is never mutated by expansion.
- * - maximum_visible_tools comes from assets/config.json.
+ * - maximum_visible_tools comes from the merged runtime config (assembled from assets/config/*.json).
  */
 const ToolLoader = (() => {
   const TOOLS_URL = 'app/post_editor/tools/tools.json';

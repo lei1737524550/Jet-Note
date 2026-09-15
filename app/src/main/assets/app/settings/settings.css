@@ -570,6 +570,7 @@
   line-height:1;
 }
 .color-view-copy-button:active { background:#f0f3f5; }
+.color-view-copy-button.is-copied { color:#34A853; }
 
 .color-view-status {
   grid-column:1 / -1;
@@ -1078,3 +1079,57 @@
   will-change:transform;
   backface-visibility:hidden;
 }
+
+/* Date View geometry: keep every control on the same inset/grid so the card's
+   border, title actions, value fields and trailing buttons read as one system. */
+.date-time-viewer-card {
+  padding-left:20px;
+  padding-right:20px;
+}
+.date-time-viewer-title-row {
+  padding-right:0;
+  gap:14px;
+}
+.date-time-viewer-title-actions { gap:10px; }
+.date-time-viewer-set-button,
+.date-time-viewer-reset-button {
+  min-width:76px;
+  height:42px;
+  padding:0 16px;
+}
+.date-time-viewer-tool { margin-top:14px; gap:10px; }
+.date-time-viewer-value-row {
+  grid-template-columns:minmax(0,1fr) 76px;
+  gap:12px;
+  align-items:center;
+}
+.date-time-viewer-preview-block,
+.date-time-viewer-pattern-input { height:50px; min-height:50px; }
+.date-time-viewer-copy-button {
+  width:76px;
+  min-width:76px;
+  height:42px;
+  min-height:42px;
+}
+.date-time-viewer-expand-row { padding-right:0; }
+.date-time-viewer-expand-button { min-height:40px; }
+
+
+/* Debug-only Settings lifecycle. Cards marked with data-debug-setting-card share
+   one upward reveal contract so future Debug tools do not need per-card CSS. */
+[data-debug-setting-card="true"] { transform-origin: bottom center; }
+.color-view-cancel-debug-button {
+  flex:0 0 auto;
+  min-width:110px;
+  height:42px;
+  padding:0 16px;
+  background:inherit;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:13px;
+  line-height:1;
+  text-align:center;
+}
+\n\n/* Debug state control. Enable Debug becomes inert while Debug is already enabled. */
+
+#enableDebugButton:disabled{opacity:.46;cursor:default;pointer-events:none;filter:grayscale(1);background:#e3e5e3!important;border-color:#bfc1c4!important;box-shadow:none!important;}

@@ -68,8 +68,8 @@ const ArchiveMapping={
       if(Array.isArray(raw.images))raw.images=raw.images.map(ref); else raw.images=[];
       if(typeof raw.text!=='string'||raw.images.some(source=>!NativeMedia.isImage(source)))throw Error('Invalid post content');
       raw.uuid=stableId; raw.createdAt=entry.createdAt??null; raw.updatedAt=entry.updatedAt??null; raw.time=typeof raw.time==='string'?raw.time:(entry.createdAt||'');
-      if(entry.starState==='super_starred'||entry.starState==='starred'||entry.starState==='none')raw.starState=entry.starState;
-      raw=normalizePostStarStateRecord(raw,{allowLegacyFavorite:true});
+      if(entry.starState==='super_star'||entry.starState==='star'||entry.starState==='none'||entry.starState==='super_starred'||entry.starState==='starred')raw.starState=entry.starState;
+      raw=normalizePostStarStateRecord(raw,{allowLegacyStar:true});
       raw.archiveExtra={
         ...(entry.extra||{
         })

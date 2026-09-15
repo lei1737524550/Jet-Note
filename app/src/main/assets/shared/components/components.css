@@ -599,18 +599,18 @@
 
 
 
-.post-action-btn.favorite .post-action-star {
+.post-action-btn.star .post-action-star {
     fill: transparent;
     stroke: #555;
     transition: fill .14s ease, stroke .14s ease;
 }
 
-.post-action-btn.favorite.active .post-action-star {
+.post-action-btn.star.active .post-action-star {
     fill: #f4c430;
     stroke: #b48a00;
 }
 
-.post-action-btn.favorite.super-active .post-action-star {
+.post-action-btn.star.super-active .post-action-star {
     fill: #e23b3b;
     stroke: #a81818;
 }
@@ -827,7 +827,7 @@
   z-index: calc(var(--z-axis-height-post-action, 90000) + 1) !important;
   pointer-events: auto !important;
 }
-#postFavoriteAction[data-post-action="favorite"] {
+#postStarAction[data-post-action="star"] {
   touch-action: none !important;
   -webkit-user-select: none !important;
   user-select: none !important;

@@ -386,10 +386,10 @@ button:focus-visible {
 
 /* Three Posts, One Body border rules are state-aware and configured in config.json. */
 #topPostCard.welcome-post.common_border{border-color:var(--three-post-one-body-top-post-welcome-border-color,var(--common-border-color));}
-#topPostCard.top-post-super.common_border{border-color:var(--three-post-one-body-top-post-super-starred-border-color,var(--common-border-color));}
+#topPostCard.top-post-super.common_border{border-color:var(--three-post-one-body-top-post-super-star-border-color,var(--common-border-color));}
 #postComposerMount .post-composer.common_border{border-color:var(--three-post-one-body-post-composer-border-color,var(--common-border-color));}
-#mainPosts article.post.post-state-not-starred.common_border{border-color:var(--three-post-one-body-main-posts-non-star-border-color,var(--common-border-color));}
-#mainPosts article.post.post-state-starred.common_border{border-color:var(--three-post-one-body-main-posts-starred-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-not-star.common_border{border-color:var(--three-post-one-body-main-posts-non-star-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-star.common_border{border-color:var(--three-post-one-body-main-posts-star-border-color,var(--common-border-color));}
 
 /* Ordinary content follows the automatic contrast color of current_body.
    State-specific timestamps and semantic feedback colors remain independent. */
@@ -443,7 +443,7 @@ button:focus-visible {
   width:var(--main-status-bar-battery-icon-size,30px);
   height:var(--main-status-bar-battery-icon-size,30px);
   object-fit:contain;
-  transform:translate(var(--main-status-bar-battery-icon-horizontal-offset,0px),-50%);
+  transform:translate(var(--main-status-bar-battery-icon-horizontal-offset,0px),-50%) rotate(90deg);
 }
 .main-status-bar-battery-percentage{
   position:absolute;

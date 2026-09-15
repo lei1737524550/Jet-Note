@@ -245,3 +245,41 @@
   isolation:isolate;
   contain:paint;
 }
+
+
+/* V6.9 Debug editor viewport model. The editor screen follows the live visual
+   viewport in both keyboard states. JSON may continue beneath the floating
+   Search controls; Search itself is anchored to the visible editor-body bottom. */
+.debug-configuration-editor-content-column{position:relative;flex:1 1 auto;height:auto;min-height:0;}
+.debug-configuration-editor-text-region{flex:1 1 auto!important;height:auto!important;max-height:none!important;min-height:0;}
+.debug-editor-search-row{position:absolute;left:0;right:0;bottom:0;z-index:20;background:transparent!important;pointer-events:none;}
+.debug-editor-search-input,.debug-editor-search-button{pointer-events:auto;background:#f3f4f2!important;}
+.debug-configuration-json-textarea{padding-bottom:58px;}
+
+/* V6.9 Debug Editor viewport/search repair ---------------------------------
+   JSON owns the complete effective edit region. Search is an overlay anchored
+   to the bottom of that region, so JSON is intentionally allowed behind it. */
+.debug-configuration-editor-body{position:relative;min-height:0;}
+.debug-configuration-editor-content-column{
+  position:relative;
+  flex:1 1 auto;
+  height:100%;
+  min-height:0;
+  gap:0;
+}
+.debug-configuration-editor-text-region{
+  flex:1 1 0!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
+}
+.debug-editor-search-row{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:5;
+  margin:0;
+  padding:0;
+  pointer-events:auto;
+}

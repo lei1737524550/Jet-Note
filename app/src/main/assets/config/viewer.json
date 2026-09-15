@@ -1,0 +1,14 @@
+{
+  "viewer_media_scale": {
+    "image_viewer_max_scale": -1,
+    "video_viewer_max_scale": -1
+  },
+  "image_viewer_background_switch_configuration": {
+    "background_color_cycle": [
+      "#000000",
+      "#FFFFFF",
+      "#808080"
+    ],
+    "default_background_color_index": 0
+  }
+}

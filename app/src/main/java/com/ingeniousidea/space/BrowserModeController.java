@@ -14,6 +14,7 @@ import android.view.animation.PathInterpolator;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.MotionEvent;
 import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
@@ -51,7 +52,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /** Reusable host for every Jet Note toolbox_* web page; source discovery lives in assets/get_source/. */
-final class ToolPageController {
+final class BrowserModeController {
     private static final String ADD_SCHEME = "jetnote-add";
     private static final String SAVE_SCHEME = "jetnote-save"; // long-press resource download
     private static final String SOURCE_STATE_SCHEME = "jetnote-source-state";
@@ -95,7 +96,7 @@ final class ToolPageController {
     private TextView toolbarTitle;
     private static final String HOME_PRELOAD_URL = "https://appassets.androidplatform.net/assets/app/home/home.html?startupBrowserPreload=1";
 
-    ToolPageController(
+    BrowserModeController(
             Activity activity, FrameLayout root, WebView mainWebView, AttachmentStore attachmentStore
     ) {
         this.activity = activity;
@@ -130,7 +131,7 @@ final class ToolPageController {
             if (overlay != null) close();
             pageUrl = url;
             pageTitle = title;
-            this.browserMode = browserMode;
+            this.browserMode = true;
             pageLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
             toolBackgroundColor = parseColor(backgroundColor, pageActionBarSpec.backgroundColor);
             toolBorderColor = parseColor(borderColor, pageActionBarSpec.borderColor);
@@ -174,7 +175,7 @@ final class ToolPageController {
             if (overlay != null) close();
             pageUrl = primaryUrl;
             pageTitle = primaryTitle;
-            this.browserMode = browserMode;
+            this.browserMode = true;
             pageLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
             toolBackgroundColor = parseColor(backgroundColor, pageActionBarSpec.backgroundColor);
             toolBorderColor = parseColor(borderColor, pageActionBarSpec.borderColor);
@@ -202,13 +203,16 @@ final class ToolPageController {
         configure(toolWebView);
         FrameLayout.LayoutParams webParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        webParams.topMargin = dp(pageActionBarSpec.height);
+        webParams.topMargin = 0;
         overlay.addView(toolWebView, webParams);
 
-        toolbar = createToolbar();
-        FrameLayout.LayoutParams toolbarParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(pageActionBarSpec.height), Gravity.TOP);
-        overlay.addView(toolbar, toolbarParams);
+        toolbar = null;
+        sourceActionButton = createBrowserSourceButton();
+        FrameLayout.LayoutParams sourceParams = new FrameLayout.LayoutParams(
+                dp(pageActionBarSpec.iconButtonWidth), dp(pageActionBarSpec.controlHeight), Gravity.TOP | Gravity.END);
+        sourceParams.topMargin = dp(8);
+        sourceParams.rightMargin = dp(pageActionBarSpec.rightAxis - pageActionBarSpec.iconButtonWidth / 2);
+        overlay.addView(sourceActionButton, sourceParams);
 
         // Transient audio status is shown only through the Android Toast below.
         // The old in-overlay banner duplicated the same message in green.
@@ -216,7 +220,7 @@ final class ToolPageController {
         loadStatePanel = createLoadStatePanel();
         FrameLayout.LayoutParams stateParams = new FrameLayout.LayoutParams(
                 dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        stateParams.topMargin = dp(pageActionBarSpec.height / 2);
+        stateParams.topMargin = 0;
         overlay.addView(loadStatePanel, stateParams);
         showLoadingState();
 
@@ -240,14 +244,15 @@ final class ToolPageController {
                     bottom = insets.getSystemWindowInsetBottom();
                 }
 
-                FrameLayout.LayoutParams tp = (FrameLayout.LayoutParams) toolbar.getLayoutParams();
-                tp.topMargin = top;
-                tp.leftMargin = left;
-                tp.rightMargin = right;
-                toolbar.setLayoutParams(tp);
+                if (sourceActionButton != null) {
+                    FrameLayout.LayoutParams sp = (FrameLayout.LayoutParams) sourceActionButton.getLayoutParams();
+                    sp.topMargin = top + dp(8);
+                    sp.rightMargin = right + dp(pageActionBarSpec.rightAxis - pageActionBarSpec.iconButtonWidth / 2);
+                    sourceActionButton.setLayoutParams(sp);
+                }
 
                 FrameLayout.LayoutParams wp = (FrameLayout.LayoutParams) toolWebView.getLayoutParams();
-                wp.topMargin = top + dp(pageActionBarSpec.height);
+                wp.topMargin = top;
                 wp.leftMargin = left;
                 wp.rightMargin = right;
                 toolWebView.setLayoutParams(wp);
@@ -422,6 +427,49 @@ final class ToolPageController {
     void destroy() {
         close();
         audioImportExecutor.shutdownNow();
+    }
+
+    private ImageButton createBrowserSourceButton() {
+        ImageButton button = createToolbarIconButton(com.ingeniousidea.space.R.drawable.ic_source_inactive, null);
+        button.setContentDescription(UiLanguage.text(activity, "toolGetPageResources"));
+        button.setOnClickListener(v -> {
+            if (sourceActionActive) {
+                if (toolWebView != null) toolWebView.evaluateJavascript(
+                        "window.JetNoteGetSource&&window.JetNoteGetSource.hideResults&&window.JetNoteGetSource.hideResults();", null);
+                setSourceActionActive(false);
+            } else {
+                setSourceActionActive(true);
+                runGetScript();
+            }
+        });
+        final float[] down = new float[2];
+        final float[] start = new float[2];
+        final boolean[] dragging = new boolean[1];
+        button.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    down[0] = event.getRawX(); down[1] = event.getRawY();
+                    start[0] = v.getX(); start[1] = v.getY(); dragging[0] = false;
+                    v.postDelayed(() -> { if (v.isPressed()) dragging[0] = true; }, 420L);
+                    return false;
+                case MotionEvent.ACTION_MOVE:
+                    if (dragging[0]) {
+                        float nx = start[0] + event.getRawX() - down[0];
+                        float ny = start[1] + event.getRawY() - down[1];
+                        nx = Math.max(0, Math.min(nx, overlay.getWidth() - v.getWidth()));
+                        ny = Math.max(0, Math.min(ny, overlay.getHeight() - v.getHeight()));
+                        v.setX(nx); v.setY(ny);
+                        return true;
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (dragging[0]) { v.setPressed(false); dragging[0] = false; return true; }
+                    break;
+            }
+            return false;
+        });
+        return button;
     }
 
     private View createToolbar() {
@@ -702,6 +750,7 @@ final class ToolPageController {
             iconPaths.put("audio", readAssetText("shared/icons/audio.svg"));
             iconPaths.put("image", readAssetText("shared/icons/image.svg"));
             iconPaths.put("video", readAssetText("shared/icons/video.svg"));
+            iconPaths.put("refresh", readAssetText("shared/icons/refresh.svg"));
 
             String viewerHtml = readAssetText("app/media/image_viewer.html");
             String viewerCss = readAssetText("get_source/viewer.css");

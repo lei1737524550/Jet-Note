@@ -253,22 +253,22 @@
 
 
 /* Multi-video cards use the same square cell geometry as multi-photo cards. */
-#mainPosts article.post .post-video-grid.two > .video-attachment-shell,
-#mainPosts article.post .post-video-grid.many > .video-attachment-shell,
-#mainPosts article.post .post-published-media-strip > .video-attachment-shell { border-radius:1px !important; }
+.published-post-surface .post-video-grid.two > .video-attachment-shell,
+.published-post-surface .post-video-grid.many > .video-attachment-shell,
+.published-post-surface .post-published-media-strip > .video-attachment-shell { border-radius:1px !important; }
 
 /* Published media height guard -------------------------------------------------
    Single-video Posts use the same maximum visual height as single-photo Posts.
    The poster/video surface stays contained instead of allowing portrait media
    to consume most of the feed viewport. Editor previews and 1xN strips are not
    affected by this rule. */
-#mainPosts article.post > .post-video-grid.one > .video-attachment-shell,
-#mainPosts article.post > .post-video-grid.one > .video-attachment-shell > .video-attachment-item {
+.published-post-surface > .post-video-grid.one > .video-attachment-shell,
+.published-post-surface > .post-video-grid.one > .video-attachment-shell > .video-attachment-item {
   max-height: var(--published-post-media-max-height, 234px);
 }
 
-#mainPosts article.post > .post-video-grid.one .video-poster,
-#mainPosts article.post > .post-video-grid.one .inline-video-player {
+.published-post-surface > .post-video-grid.one .video-poster,
+.published-post-surface > .post-video-grid.one .inline-video-player {
   max-height: var(--published-post-media-max-height, 234px);
   object-fit: contain;
   object-position: center;
@@ -348,7 +348,7 @@
 
 /* Single video keeps the full media width, but no longer has any special
    footer/time-control layout. */
-#mainPosts article.post > .post-video-grid.one .video-inline-time {
+.published-post-surface > .post-video-grid.one .video-inline-time {
   display:block;
 }
 
@@ -357,11 +357,9 @@
 /* 3 Post One Body integration: the track and time control use the explicit Post-internal Body surface.
    The fill remains a semantic progress indicator so played progress stays
    visible against the Post-internal track surface. */
-.three-posts-one-body #mainPosts article.post .video-progress-track,
-.three-posts-one-body #topPostCard .video-progress-track {
+.three-posts-one-body .published-post-surface .video-progress-track {
   background: var(--three-post-internal-surface-background) !important;
 }
-.three-posts-one-body #mainPosts article.post .video-inline-time.video-playback-time-button,
-.three-posts-one-body #topPostCard .video-inline-time.video-playback-time-button {
+.three-posts-one-body .published-post-surface .video-inline-time.video-playback-time-button {
   background: var(--three-post-internal-surface-background) !important;
 }

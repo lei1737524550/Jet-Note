@@ -52,6 +52,17 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
     private boolean overlayAllowed = true;
     private int playerGeneration = 0;
 
+    // Keep the native TextureView locked to the WebView during scrolling.
+    // JS still reports the authoritative DOM rectangle, but a JS -> bridge -> UI-thread
+    // round trip can trail the WebView compositor by one or two frames.  Remember the
+    // last authoritative position and apply the WebView scroll delta natively so the
+    // video surface moves in the same frame as its HTML card.
+    private float rectAnchorX;
+    private float rectAnchorY;
+    private int rectAnchorScrollX;
+    private int rectAnchorScrollY;
+    private boolean hasRectAnchor;
+
     private int videoWidth;
     private int videoHeight;
     private float zoom = 1f;
@@ -85,6 +96,41 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         this.webView = webView;
         this.store = store;
         this.touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
+        webView.getViewTreeObserver().addOnScrollChangedListener(this::syncRectToWebViewScroll);
+    }
+
+    private void syncRectToWebViewScroll() {
+        if (stage == null || !hasRectAnchor) return;
+
+        // V7.3: never keep decoding/advancing inline video while the feed is moving.
+        // The native TextureView and WebView are separate compositor layers; even when
+        // their geometry is synchronized, a playing frame can be presented one frame
+        // out of phase during a scroll and look like the picture is bobbing vertically.
+        // Pause on the first actual scroll delta and leave playback paused until the
+        // user explicitly taps the video again. This applies to finger scrolling and
+        // programmatic camera/follow scrolling alike.
+        int scrollX = webView.getScrollX();
+        int scrollY = webView.getScrollY();
+        if (scrollX != rectAnchorScrollX || scrollY != rectAnchorScrollY) {
+            pauseForFeedMotion();
+        }
+
+        float x = rectAnchorX - (scrollX - rectAnchorScrollX);
+        float y = rectAnchorY - (scrollY - rectAnchorScrollY);
+        // Position-only updates avoid relayout and keep the native surface phase-locked
+        // with WebView scrolling. The next JS rectangle refreshes the anchor.
+        stage.setX(x);
+        stage.setY(y);
+    }
+
+    private void pauseForFeedMotion() {
+        if (!prepared || player == null) return;
+        try {
+            if (player.isPlaying()) {
+                player.pause();
+                dispatchProgress();
+            }
+        } catch (RuntimeException ignored) { }
     }
 
 
@@ -450,6 +496,11 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         stage.setLayoutParams(lp);
         stage.setX(x);
         stage.setY(y);
+        rectAnchorX = x;
+        rectAnchorY = y;
+        rectAnchorScrollX = webView.getScrollX();
+        rectAnchorScrollY = webView.getScrollY();
+        hasRectAnchor = true;
         applyVideoTransform();
     }
 
@@ -658,6 +709,7 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
             ((ViewGroup) stage.getParent()).removeView(stage);
         }
         stage = null;
+        hasRectAnchor = false;
         textureView = null;
         currentFile = null;
         mediaId = null;

@@ -18,6 +18,7 @@
   let normalKeyboardHiddenOffsetPx = 0;
   let debugKeyboardHiddenOffsetPx = 0;
   let lastKeyboardOpen = null;
+  let latestViewportHeight = NaN;
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -33,6 +34,9 @@
   function readViewportHeightCssPixels() {
     // visualViewport reflects the actually visible area when the Android keyboard
     // is open. Do not multiply by devicePixelRatio; these are already CSS pixels.
+    const eventHeight = Number(latestViewportHeight);
+    if (Number.isFinite(eventHeight) && eventHeight > 0) return eventHeight;
+
     const visualHeight = Number(window.visualViewport && window.visualViewport.height);
     if (Number.isFinite(visualHeight) && visualHeight > 0) return visualHeight;
 
@@ -120,6 +124,8 @@
     window.addEventListener('resize', scheduleResponsiveHeightRefresh, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveHeightRefresh, { passive: true });
     window.addEventListener('jetnote:viewport-change', event => {
+      const detailHeight = Number(event?.detail?.height);
+      if (Number.isFinite(detailHeight) && detailHeight > 0) latestViewportHeight = detailHeight;
       applyKeyboardLayoutState(Boolean(event?.detail?.keyboardOpen));
       scheduleResponsiveHeightRefresh();
     }, { passive: true });

@@ -3,7 +3,7 @@
   left: var(--viewport-offset-left, 0px);
   top: var(--viewport-offset-top, 0px);
   width: var(--viewport-width, 100vw);
-  height: var(--editor-stable-viewport-height, var(--viewport-height, 100dvh));
+  height: var(--viewport-height, 100dvh);
   z-index: 9999;
   display: none;
   overflow: hidden;
@@ -218,7 +218,7 @@
 .post-compose-media-row .video-attachment-shell .video-poster {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* Compact editor thumbnails do not need an inline timeline: the media itself
@@ -317,7 +317,7 @@
   width:100%;
   height:100%;
   aspect-ratio:auto;
-  object-fit:cover;
+  object-fit:contain;
   border-radius:0;
 }
 /* Editor video reuses the normal playback state/progress machinery. Keep the
@@ -362,4 +362,132 @@
 .post-compose-body {
   isolation:isolate;
   contain:paint;
+}
+
+/* V6.0 unified ordered visual-attachment rail. Image and video no longer own
+   separate layout tracks: insertion order is the display order. */
+.post-compose-media-row {
+  align-items:flex-end;
+  padding-bottom:2px !important;
+  overflow:visible;
+}
+.post-compose-visual-media {
+  position:relative;
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:flex-end;
+  gap:4px;
+  width:100%;
+  height:var(--post-editor-attachment-row-height,84px);
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  scroll-snap-type:x proximity;
+}
+.post-compose-visual-media::-webkit-scrollbar { display:none; }
+.post-compose-visual-media .compose-image-item,
+.post-compose-visual-media .video-attachment-shell {
+  position:relative;
+  flex:0 0 calc((100% - 8px) / 3);
+  width:calc((100% - 8px) / 3);
+  min-width:calc((100% - 8px) / 3);
+  height:100%;
+  margin:0;
+  box-sizing:border-box;
+  overflow:hidden;
+  scroll-snap-align:start;
+  border-radius:0;
+  border:0 !important;
+  background:transparent;
+}
+.post-compose-visual-media .compose-image-item img {
+  width:100%; height:100%; object-fit:contain; display:block;
+}
+.post-compose-visual-media .video-attachment-shell {
+  display:grid;
+  grid-template-rows:minmax(0,1fr) 6px 16px;
+  background:#111;
+}
+.post-compose-visual-media .compose-video-item,
+.post-compose-visual-media .video-poster {
+  width:100%; height:100%; min-height:0; object-fit:contain; display:block;
+}
+.post-compose-visual-media .video-progress-track {
+  display:block !important;
+  position:relative !important;
+  inset:auto !important;
+  width:100%; height:6px; margin:0 !important; z-index:7;
+}
+.post-compose-visual-media .video-progress-track::before,
+.post-compose-visual-media .video-progress-fill { top:1px; height:4px; }
+.post-compose-visual-media .video-inline-time {
+  display:block !important;
+  position:relative;
+  height:16px;
+  line-height:16px;
+  text-align:center;
+  font-size:11px;
+  white-space:nowrap;
+  background:var(--jet-note-type-body-background-color,#D2E9C2);
+  color:var(--jet-note-type-body-foreground-color,#111);
+  z-index:7;
+}
+.post-compose-visual-media .compose-image-remove {
+  position:absolute;
+  top:2px; right:2px;
+  width:20px; height:20px;
+  padding:0; margin:0;
+  border:0; border-radius:50%;
+  background:transparent;
+  color:#fff;
+  font-size:18px; line-height:20px;
+  z-index:20;
+}
+/* White under difference blending yields the exact RGB complement of the pixel
+   underneath the X without expensive frame-by-frame video canvas sampling. */
+.post-compose-visual-media .adaptive-complement-remove {
+  mix-blend-mode:difference;
+  isolation:auto;
+}
+.post-compose-visual-media .compose-media-more-indicator {
+  position:sticky;
+  right:0;
+  align-self:center;
+  flex:0 0 12px;
+  width:12px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  z-index:30;
+  pointer-events:none;
+}
+.post-compose-visual-media .compose-media-more-indicator img {
+  width:12px; height:28px; display:block;
+}
+
+
+/* V6.9: keep the configured four-state editor geometry authoritative.
+   The current visual viewport owns screen height; keyboard-hidden offset only
+   enlarges the text display area. Optional attachment rows still collapse. */
+.post-compose-attachment-stack{flex:0 0 auto;height:auto;overflow:visible;gap:var(--post-editor-vertical-section-gap,12px);}
+.post-compose-attachment-row{flex:0 0 var(--post-editor-attachment-row-height,48px);height:var(--post-editor-attachment-row-height,48px);}
+.post-compose-audio-row:not(:has(#postAudioDraft > *)){display:none!important;}
+.post-compose-media-row:not(:has(#postVisualMediaPreview > *)){display:none!important;}
+
+/* V6.9 viewport-chain repair -------------------------------------------------
+   The visual viewport owns the editor screen. The body then gives its actual
+   remaining height to the content column; fixed attachment/tool rows consume
+   their real footprint and the text display receives the remainder. No
+   keyboard-state Y offset participates in this chain. */
+.post-compose-body > .post-input-row{
+  flex:1 1 auto;
+  height:100%;
+  min-height:0;
+  overflow:hidden;
+}
+#postComposerText{
+  flex:1 1 0!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:none!important;
 }

@@ -130,30 +130,35 @@ function renderMediaHTML(images, className, zoomable = false) {
  */
 function renderPublishedVisualMediaHTML(images, attachments) {
   const photos = Array.isArray(images) ? images : [];
-  const videos = (attachments || []).filter(item => item?.type === 'video');
-  if (!photos.length && !videos.length) return '';
+  const safeAttachments = Array.isArray(attachments) ? attachments : [];
+  const visual = [];
+  const representedPhotos = new Set();
 
-  if (videos.length === 1 && photos.length === 0) {
-    return renderVideoAttachmentsHTML(videos);
+  // V6.0: attachment sequence is authoritative. Images and videos are never
+  // regrouped by media type after the user has chosen them.
+  for (const item of safeAttachments) {
+    if (item?.type === 'video') {
+      visual.push({type:'video', item});
+    } else if (item?.type === 'image') {
+      const src = NativeMedia.url(item);
+      representedPhotos.add(src);
+      visual.push({type:'image', src});
+    }
   }
+  // Preserve old posts whose image bytes predate ordered image attachments.
+  photos.forEach(src => {
+    if (!representedPhotos.has(src)) visual.push({type:'image', src});
+  });
+  if (!visual.length) return '';
 
-  // A single published photo mirrors the single-video presentation: it keeps
-  // its natural aspect ratio and breaks through only the Post's horizontal
-  // content padding. Multiple/mixed visual attachments continue to use 1xN.
-  if (photos.length === 1 && videos.length === 0) {
-    return renderMediaHTML(photos, 'post-media-grid post-published-single-photo', true);
-  }
+  if (visual.length === 1 && visual[0].type === 'video') return renderVideoAttachmentsHTML([visual[0].item]);
+  if (visual.length === 1 && visual[0].type === 'image') return renderMediaHTML([visual[0].src], 'post-media-grid post-published-single-photo', true);
 
-  const videoCards = videos.map(item => renderVideoAttachmentCardHTML(item)).join('');
-  const photoCards = photos.map(src => `
-    <div class="post-published-media-photo-frame">
-      <img class="post-published-media-photo published-inline-zoom-media"
-           data-published-inline-zoom="image"
-           src="${src}"
-           alt="">
-    </div>`).join('');
-
-  return `<div class="post-published-media-strip">${videoCards}${photoCards}</div>`;
+  const cards = visual.map(entry => entry.type === 'video'
+    ? renderVideoAttachmentCardHTML(entry.item)
+    : `<div class="post-published-media-photo-frame"><img class="post-published-media-photo published-inline-zoom-media" data-published-inline-zoom="image" src="${entry.src}" alt=""></div>`
+  ).join('');
+  return `<div class="post-published-media-strip">${cards}</div>`;
 }
 
 /*

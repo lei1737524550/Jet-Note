@@ -9,6 +9,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Single source of truth for Jet Note's bundled config.json and the optional
@@ -27,13 +30,139 @@ final class RuntimeConfigStore {
 
     private RuntimeConfigStore() { }
 
-    static String readBundled(Context context) throws Exception {
-        try (InputStream in = context.getAssets().open("config.json")) {
+    private static JSONObject readAssetObject(Context context, String path) throws Exception {
+        try (InputStream in = context.getAssets().open(path)) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             byte[] buffer = new byte[8192];
             int count;
             while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-            return out.toString(StandardCharsets.UTF_8.name());
+            return new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
+        }
+    }
+
+    private static JSONObject deepMergeDisjoint(JSONObject left, JSONObject right) throws Exception {
+        JSONObject result = new JSONObject(left.toString());
+        java.util.Iterator<String> keys = right.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object value = right.get(key);
+            if (!result.has(key)) {
+                result.put(key, value);
+                continue;
+            }
+            Object existing = result.get(key);
+            if (existing instanceof JSONObject && value instanceof JSONObject) {
+                result.put(key, deepMergeDisjoint((JSONObject) existing, (JSONObject) value));
+                continue;
+            }
+            throw new IllegalStateException("Duplicate config path while merging: " + key);
+        }
+        return result;
+    }
+
+    static List<String> listBundledSectionNames(Context context) throws Exception {
+        String[] names = context.getAssets().list("config");
+        List<String> result = new ArrayList<>();
+        if (names != null) {
+            for (String name : names) {
+                if (name != null && name.endsWith(".json") && !name.contains("/") && !name.contains("\\")) {
+                    result.add(name);
+                }
+            }
+        }
+        Collections.sort(result);
+        // Keep the two historically central files easy to find in Debug mode.
+        result.remove("config.json");
+        result.remove("anim.json");
+        result.add(0, "anim.json");
+        result.add(0, "config.json");
+        return result;
+    }
+
+    private static String normalizeSectionName(String section) {
+        String name = section == null ? "" : section.trim();
+        if (!name.endsWith(".json")) name += ".json";
+        if (name.contains("/") || name.contains("\\") || name.contains("..")) return "";
+        return name;
+    }
+
+    static String listBundledSectionsJson(Context context) {
+        try {
+            org.json.JSONArray array = new org.json.JSONArray();
+            for (String name : listBundledSectionNames(context)) array.put(name);
+            return array.toString();
+        } catch (Exception error) {
+            return "[]";
+        }
+    }
+
+    static String readBundled(Context context) throws Exception {
+        JSONObject merged = new JSONObject();
+        for (String name : listBundledSectionNames(context)) {
+            merged = deepMergeDisjoint(merged, readAssetObject(context, "config/" + name));
+        }
+        return merged.toString(2);
+    }
+
+    static String readEffectiveSection(Context context, String section) {
+        try {
+            String name = normalizeSectionName(section);
+            if (name.isEmpty() || !listBundledSectionNames(context).contains(name)) return "{}";
+            JSONObject schema = readAssetObject(context, "config/" + name);
+            JSONObject effective = new JSONObject(readEffective(context));
+            return projectExistingValues(schema, effective).toString(2);
+        } catch (Exception error) {
+            return "{}";
+        }
+    }
+
+    static synchronized boolean saveRuntimeSection(Context context, String section, String json) {
+        try {
+            String name = normalizeSectionName(section);
+            if (name.isEmpty() || !listBundledSectionNames(context).contains(name)) return false;
+            JSONObject sectionSchema = readAssetObject(context, "config/" + name);
+            JSONObject incoming = new JSONObject(json);
+            JSONObject validatedSection = mergeUserValuesIntoBundledSchema(sectionSchema, incoming);
+            JSONObject effective = new JSONObject(readEffective(context));
+            replaceSchemaPaths(effective, sectionSchema, validatedSection);
+            return saveRuntime(context, effective.toString());
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    private static JSONObject projectExistingValues(JSONObject schema, JSONObject source) throws Exception {
+        JSONObject result = new JSONObject();
+        java.util.Iterator<String> keys = schema.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object schemaValue = schema.get(key);
+            Object sourceValue = source.has(key) ? source.get(key) : schemaValue;
+            if (schemaValue instanceof JSONObject && sourceValue instanceof JSONObject) {
+                result.put(key, projectExistingValues((JSONObject) schemaValue, (JSONObject) sourceValue));
+            } else {
+                result.put(key, sourceValue);
+            }
+        }
+        return result;
+    }
+
+    private static void replaceSchemaPaths(JSONObject target, JSONObject schema, JSONObject values) throws Exception {
+        java.util.Iterator<String> keys = schema.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object schemaValue = schema.get(key);
+            Object value = values.get(key);
+            if (schemaValue instanceof JSONObject && value instanceof JSONObject) {
+                JSONObject child = target.optJSONObject(key);
+                if (child == null) {
+                    child = new JSONObject();
+                    target.put(key, child);
+                }
+                replaceSchemaPaths(child, (JSONObject) schemaValue, (JSONObject) value);
+            } else {
+                target.put(key, value);
+            }
         }
     }
 

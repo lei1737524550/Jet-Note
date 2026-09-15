@@ -72,6 +72,17 @@
         "Debug Post search text color",
         "Debug UI dynamic border rules"
       ]
+    },
+    "animation_speed_or_duration": {
+      "display_name": "Animation Speed or Duration",
+      "config_selector": "speed_or_duration",
+      "allowed_values": [
+        "speed",
+        "duration"
+      ],
+      "speed_semantics": "Use the configured speed_px_per_second and derive duration from travel or reveal distance; longer distance takes longer.",
+      "duration_semantics": "Use the configured duration_ms as a fixed duration; longer distance therefore moves faster.",
+      "naming_rule": "Animation selectors must state both choices in the field name with _or_, for example speed_or_duration; do not use a generic mode field."
     }
   },
   "regions": {
@@ -577,7 +588,7 @@
     },
     "new_post_text_area_height": {
       "code_location": [
-        "app/src/main/assets/config.json",
+        "app/src/main/assets/config/config.json + app/src/main/assets/config/anim.json",
         "app/src/main/assets/app/post_editor/editor_config.js",
         "app/src/main/assets/app/post_editor/post_editor.css"
       ],
@@ -686,7 +697,8 @@
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
       "color_view_title": "Color View",
-      "date_time_viewer_title": "Date View"
+      "date_time_viewer_title": "Date View",
+      "cancel_debug": "Cancel Debug"
     },
     "post_composer": {
       "new_post_title": "New Post",

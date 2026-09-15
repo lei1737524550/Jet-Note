@@ -1,0 +1,8 @@
+{
+  "is_display": {
+    "top_post": true,
+    "post_composer": true,
+    "main_posts": true,
+    "star_post": true
+  }
+}

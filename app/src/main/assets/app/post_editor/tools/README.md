@@ -40,7 +40,7 @@ The algorithm finds the `tool_m1` visual slot, then places child 1 at `anchor - 
 
 ## Capacity
 
-`assets/config.json -> new_post_tools.maximum_visible_tools` is the only maximum-capacity setting. The current default is 6. Rendering must never exceed it, and the 48px tool touch target must not be compressed to fit extra items.
+`assets/config/config.json -> new_post_tools.maximum_visible_tools` is the only maximum-capacity setting. The current default is 6. Rendering must never exceed it, and the 48px tool touch target must not be compressed to fit extra items.
 
 ## Reusable toolbox-page template
 

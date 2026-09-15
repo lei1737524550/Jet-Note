@@ -10,8 +10,8 @@ android {
         applicationId "com.ingeniousidea.space"
         minSdk 23
         targetSdk 34
-        versionCode 44
-        versionName "5.2"
+        versionCode 164
+        versionName "7.3"
     }
 
     buildTypes {

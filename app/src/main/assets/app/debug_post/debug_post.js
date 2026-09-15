@@ -75,7 +75,7 @@
   class DebugTextPostRenderer extends BaseNonPersistentPostRenderer {
     constructor({filename,text}){ super(); this.filename=filename; this.text=String(text??''); }
     render(){
-      const id=this.filename==='config.json'?'config':'readme';
+      const id=this.filename==='README.txt'?'readme':this.filename;
       const edit=`<button class="more debug-configuration-post-edit-button" type="button" data-debug-configuration-post-action="edit" data-debug-post-id="${id}" aria-label="Edit ${escapeHtml(this.filename)}" title="Edit ${escapeHtml(this.filename)}"><img src="shared/icons/edit_pencil.svg" alt="" aria-hidden="true"></button>`;
       return `<article class="post debug-configuration-post common_border" data-debug-configuration-post="true" data-debug-post-id="${id}">
         <div class="debug-configuration-post-header"><div class="debug-configuration-post-filename">${escapeHtml(this.filename)}</div>${edit}</div>
@@ -99,19 +99,19 @@
   }
 
   class DebugConfigurationEditorController extends BaseFullScreenTextEditorController {
-    constructor(){super({screenElementId:'debugConfigurationEditorScreen',textareaElementId:'debugConfigurationJsonTextarea'});this.hasBoundTextareaEvents=false;this.isSavingConfiguration=false;this.currentPostId='config';this.latestSyntaxResult={valid:true,errors:[]}}
+    constructor(){super({screenElementId:'debugConfigurationEditorScreen',textareaElementId:'debugConfigurationJsonTextarea'});this.hasBoundTextareaEvents=false;this.isSavingConfiguration=false;this.currentPostId='config.json';this.latestSyntaxResult={valid:true,errors:[]}}
     get validationErrorBox(){return document.getElementById('debugConfigurationValidationError')} get validationErrorMessage(){return this.validationErrorBox?.querySelector('.debug-configuration-validation-error-message')||null}
     bindTextareaEventsOnce(){
       if(this.hasBoundTextareaEvents)return;
       const t=this.textareaElement;if(!t)return;
-      t.addEventListener('input',()=>{this.clearValidationError();this.latestSyntaxResult=this.currentPostId==='config'?this.validateConfigurationJson(t.value):{valid:true,errors:[]};this.refreshSearchHighlights()});
+      t.addEventListener('input',()=>{this.clearValidationError();this.latestSyntaxResult=this.currentPostId!=='readme'?this.validateConfigurationJson(t.value):{valid:true,errors:[]};this.refreshSearchHighlights()});
       t.addEventListener('scroll',()=>this.syncSearchHighlightScroll(),{passive:true});
       this.hasBoundTextareaEvents=true
     }
     openDebugPost(postId,text){
-      this.currentPostId=postId==='readme'?'readme':'config';this.bindTextareaEventsOnce();this.clearValidationError();
+      this.currentPostId=postId==='readme'?'readme':String(postId||'config.json');this.bindTextareaEventsOnce();this.clearValidationError();
       super.openWithText(text);
-      this.latestSyntaxResult=this.currentPostId==='config'?this.validateConfigurationJson(String(text??'')):{valid:true,errors:[]};
+      this.latestSyntaxResult=this.currentPostId!=='readme'?this.validateConfigurationJson(String(text??'')):{valid:true,errors:[]};
       const i=document.getElementById('debugEditorSearchInput');if(i)i.value='';
       this.clearSearchHighlights();
     }
@@ -203,21 +203,74 @@
       this.restoreFocusState(state);
     }
 
-    async saveCurrentPostAndClose(){if(this.isSavingConfiguration)return;const t=this.textareaElement,b=this.screenElement?.querySelector('.debug-configuration-editor-save-button');if(!t)return;this.clearValidationError();if(this.currentPostId==='config'){const focusState=this.captureFocusState(),scrollTop=t.scrollTop,scrollLeft=t.scrollLeft,result=this.latestSyntaxResult||this.validateConfigurationJson(t.value);if(!result.valid){playPostUiSound?.('error');this.renderDiagnosticRanges(result.errors);const first=result.errors?.[0];this.showValidationError(`${result.errors.length} JSON syntax error${result.errors.length===1?'':'s'}. ${first?.message||'Invalid JSON.'}`);t.scrollTop=scrollTop;t.scrollLeft=scrollLeft;this.syncSearchHighlightScroll();this.restoreFocusState(focusState);return}}playPostUiSound?.('send_post');this.isSavingConfiguration=true;if(b)b.disabled=true;try{const n=window.JetNoteNative;if(!n)throw new Error('Runtime bridge is unavailable.');if(this.currentPostId==='readme'){if(typeof n.setRuntimeReadmeText!=='function'||!n.setRuntimeReadmeText(t.value))throw new Error('Unable to save README.txt.');readmeText=t.value;this.closeWithoutSaving();if(typeof renderPosts==='function')renderPosts()}else{if(typeof n.setRuntimeConfigJson!=='function'||!n.setRuntimeConfigJson(t.value))throw new Error('Unable to save config.json.');this.closeWithoutSaving();location.reload()}}catch(error){this.showValidationError(error?.message||'Unable to save Debug Post.')}finally{this.isSavingConfiguration=false;if(b?.isConnected)b.disabled=false}}
+    async saveCurrentPostAndClose(){if(this.isSavingConfiguration)return;const t=this.textareaElement,b=this.screenElement?.querySelector('.debug-configuration-editor-save-button');if(!t)return;this.clearValidationError();if(this.currentPostId!=='readme'){const focusState=this.captureFocusState(),scrollTop=t.scrollTop,scrollLeft=t.scrollLeft,result=this.latestSyntaxResult||this.validateConfigurationJson(t.value);if(!result.valid){playPostUiSound?.('error');this.renderDiagnosticRanges(result.errors);const first=result.errors?.[0];this.showValidationError(`${result.errors.length} JSON syntax error${result.errors.length===1?'':'s'}. ${first?.message||'Invalid JSON.'}`);t.scrollTop=scrollTop;t.scrollLeft=scrollLeft;this.syncSearchHighlightScroll();this.restoreFocusState(focusState);return}}playPostUiSound?.('send_post');this.isSavingConfiguration=true;if(b)b.disabled=true;try{const n=window.JetNoteNative;if(!n)throw new Error('Runtime bridge is unavailable.');if(this.currentPostId==='readme'){if(typeof n.setRuntimeReadmeText!=='function'||!n.setRuntimeReadmeText(t.value))throw new Error('Unable to save README.txt.');readmeText=t.value}else{if(typeof n.setRuntimeConfigSectionJson!=='function'||!n.setRuntimeConfigSectionJson(this.currentPostId,t.value))throw new Error(`Unable to save ${this.currentPostId}.`)}this.closeWithoutSaving();if(typeof n.relaunchForConfigReload==='function'){n.relaunchForConfigReload();return}location.reload()}catch(error){this.showValidationError(error?.message||'Unable to save Debug Post.')}finally{this.isSavingConfiguration=false;if(b?.isConnected)b.disabled=false}}
   }
   let editor=null; function getEditor(){if(!editor)editor=new DebugConfigurationEditorController();editor.bindTextareaEventsOnce();return editor}
 
 
   const DebugConfigurationFeature={
     enabled(){return localStorage.getItem(DEBUG_MODE_STORAGE_KEY)==='1'},
-    setEnabled(value){localStorage.setItem(DEBUG_MODE_STORAGE_KEY,value?'1':'0');this.refreshSettings();if(value)ensureReadmeLoaded();if(typeof renderPosts==='function')renderPosts()},
+    async setEnabled(value){
+      const next=Boolean(value);
+      if(next){
+        localStorage.setItem(DEBUG_MODE_STORAGE_KEY,'1');
+        this.refreshSettings({animate:true,show:true});
+        ensureReadmeLoaded();
+        if(typeof renderPosts==='function')renderPosts();
+        return;
+      }
+      if(!this.enabled())return;
+      await this.closeDebugSettingsWithReflow();
+      localStorage.setItem(DEBUG_MODE_STORAGE_KEY,'0');
+      this.refreshSettings({animate:false,show:false});
+      if(typeof renderPosts==='function')renderPosts();
+    },
+    getConfigurationSectionFiles(){try{const raw=window.JetNoteNative?.listRuntimeConfigSectionFilesJson?.();const names=raw?JSON.parse(raw):[];return Array.isArray(names)?names.filter(name=>typeof name==='string'&&name.endsWith('.json')):[]}catch(_){return[]}},
+    getCurrentConfigurationSectionJson(section){try{return window.JetNoteNative?.getRuntimeConfigSectionJson?.(section)||'{}'}catch(_){return'{}'}},
     getCurrentConfigurationJson(){try{return window.JetNoteNative?.getRuntimeConfigJson?.()||'{}'}catch(_){return'{}'}},
-    render(){if(!this.enabled())return'';loadSearchConfig();ensureReadmeLoaded();return new DebugTextPostRenderer({filename:'config.json',text:this.getCurrentConfigurationJson()}).render()+new DebugTextPostRenderer({filename:'README.txt',text:readmeText||'Loading README…'}).render()},
-    openEditor(event,postId){event?.preventDefault?.();event?.stopPropagation?.();const id=postId==='readme'?'readme':'config';const text=id==='readme'?readmeText:this.getCurrentConfigurationJson();getEditor().openDebugPost(id,text)},
+    render(){
+      if(!this.enabled())return'';
+      loadSearchConfig();ensureReadmeLoaded();
+      const configurationPosts=this.getConfigurationSectionFiles().map(filename=>new DebugTextPostRenderer({filename,text:this.getCurrentConfigurationSectionJson(filename)}).render()).join('');
+      return configurationPosts+new DebugTextPostRenderer({filename:'README.txt',text:readmeText||'Loading README…'}).render();
+    },
+    openEditor(event,postId){event?.preventDefault?.();event?.stopPropagation?.();const id=postId==='readme'?'readme':String(postId||'config.json');const text=id==='readme'?readmeText:this.getCurrentConfigurationSectionJson(id);getEditor().openDebugPost(id,text)},
     closeEditor(){if(!editor?.isOpen())return false;editor.closeWithoutSaving();return true}, isEditorOpen(){return Boolean(editor?.isOpen())},
     saveJsonToDownloads(){const status=document.getElementById('debugSettingsStatus');if(status)status.textContent='';try{const n=window.JetNoteNative;if(!n||typeof n.saveEffectiveConfigJsonToDownloads!=='function')throw new Error('Config export bridge is unavailable.');const ok=n.saveEffectiveConfigJsonToDownloads();if(!ok&&status)status.textContent='Unable to save config.json.'}catch(error){if(status)status.textContent=error?.message||'Unable to save config.json.'}},
-    refreshSettings(){const b=document.getElementById('enableDebugButton');if(!b)return;const on=this.enabled();['colorViewCard','dateTimeViewerCard'].forEach(id=>{const el=document.getElementById(id);if(el){el.hidden=!on;el.classList.toggle('debug-ui-dynamic-border',on)}});applyDebugUiBorderCss();b.classList.toggle('debug-enabled',on);const l=b.querySelector('.settings-choice-main');if(l)l.textContent=on?'Debug Enabled':'Enable Debug';else b.textContent=on?'Debug Enabled':'Enable Debug';b.setAttribute('aria-pressed',String(on))},
-    bind(){getEditor();loadSearchConfig();if(this.enabled())ensureReadmeLoaded();this.refreshSettings();if(document.documentElement.dataset.debugConfigurationFeatureEventsBound==='true')return;document.documentElement.dataset.debugConfigurationFeatureEventsBound='true';document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-debug-configuration-editor-action="search"]'))event.preventDefault()});document.addEventListener('click',event=>{const action=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugConfigurationPostAction;if(action==='edit'){const postId=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugPostId;this.openEditor(event,postId);return}const ea=event.target.closest('[data-debug-configuration-editor-action]')?.dataset.debugConfigurationEditorAction;if(!ea)return;const c=getEditor();if(ea==='search'){event.preventDefault();c.searchInEditor()}else if(ea==='cancel'){event.preventDefault();c.closeWithoutSaving()}else if(ea==='save'){event.preventDefault();void c.saveCurrentPostAndClose()}});document.addEventListener('keydown',event=>{if(event.target?.id==='debugEditorSearchInput'&&event.key==='Enter'){event.preventDefault();getEditor().searchInEditor()}})}
+    getDebugSettingsAnimationConfig(){let cfg={};try{const raw=window.JetNoteNative?.getRuntimeConfigJson?.();cfg=raw?JSON.parse(raw)?.debug_settings_expand_animation||{}:{}}catch(_){}const choice=String(cfg.speed_or_duration||'speed').toLowerCase()==='duration'?'duration':'speed';return{speed_or_duration:choice,duration_ms:Math.max(0,Number(cfg.duration_ms)||900),speed_px_per_second:Math.max(1,Number(cfg.speed_px_per_second)||10)}},
+    getDebugSettingsCloseConfig(){let cfg={};try{const raw=window.JetNoteNative?.getRuntimeConfigJson?.();cfg=raw?JSON.parse(raw)?.debug_settings_close_animation||{}:{}}catch(_){}const choice=String(cfg.speed_or_duration||'speed').toLowerCase()==='duration'?'duration':'speed';return{speed_or_duration:choice,duration_ms:Math.max(0,Number(cfg.duration_ms)||900),speed_px_per_second:Math.max(1,Number(cfg.speed_px_per_second)||10),end_hold_duration_ms:Math.max(0,Number(cfg.end_hold_duration_ms)||200),remaining_settings_reflow_duration_ms:Math.max(0,Number(cfg.remaining_settings_reflow_duration_ms)||700)}},
+    debugSettingCards(){return Array.from(document.querySelectorAll('[data-debug-setting-card="true"]'))},
+    debugSettingsMovementEntries(cards){const viewportBottom=Math.max(0,window.innerHeight||document.documentElement.clientHeight||0);return cards.map(card=>{const rect=card.getBoundingClientRect();const dy=viewportBottom-rect.bottom;return{card,dy,distance:Math.abs(dy)}})},
+    resolveMaximumDistanceAnimationPlan(entries,cfg){const maximumDistance=entries.reduce((maximum,item)=>Math.max(maximum,Number(item.distance)||0),0);let sharedDuration=0;if(cfg.speed_or_duration==='speed'){if(maximumDistance>0&&cfg.speed_px_per_second>0)sharedDuration=maximumDistance/cfg.speed_px_per_second*1000}else sharedDuration=cfg.duration_ms;return entries.map(item=>({...item,duration:sharedDuration,effectiveSpeedPxPerSecond:sharedDuration>0?item.distance/(sharedDuration/1000):0}))},
+    debugSettingsAnimationPlan(cards,closing=false){const cfg=this.getDebugSettingsAnimationConfig();return this.resolveMaximumDistanceAnimationPlan(this.debugSettingsMovementEntries(cards),cfg)},
+    followDebugMovement(plan,animations){const body=document.querySelector('.settings-body');if(!body||!plan.length||!animations.length)return;const reference=plan.reduce((best,item)=>(Number(item.distance)||0)>(Number(best?.distance)||-1)?item:best,null);if(!reference?.card)return;let frame=0;const tick=()=>{const active=animations.some(animation=>animation.playState==='running'||animation.playState==='pending');if(!active){frame=0;return}const viewport=body.getBoundingClientRect(),rect=reference.card.getBoundingClientRect();const visibleHeight=Math.max(0,viewport.height);const maxScroll=Math.max(0,body.scrollHeight-body.clientHeight);let desired=body.scrollTop+(rect.top+rect.height/2-(viewport.top+visibleHeight/2));desired=Math.max(0,Math.min(maxScroll,desired));if(rect.height<=visibleHeight){if(rect.top<viewport.top)desired=Math.max(0,body.scrollTop-(viewport.top-rect.top));else if(rect.bottom>viewport.bottom)desired=Math.min(maxScroll,body.scrollTop+(rect.bottom-viewport.bottom))}if(Math.abs(desired-body.scrollTop)>.25)body.scrollTop=desired;frame=requestAnimationFrame(tick)};frame=requestAnimationFrame(tick)},
+    animateDebugSettingCard(card,show,duration,startDy){card.getAnimations?.().forEach(animation=>animation.cancel());if(show){card.hidden=false;card.classList.add('debug-ui-dynamic-border');if(!duration)return null;return card.animate([{transform:`translate3d(0,${startDy}px,0)`,opacity:0},{transform:'translate3d(0,0,0)',opacity:1}],{duration,easing:'linear',fill:'none'})}card.classList.remove('debug-ui-dynamic-border');if(!duration){card.hidden=true;return null}return card.animate([{transform:'translate3d(0,0,0)',opacity:1},{transform:`translate3d(0,${startDy}px,0)`,opacity:0}],{duration,easing:'linear',fill:'forwards'})},
+    async closeDebugSettingsWithReflow(){
+      const cards=this.debugSettingCards().filter(card=>!card.hidden);
+      const closeCfg=this.getDebugSettingsCloseConfig();
+      const plan=this.debugSettingsAnimationPlan(cards,true);
+      const closeAnimations=plan.map(item=>this.animateDebugSettingCard(item.card,false,item.duration,item.dy)).filter(Boolean);
+      this.followDebugMovement(plan,closeAnimations);
+      await Promise.all(closeAnimations.map(animation=>animation.finished.catch(()=>{})));
+      // Enable and Cancel are exact reverse transactions: no close-only hold.
+
+      const body=document.querySelector('.settings-body');
+      const remaining=body?Array.from(body.children).filter(element=>element instanceof HTMLElement&&!cards.includes(element)&&!element.hidden):[];
+      const before=new Map(remaining.map(element=>[element,element.getBoundingClientRect()]));
+      cards.forEach(card=>{card.getAnimations?.().forEach(animation=>animation.cancel());card.hidden=true;card.classList.remove('debug-ui-dynamic-border');card.style.transform='';card.style.clipPath='';card.style.opacity=''});
+      void body?.offsetHeight;
+      const moving=[];
+      remaining.forEach(element=>{
+        const first=before.get(element),last=element.getBoundingClientRect();
+        const dx=first.left-last.left,dy=first.top-last.top;
+        if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return;
+        element.getAnimations?.().forEach(animation=>animation.cancel());
+        moving.push(element.animate([{transform:`translate3d(${dx}px,${dy}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:(plan[0]?.duration||0),easing:'linear',fill:'none'}).finished.catch(()=>{}));
+      });
+      await Promise.all(moving);
+    },
+    refreshSettings(options={}){const b=document.getElementById('enableDebugButton');if(!b)return;const on=options.show??this.enabled(),animate=options.animate===true;const cards=this.debugSettingCards();if(animate&&on){cards.forEach(card=>{card.hidden=false;card.classList.add('debug-ui-dynamic-border')});void document.documentElement.offsetHeight;const plan=this.debugSettingsAnimationPlan(cards,false);const animations=plan.map(item=>this.animateDebugSettingCard(item.card,true,item.duration,item.dy)).filter(Boolean);this.followDebugMovement(plan,animations)}else cards.forEach(card=>{if(!animate){card.getAnimations?.().forEach(animation=>animation.cancel());card.hidden=!on;card.classList.toggle('debug-ui-dynamic-border',on)}});applyDebugUiBorderCss();b.classList.remove('debug-enabled');const l=b.querySelector('.settings-choice-main');const enableDebugLabel=window.JetNoteLanguage?.value?.('ui_strings.settings.enable_debug','Enable Debug')||'Enable Debug';if(l)l.textContent=enableDebugLabel;else b.textContent=enableDebugLabel;b.setAttribute('aria-pressed',String(on));b.disabled=Boolean(on);b.setAttribute('aria-disabled',String(Boolean(on)))},
+    bind(){getEditor();loadSearchConfig();if(this.enabled())ensureReadmeLoaded();this.refreshSettings();if(document.documentElement.dataset.debugConfigurationFeatureEventsBound==='true')return;document.documentElement.dataset.debugConfigurationFeatureEventsBound='true';document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-debug-configuration-editor-action="search"]'))event.preventDefault()});document.addEventListener('click',event=>{if(event.target.closest('#colorViewCancelDebugButton')){event.preventDefault();void this.setEnabled(false);return}const action=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugConfigurationPostAction;if(action==='edit'){const postId=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugPostId;this.openEditor(event,postId);return}const ea=event.target.closest('[data-debug-configuration-editor-action]')?.dataset.debugConfigurationEditorAction;if(!ea)return;const c=getEditor();if(ea==='search'){event.preventDefault();c.searchInEditor()}else if(ea==='cancel'){event.preventDefault();c.closeWithoutSaving()}else if(ea==='save'){event.preventDefault();void c.saveCurrentPostAndClose()}});document.addEventListener('keydown',event=>{if(event.target?.id==='debugEditorSearchInput'&&event.key==='Enter'){event.preventDefault();getEditor().searchInEditor()}})}
   };
   window.DebugConfigurationFeature=DebugConfigurationFeature;window.DebugPostFeature=DebugConfigurationFeature;window.DebugConfigurationPostRenderer=DebugTextPostRenderer;window.DebugConfigurationEditorController=DebugConfigurationEditorController;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>DebugConfigurationFeature.bind(),{once:true});else DebugConfigurationFeature.bind();

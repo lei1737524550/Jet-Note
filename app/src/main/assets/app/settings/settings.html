@@ -9,9 +9,10 @@
     <div class="settings-body">
       
       <!-- Settings modules: stable code identity is setting_N; visible/developer name is metadata. -->
-      <div class="settings-card setting-box color-view-card common_border" id="colorViewCard" hidden data-setting-id="setting_1" data-setting-name="Color View">
+      <div class="settings-card setting-box color-view-card common_border" id="colorViewCard" hidden data-debug-setting-card="true" data-setting-id="setting_1" data-setting-name="Color View">
         <div class="color-view-title-row">
           <div class="settings-row-title" data-ui-string="settings.color_view_title"></div>
+          <button class="color-view-cancel-debug-button common_border" id="colorViewCancelDebugButton" type="button" data-ui-string="settings.cancel_debug"></button>
         </div>
         <div class="color-view-tool common_border">
           <div class="color-view-preview-column">
@@ -55,7 +56,7 @@
           <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
         </div>
       </div>
-      <div class="settings-card setting-box date-time-viewer-card common_border" id="dateTimeViewerCard" hidden data-setting-id="setting_2" data-setting-name="Date View">
+      <div class="settings-card setting-box date-time-viewer-card common_border" id="dateTimeViewerCard" hidden data-debug-setting-card="true" data-setting-id="setting_2" data-setting-name="Date View">
         <div class="date-time-viewer-title-row">
           <div class="settings-row-title" data-ui-string="settings.date_time_viewer_title"></div>
           <div class="date-time-viewer-title-actions">

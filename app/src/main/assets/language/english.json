@@ -63,7 +63,7 @@
   "postTools": "Post tools",
   "attachmentReadFailed": "Unable to read the selected attachment.",
   "edit": "Edit",
-  "favorite": "Favorite",
+  "star": "Star",
   "ui_strings": {
     "common": {
       "back": "Back",
@@ -91,7 +91,8 @@
       "save_json": "Save JSON",
       "browser_title": "Browser",
       "relaunch": "Relaunch",
-      "relaunch_accessibility_label": "Reload configuration and restart Jet Note"
+      "relaunch_accessibility_label": "Reload configuration and restart Jet Note",
+      "cancel_debug": "Cancel Debug"
     },
     "post_composer": {
       "new_post_title": "New Post",
@@ -308,5 +309,9 @@
   "startupRenderingWarningDismiss": "OK",
   "archiveOpenBusy": "Finish the current edit or import before opening a backup.",
   "archiveImportCommitted": "Import complete. Media and data were committed.",
-  "archiveImportCompleteToast": "Jet Note import complete"
+  "archiveImportCompleteToast": "Jet Note import complete",
+  "getSourceRefresh": "Refresh",
+  "debugEditorSearchPlaceholder": "Search",
+  "debugEditorSearchAccessibilityLabel": "Search debug post",
+  "debugEditorSearchAction": "Search"
 }

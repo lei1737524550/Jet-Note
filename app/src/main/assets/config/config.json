@@ -1,0 +1,8 @@
+{
+  "global_set_background": "#AED194",
+  "global_set_body": "#D2E9C2",
+  "jet_scrollbar": {
+    "visual_width_px": 7,
+    "interaction_width_px": 20
+  }
+}

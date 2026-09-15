@@ -1,6 +1,6 @@
 # config.json migration and archive policy
 
-`assets/config.json` defines the schema shipped by the currently installed APK. The runtime copy is user data.
+``assets/config/config.json` + `assets/config/anim.json` define the schema shipped by the currently installed APK. The runtime copy is user data.
 
 On startup and whenever runtime config is saved, `RuntimeConfigStore` recursively projects user values onto the current bundled schema:
 

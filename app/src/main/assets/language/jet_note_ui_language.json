@@ -1,6 +1,90 @@
 {
-  "schema_version": 7,
+  "schema_version": 9,
   "purpose": "Shared UI terminology and naming language for Jet Note development.",
+  "ui_language_primitives": {
+    "jetnote_style_border": {
+      "display_name": "JetNote 风格边框",
+      "english_name": "JetNote Style Border",
+      "type": "CSS visual language fragment",
+      "description": "JetNote 的标准静态边框视觉语言：具有圆角 radius、solid 实线、细线边框，并默认使用灰色。它描述边框几何与基础视觉，不等同于颜色变化动画。",
+      "canonical_css": "border: var(--common-border-width, 1px) solid var(--common-border-color, #bfc1c4); border-radius: var(--common-border-radius);",
+      "implementation": {
+        "shared_class": "common_border",
+        "border_color_variable": "--common-border-color",
+        "border_width_variable": "--common-border-width",
+        "border_radius_variable": "--common-border-radius",
+        "default_border_color": "#bfc1c4",
+        "default_border_style": "solid",
+        "default_border_character": "thin line"
+      },
+      "rules": [
+        "默认使用灰色细 solid 实线；颜色可由具体组件或配置覆盖，但未指定时必须回落到 JetNote 默认灰色。",
+        "必须具有 JetNote 圆角 radius；不同组件尺寸可以不同，但应复用统一的圆角、线宽和颜色变量体系。",
+        "新卡片、输入框、按钮、工具框等普通 box-like UI 优先复用 common_border，不要重复创建等价 CSS 片段。",
+        "JetNote 风格边框只定义静态边框视觉；需要随时间变化颜色时，在其上叠加 JetNote 颜色变化配置语言。"
+      ]
+    },
+    "jetnote_color_change_configuration_language": {
+      "display_name": "JetNote 颜色变化配置语言",
+      "english_name": "JetNote Color Change Configuration Language",
+      "type": "JSON time-sequenced color configuration language",
+      "description": "JetNote 公共的颜色随时间变化配置协议。用于边框、文字或其他支持颜色动画的 UI。消费者应复用这一结构，不要为 Search、Debug、Set 成功反馈或其他功能创建平行格式。",
+      "canonical_shape": {
+        "change_count": "-1, 0, or a positive integer",
+        "sequence": "Ordered array of { color, duration_ms } entries."
+      },
+      "example": {
+        "change_count": -1,
+        "sequence": [
+          {
+            "color": "#FF0000",
+            "duration_ms": 200
+          },
+          {
+            "color": "#FFA500",
+            "duration_ms": 200
+          },
+          {
+            "color": "#FFFF00",
+            "duration_ms": 200
+          },
+          {
+            "color": "#00FF00",
+            "duration_ms": 200
+          }
+        ]
+      },
+      "parameter_semantics": {
+        "change_count": {
+          "-1": "无限循环。按 sequence 从第一项到最后一项依次应用颜色；最后一项结束后回到第一项，并持续循环，直到调用方停止/销毁该效果。",
+          "0": "固定颜色。只读取 sequence[0].color 并保持，不继续执行后续颜色变化。",
+          "positive_integer": "有限循环次数。N 表示完整执行 sequence 的 N 轮；每轮按数组顺序执行。N=1 即单轮。具体旧组件若历史上只接受 0/1/-1，应视为受限消费者，不得反过来重新定义公共语言。",
+          "invalid": "非整数、缺失或其他非法值由具体消费者按其兼容策略回退；新实现应优先显式校验，而不是产生不可预测循环。"
+        },
+        "sequence": "颜色阶段数组，数组顺序就是执行顺序。至少应包含一个有效阶段。",
+        "color": "该阶段应用的 CSS 颜色值；项目配置优先使用明确的十六进制颜色。",
+        "duration_ms": "当前阶段保持时间，单位毫秒。到期后进入下一阶段；无限循环时最后一项到期后回到第一项。"
+      },
+      "completion_semantics": "有限循环完成后保持最后一个 sequence 项的颜色，除非调用方的功能规范明确要求恢复原色。恢复原色属于调用方行为，不属于本语言本身。",
+      "relationship_to_style_border": "当用于边框时，JetNote 风格边框负责 radius / thin solid / 默认灰色；本语言只负责颜色随时间的变化，两者职责独立并可组合。",
+      "known_consumers": [
+        "Three Posts, One Body border rules",
+        "Debug Post search text color",
+        "Debug UI dynamic border rules"
+      ]
+    },
+    "animation_speed_or_duration": {
+      "display_name": "Animation Speed or Duration",
+      "config_selector": "speed_or_duration",
+      "allowed_values": [
+        "speed",
+        "duration"
+      ],
+      "speed_semantics": "Use the configured speed_px_per_second and derive duration from travel or reveal distance; longer distance takes longer.",
+      "duration_semantics": "Use the configured duration_ms as a fixed duration; longer distance therefore moves faster.",
+      "naming_rule": "Animation selectors must state both choices in the field name with _or_, for example speed_or_duration; do not use a generic mode field."
+    }
+  },
   "regions": {
     "top_post": {
       "display_name": "Top Post",
@@ -205,22 +289,6 @@
     }
   },
   "visual_language": {
-    "jet_note_border_format": {
-      "display_name": "Jet Note Border Format",
-      "description": "The shared border language for Jet Note cards, tools, inputs, buttons, text preview blocks, and other box-like UI. New components should reuse the common_border class and its shared CSS variables instead of inventing unrelated border geometry.",
-      "implementation": {
-        "shared_class": "common_border",
-        "border_color_variable": "--common-border-color",
-        "border_width_variable": "--common-border-width",
-        "border_radius_variable": "--common-border-radius"
-      },
-      "rules": [
-        "Use the same border color, width and corner radius family as existing Jet Note Settings cards and controls.",
-        "A component may have different dimensions, but its outline geometry must remain visually consistent with Jet Note.",
-        "Nested utility controls should reuse the same border vocabulary unless a functional reason requires otherwise.",
-        "Do not force color tools into a square shape; dimensions should follow the surrounding Jet Note layout while preserving the shared border format."
-      ]
-    },
     "jet_note_type": {
       "english": "Jet Note Type is the centralized surface/background configuration layer. Three Posts, One Body backgrounds remain under jet_note_type.jet_note_type_background; Three Posts, One Body border-color timing is owned by config.json -> three_post_one_body and must not be duplicated under jet_note_type_border_color.",
       "configuration_root": "shared/components/jet_note_type.json",
@@ -259,42 +327,6 @@
       "configuration": "shared/components/jet_note_type.json -> jet_note_type_background.three_post_one_body.internal_controls",
       "scope_rule": "Inheritance begins at .three-posts-one-body__box, never at .three-posts-one-body or a __layout wrapper.",
       "explicit_exemption": "data-three-post-background-exempt=\"true\" remains available for a renderer that must own a different surface."
-    },
-    "three_post_one_body_border_rule_language": {
-      "display_name": "Three Posts, One Body Border Rule Language",
-      "configuration_root": "config.json -> three_post_one_body",
-      "state_paths": {
-        "top_post.welcome": "three_post_one_body.top_post.welcome.border_rule",
-        "top_post.super_star": "three_post_one_body.top_post.super_star.border_rule",
-        "post_composer": "three_post_one_body.post_composer.border_rule",
-        "main_posts.non_star": "three_post_one_body.main_posts.non_star.border_rule",
-        "main_posts.star": "three_post_one_body.main_posts.star.border_rule"
-      },
-      "rule_shape": {
-        "change_count": "-1, 0, or positive integer n",
-        "sequence": "Ordered array of { color, duration_ms } entries."
-      },
-      "change_count_semantics": {
-        "-1": "Infinite loop. Apply every sequence color in order, wait duration_ms for the current color, then advance; after the final color, return to the first color and continue forever.",
-        "0": "Fixed border. Read only the first sequence color and keep it permanently. Later colors and durations are ignored.",
-        "n": "For any positive integer n, execute the configured sequence n times. After the nth pass reaches the final color, keep that final state permanently for border rules."
-      },
-      "state_model": {
-        "top_post": [
-          "welcome",
-          "super_star"
-        ],
-        "post_composer": [
-          "default"
-        ],
-        "main_posts": [
-          "non_star",
-          "star"
-        ]
-      },
-      "ownership_rule": "This border-rule language is the single canonical source for Three Posts, One Body border colors, including Star and Super Star states. Do not keep parallel outer_border_color or activation-transition border fields.",
-      "activation_rule": "When a post enters star or super_star, restart that state border rule from sequence[0]. This preserves activation transitions expressed as change_count: 1 sequences.",
-      "naming_rule": "Use top_post.welcome, top_post.super_star, post_composer, main_posts.non_star, and main_posts.star. Do not reintroduce post_1/post_2/post_3 or separate Star/Super Star border-color fields."
     },
     "three_post_one_body_background_geometry": {
       "display_name": "Three Posts, One Body Set Background / Set Body Geometry",
@@ -665,7 +697,8 @@
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
       "color_view_title": "Color View",
-      "date_time_viewer_title": "Date View"
+      "date_time_viewer_title": "Date View",
+      "cancel_debug": "Cancel Debug"
     },
     "post_composer": {
       "new_post_title": "New Post",
@@ -714,7 +747,7 @@
     }
   },
   "ui_string_storage_rule": {
-    "english": "User-visible wording belongs in assets/language/english.json. assets/language/jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
+    "english": "User-visible wording belongs in assets/language/english.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
   },
   "interaction_rules": {
     "color_view_radix_selector": {
@@ -730,7 +763,7 @@
     "description": "Color View only picks, formats, and copies a color. It no longer changes the application Background or Body. Those global colors are configured by config.json global_set_background and global_set_body.",
     "config": {
       "global_set_background": "Global Set Background color. Authoritative application Background source.",
-      "global_set_body": "Global Set Body color. Authoritative application Body source.",
+      "global_set_body": "Global Set Body color. Authoritative application Body source."
     },
     "actual_code_locations": {
       "markup": "app/settings/settings.html -> #colorViewCard -> .color-view-format-copy-layout",
@@ -859,5 +892,39 @@
     "config_key": "main_status_bar._main_status_bar_datetime_format_pattern",
     "implementation": "shared/core/date_time_format.js",
     "viewer": "app/settings/date_time_viewer.js"
+  },
+  "animation_models": {
+    "maximum_distance_shared_duration_model": {
+      "display_name": "最大距离共享用时模型",
+      "english_name": "Maximum Distance Shared Duration Model",
+      "type": "Jet Note movement timing model",
+      "applies_to": [
+        "star",
+        "cancel_star",
+        "super_star",
+        "cancel_super_star",
+        "enable_debug_expand",
+        "cancel_debug_close"
+      ],
+      "principle": "先测量本轮所有实际移动元素的真实移动距离。配置速度只作用于本轮移动距离最大的元素；最大距离与配置速度计算出公共总用时，其他元素共享该总用时，并由自己的真实距离反算实际速度。",
+      "formula": {
+        "maximum_distance": "D_max = max(D_1, D_2, ..., D_n)",
+        "configured_reference_speed": "V_ref",
+        "shared_duration_seconds": "T = D_max / V_ref",
+        "element_duration": "T_i = T",
+        "element_speed": "V_i = D_i / T",
+        "reference_element_speed": "V_max = D_max / T = V_ref"
+      },
+      "debug_geometry": "Enable Debug 展开时，Debug-only Settings cards 的起始底边对齐 viewport bottom；关闭时反向移动到同一个 viewport-bottom 底边。每个元素的 D_i 都由真实起点与终点计算。",
+      "rules": [
+        "所有参与本轮动画的元素先完成距离测量，再计算 D_max。",
+        "不得把 V_ref 直接赋给每个元素。",
+        "所有元素使用同一个 T，同时开始并同时结束。",
+        "距离较短的元素实际速度更低：V_i = D_i / T。",
+        "使用 linear timing，使计算得到的速度在单次移动中保持恒定。"
+      ],
+      "bidirectional_debug_rule": "Enable Debug 与 Cancel Debug 使用同一个 V_ref；相同轨迹反向播放必须得到相同 shared duration，不允许关闭侧附加更慢的 duration 或 hold。",
+      "dynamic_viewport_follow": "Debug 展开与收回的每一帧都跟随当前移动目标：先保证元素完整可见；滚动边界允许时再尽量将目标垂直居中；到达顶部/底部合法滚动边界后 viewport 停止而元素继续完成运动。"
+    }
   }
 }
