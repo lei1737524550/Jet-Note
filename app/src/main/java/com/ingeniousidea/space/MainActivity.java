@@ -44,7 +44,8 @@ import java.util.Map;
 public class MainActivity extends Activity {
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String LEGACY_HOST = "jetnote.local";
-    private static final String LOCAL_PAGE = "https://" + APP_HOST + "/assets/app/home/home.html";
+    private static final String HOME_PAGE = "https://" + APP_HOST + "/assets/app/home/home.html";
+    private static final String BROWSER_BOOT_PAGE = "https://" + APP_HOST + "/assets/app/browser/browser_boot.html";
 
     private FrameLayout root;
     private RichContentWebView webView;
@@ -66,6 +67,7 @@ public class MainActivity extends Activity {
     private FrameLayout nativeStartupSplashOverlay;
     private View startupRenderWarningOverlay;
     private long nativeStartupSplashMinimumDurationMs = 900L;
+    private boolean nativeStartupSplashMinimumElapsed;
 
     /**
      * The effective config is centralized in RuntimeConfigStore. Runtime edits
@@ -86,27 +88,26 @@ public class MainActivity extends Activity {
     }
 
     private int parseStartupBackgroundColor(JSONObject loadAnimation) {
-        String configured = loadAnimation.optString("load_animation_background", "#FAFFF0").trim();
+        String configured = loadAnimation.optString("load_animation_background", "#AED194").trim();
         try { return Color.parseColor(configured); }
-        catch (Exception ignored) { return Color.parseColor("#FAFFF0"); }
+        catch (Exception ignored) { return Color.parseColor("#AED194"); }
     }
 
-    /** Build the complete startup brand surface before WebView navigation begins. */
+    /** Build the one native startup surface before WebView navigation begins. */
     private void installNativeStartupSplash(JSONObject effectiveConfiguration) {
         JSONObject loadAnimation = effectiveConfiguration.optJSONObject("load_animation");
         if (loadAnimation == null) loadAnimation = new JSONObject();
         nativeStartupSplashMinimumDurationMs = Math.max(0L,
                 loadAnimation.optLong("load_animation_minimum_duration_ms", 900L));
+        nativeStartupSplashMinimumElapsed = false;
 
         FrameLayout overlay = new FrameLayout(this);
         overlay.setBackgroundColor(parseStartupBackgroundColor(loadAnimation));
         overlay.setClickable(true);
         overlay.setFocusable(true);
 
-        LinearLayout brand = new LinearLayout(this);
-        brand.setOrientation(LinearLayout.VERTICAL);
-        brand.setGravity(Gravity.CENTER_HORIZONTAL);
-
+        // Keep the icon at the exact screen center. The Android window preview uses
+        // the same 112dp centered icon, so preview -> Activity has no positional jump.
         ImageView icon = new ImageView(this);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         try {
@@ -115,41 +116,39 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
             icon.setImageResource(R.drawable.icon);
         }
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(dp(112), dp(112));
-        brand.addView(icon, iconParams);
+        FrameLayout.LayoutParams iconParams = new FrameLayout.LayoutParams(dp(112), dp(112), Gravity.CENTER);
+        overlay.addView(icon, iconParams);
 
         TextView applicationName = new TextView(this);
         applicationName.setTextColor(Color.rgb(34, 34, 34));
         applicationName.setTextSize(30f);
         applicationName.setGravity(Gravity.CENTER);
-        applicationName.setPadding(0, dp(18), 0, 0);
         try {
             applicationName.setText(getApplicationInfo().loadLabel(getPackageManager()));
         } catch (Exception ignored) {
             applicationName.setText(R.string.app_name);
         }
-        brand.addView(applicationName, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        FrameLayout.LayoutParams brandParams = new FrameLayout.LayoutParams(
+        FrameLayout.LayoutParams nameParams = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
-        overlay.addView(brand, brandParams);
+        nameParams.topMargin = dp(92);
+        overlay.addView(applicationName, nameParams);
+
         root.addView(overlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         nativeStartupSplashOverlay = overlay;
     }
 
-    /**
-     * Splash timing never waits for WebView readiness. At the configured deadline
-     * the overlay is removed unconditionally. Missing frontendReady is diagnostic only.
-     */
+    /** Remove the native splash only after both its configured minimum time and frontend readiness. */
+    private void maybeFinishNativeStartupSplash() {
+        if (!nativeStartupSplashMinimumElapsed || !frontendIsReady || nativeStartupSplashOverlay == null) return;
+        root.removeView(nativeStartupSplashOverlay);
+        nativeStartupSplashOverlay = null;
+    }
+
     private void scheduleNativeStartupSplashExit() {
         startupHandler.postDelayed(() -> {
-            if (nativeStartupSplashOverlay != null) {
-                root.removeView(nativeStartupSplashOverlay);
-                nativeStartupSplashOverlay = null;
-            }
-            if (!frontendIsReady) showStartupRenderWarning();
+            nativeStartupSplashMinimumElapsed = true;
+            maybeFinishNativeStartupSplash();
         }, nativeStartupSplashMinimumDurationMs);
     }
 
@@ -229,14 +228,21 @@ public class MainActivity extends Activity {
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
         webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
-        webView.setBackgroundColor(Color.rgb(255, 255, 255));
+
+        // Keep the WebView's pre-render surface identical to the native startup
+        // surface. This closes the Theme -> Activity -> WebView white-flash gap.
+        JSONObject effectiveStartupConfiguration = readEffectiveRuntimeConfiguration();
+        JSONObject startupLoadAnimation = effectiveStartupConfiguration.optJSONObject("load_animation");
+        if (startupLoadAnimation == null) startupLoadAnimation = new JSONObject();
+        int startupBackgroundColor = parseStartupBackgroundColor(startupLoadAnimation);
+        webView.setBackgroundColor(startupBackgroundColor);
+        root.setBackgroundColor(startupBackgroundColor);
         root.addView(webView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
 
         // Build the native splash immediately, before WebView starts navigating.
         // Its duration is read from the same effective config.json used by the app.
-        JSONObject effectiveStartupConfiguration = readEffectiveRuntimeConfiguration();
         installNativeStartupSplash(effectiveStartupConfiguration);
         // Start the configured timer at splash creation, not after controller/WebView setup.
         scheduleNativeStartupSplashExit();
@@ -278,6 +284,7 @@ public class MainActivity extends Activity {
         webView.addJavascriptInterface(
                 new NativeBridge(this, webView, toolPageController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
                     frontendIsReady=true;
+                    maybeFinishNativeStartupSplash();
                     if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();
                     dispatchPendingImport();
                 })),
@@ -355,7 +362,9 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.loadUrl(LOCAL_PAGE);
+        // Browser Mode is a startup route, not a Home overlay. When enabled,
+        // never load home.html, render Posts, or initialize Home media/listeners.
+        webView.loadUrl(BrowserModeStore.isEnabled(this) ? BROWSER_BOOT_PAGE : HOME_PAGE);
     }
 
     /**

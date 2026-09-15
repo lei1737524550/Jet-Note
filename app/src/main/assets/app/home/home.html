@@ -7,6 +7,31 @@
 <meta name="theme-color" content="#ffffff">
 <base href="/assets/">
 <script>
+// Startup Browser preloads a fully live Home behind the native Browser, but
+// Browser -> Home transition itself is native and bitmap-frozen. No live Home
+// DOM element is transformed during the merge.
+(function(){
+  const preload=new URLSearchParams(location.search).get('startupBrowserPreload')==='1';
+  let ready=false;
+  if(preload){
+    document.documentElement.classList.add('startup-browser-home-preload');
+    window.addEventListener('DOMContentLoaded',()=>{
+      document.body.style.pointerEvents='none';
+    },{once:true});
+  }
+  window.JetNoteStartupBrowserEntry={
+    isPreload:()=>preload,
+    isReady:()=>preload&&ready,
+    markReady:()=>{ready=true; return true;},
+    finishFrozenReveal:()=>{
+      document.body.style.pointerEvents='';
+      try{history.replaceState(null,'',location.pathname);}catch(_){}
+      return true;
+    }
+  };
+})();
+</script>
+<script>
 // Apply only the last confirmed user background before the first body paint.
 // The full appearance module later verifies it against IndexedDB.
 (function restoreFirstFrameBackground(){
@@ -116,6 +141,7 @@
       'shared/vendor/sha256.js',
       'shared/data/post_store.js',
       'shared/data/post_attachment_policy.js',
+      'shared/core/media_resource_manager.js',
       'app/media/post_audio.js',
       'app/video/video_player.js',
       'shared/data/media_adapter.js',
@@ -130,6 +156,7 @@
       'app/settings/settings.js',
       'app/settings/browser_settings.js',
       'app/settings/date_time_viewer.js',
+      'shared/core/json_syntax_validator.js',
       'app/debug_post/debug_post.js',
       // Post editor is deliberately split into small modules; keep this order.
       'app/post_editor/editor_config.js',
@@ -148,6 +175,7 @@
       'shared/components/delete_confirm_dialog.js',
       'app/home/posts.js',
       'app/home/main_status_bar.js',
+      'shared/core/target_transition.js',
       'shared/core/navigation.js',
       'app/settings/appearance.js',
       'shared/core/bootstrap.js',

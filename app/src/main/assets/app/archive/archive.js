@@ -72,7 +72,7 @@ const ArchiveCodec=(()=>{
         id,type:'image',mimeType:match[1],originalName:null,path,size:bytes.length,sha256:hash
       };
     }
-    const posts=[]; for(const record of state.posts||[])posts.push(await ArchiveMapping.toCanonical(record,stored,image)); add('data/posts.json',encode(posts)); const content={posts:'data/posts.json'}; add('manifest.json',encode({
+    const posts=[]; for(const record of state.posts||[])posts.push(await ArchiveMapping.toCanonical(record,stored,image)); add('data/posts.json',encode(posts)); const content={posts:'data/posts.json'}; if(object(state.config)){add('data/config.json',encode(state.config));content.config='data/config.json';} add('manifest.json',encode({
       format:'jet-note',formatVersion:2,app:'Jet Note',appVersion:'2.4',createdAt:new Date().toISOString(),encoding:'UTF-8',content
     })); const checksums={
     }; for(const[path,bytes]of Object.entries(files))checksums[path]=sha256(bytes); add('checksums.json',encode(checksums)); const zip=fflate.zipSync(files,{
@@ -80,7 +80,7 @@ const ArchiveCodec=(()=>{
     }); if(zip.length>ARCHIVE_MAX)fail('Backup exceeds 128 MiB'); return zip;
   }
   function validate(bytes){
-    const files=unpack(bytes); for(const path of ['manifest.json','checksums.json','data/posts.json'])if(!files[path])fail('Missing '+path); for(const path of Object.keys(files))if(!['manifest.json','checksums.json','data/posts.json','data/profile.json'].includes(path)&&!/^media\/[A-Za-z0-9_.-]+$/.test(path))fail('Unexpected archive entry'); const sums=decodeJSON(files['checksums.json']); if(!object(sums))fail('Invalid checksums'); for(const path of Object.keys(files))if(path!=='checksums.json'&&(!Object.hasOwn(sums,path)||String(sums[path]).toLowerCase()!==sha256(files[path])))fail('Checksum mismatch: '+path); for(const path of Object.keys(sums))if(path==='checksums.json'||!files[path])fail('Missing checked file'); const manifest=decodeJSON(files['manifest.json']); if(manifest.format!=='jet-note'||manifest.formatVersion!==2||manifest.encoding!=='UTF-8'||!object(manifest.content)||manifest.content.posts!=='data/posts.json')fail('Unsupported Jet Note archive'); if(Object.keys(manifest.content).some(key=>!['posts','profile'].includes(key))||manifest.content.profile&&manifest.content.profile!=='data/profile.json')fail('Unsupported Jet Note archive'); const result=ArchiveMapping.fromCanonical(decodeJSON(files['data/posts.json']),attachment=>{
+    const files=unpack(bytes); for(const path of ['manifest.json','checksums.json','data/posts.json'])if(!files[path])fail('Missing '+path); for(const path of Object.keys(files))if(!['manifest.json','checksums.json','data/posts.json','data/profile.json','data/config.json'].includes(path)&&!/^media\/[A-Za-z0-9_.-]+$/.test(path))fail('Unexpected archive entry'); const sums=decodeJSON(files['checksums.json']); if(!object(sums))fail('Invalid checksums'); for(const path of Object.keys(files))if(path!=='checksums.json'&&(!Object.hasOwn(sums,path)||String(sums[path]).toLowerCase()!==sha256(files[path])))fail('Checksum mismatch: '+path); for(const path of Object.keys(sums))if(path==='checksums.json'||!files[path])fail('Missing checked file'); const manifest=decodeJSON(files['manifest.json']); if(manifest.format!=='jet-note'||manifest.formatVersion!==2||manifest.encoding!=='UTF-8'||!object(manifest.content)||manifest.content.posts!=='data/posts.json')fail('Unsupported Jet Note archive'); if(Object.keys(manifest.content).some(key=>!['posts','profile','config'].includes(key))||manifest.content.profile&&manifest.content.profile!=='data/profile.json'||manifest.content.config&&manifest.content.config!=='data/config.json')fail('Unsupported Jet Note archive'); const result=ArchiveMapping.fromCanonical(decodeJSON(files['data/posts.json']),attachment=>{
       const bytes=files[attachment.path]; if(!bytes)fail('Missing media'); const hash=sha256(bytes); if(!attachment.sha256||attachment.sha256.toLowerCase()!==hash||attachment.size!==bytes.length)fail('Attachment checksum mismatch'); const{
         path,...meta
       }
@@ -89,7 +89,7 @@ const ArchiveCodec=(()=>{
           type:attachment.mimeType
         }),imageSource:attachment.type==='image'?'data:'+attachment.mimeType+';base64,'+bytesToBase64(bytes):null
       };
-    }); result.profile=null; return result;
+    }); result.profile=null; result.config=files['data/config.json']?decodeJSON(files['data/config.json']):null; if(result.config!==null&&!object(result.config))fail('Invalid config.json'); return result;
   }
   return{
     exportSnapshot,validate

@@ -11,9 +11,13 @@
   const TEXT_AREA_PADDING_RANGE = { min: 0, max: 120 };
   const ATTACHMENT_ROW_HEIGHT_RANGE = { min: 32, max: 120 };
   const DEBUG_CONFIGURATION_TEXT_AREA_HEIGHT_RANGE = { min: 120, max: 3000 };
+  const KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE = { min: 0, max: 1200 };
 
   let responsiveTextAreaConfig = null;
   let resizeFrame = 0;
+  let normalKeyboardHiddenOffsetPx = 0;
+  let debugKeyboardHiddenOffsetPx = 0;
+  let lastKeyboardOpen = null;
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -87,6 +91,22 @@
     }
   }
 
+
+  function applyKeyboardLayoutState(keyboardOpen) {
+    const isOpen = Boolean(keyboardOpen);
+    lastKeyboardOpen = isOpen;
+    const root = document.documentElement;
+    root.dataset.jetnoteKeyboardOpen = isOpen ? 'true' : 'false';
+    root.style.setProperty('--post-editor-keyboard-hidden-text-display-offset', `${isOpen ? 0 : normalKeyboardHiddenOffsetPx}px`);
+    root.style.setProperty('--debug-editor-keyboard-hidden-text-display-offset', `${isOpen ? 0 : debugKeyboardHiddenOffsetPx}px`);
+  }
+
+  function readBoundedOffset(rawValue) {
+    const value = Number(rawValue);
+    if (!Number.isFinite(value)) return 0;
+    return clamp(value, KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE.min, KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE.max);
+  }
+
   function scheduleResponsiveHeightRefresh() {
     if (!responsiveTextAreaConfig) return;
     if (resizeFrame) cancelAnimationFrame(resizeFrame);
@@ -99,7 +119,10 @@
   function bindViewportRefresh() {
     window.addEventListener('resize', scheduleResponsiveHeightRefresh, { passive: true });
     window.addEventListener('orientationchange', scheduleResponsiveHeightRefresh, { passive: true });
-    window.addEventListener('jetnote:viewport-change', scheduleResponsiveHeightRefresh, { passive: true });
+    window.addEventListener('jetnote:viewport-change', event => {
+      applyKeyboardLayoutState(Boolean(event?.detail?.keyboardOpen));
+      scheduleResponsiveHeightRefresh();
+    }, { passive: true });
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', scheduleResponsiveHeightRefresh, { passive: true });
       window.visualViewport.addEventListener('scroll', scheduleResponsiveHeightRefresh, { passive: true });
@@ -122,13 +145,16 @@
       setCssPixels('--post-editor-text-padding-bottom', layout.text_area_padding_bottom, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-text-padding-left', layout.text_area_padding_left, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-attachment-row-height', layout.attachment_row_height, ATTACHMENT_ROW_HEIGHT_RANGE);
+      normalKeyboardHiddenOffsetPx = readBoundedOffset(layout.keyboard_hidden_text_display_area_vertical_offset_px);
 
       const debugConfigurationEditor = config.debug_configuration_editor || {};
       setCssPixels(
         '--debug-configuration-editor-text-area-height',
-        debugConfigurationEditor.text_area_height,
+        debugConfigurationEditor.edit_debud_post_height,
         DEBUG_CONFIGURATION_TEXT_AREA_HEIGHT_RANGE
       );
+      debugKeyboardHiddenOffsetPx = readBoundedOffset(debugConfigurationEditor.keyboard_hidden_text_display_area_vertical_offset_px);
+      applyKeyboardLayoutState(lastKeyboardOpen === null ? false : lastKeyboardOpen);
 
       bindViewportRefresh();
       // A second pass after first layout catches WebView viewport settling.

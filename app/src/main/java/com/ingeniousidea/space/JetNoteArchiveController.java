@@ -286,6 +286,7 @@ final class JetNoteArchiveController {
             JSONArray posts = root.optJSONArray("posts");
             if (posts == null) throw new JSONException("posts missing");
             JSONObject profile = root.optJSONObject("profile");
+            JSONObject config = root.optJSONObject("config");
 
             LinkedHashMap<String, JSONObject> attachments = collectAttachments(posts);
             JSONObject checksums = new JSONObject();
@@ -300,6 +301,7 @@ final class JetNoteArchiveController {
             JSONObject content = new JSONObject();
             content.put("posts", "data/posts.json");
             if (profile != null) content.put("profile", "data/profile.json");
+            if (config != null) content.put("config", "data/config.json");
             manifest.put("content", content);
 
             long mediaTotal = 0L;
@@ -316,6 +318,7 @@ final class JetNoteArchiveController {
                 putCheckedText(zip, "manifest.json", manifest.toString(2), checksums);
                 putCheckedText(zip, "data/posts.json", posts.toString(2), checksums);
                 if (profile != null) putCheckedText(zip, "data/profile.json", profile.toString(2), checksums);
+                if (config != null) putCheckedText(zip, "data/config.json", config.toString(2), checksums);
 
                 for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
                     throwIfExportCancelled();
@@ -459,6 +462,7 @@ final class JetNoteArchiveController {
             File manifestFile = new File(stageDir, "manifest.json");
             File postsFile = new File(stageDir, "data/posts.json");
             File profileFile = new File(stageDir, "data/profile.json");
+            File configFile = new File(stageDir, "data/config.json");
             File checksumsFile = new File(stageDir, "checksums.json");
             requireMetadataFile(manifestFile);
             requireMetadataFile(postsFile);
@@ -480,7 +484,7 @@ final class JetNoteArchiveController {
             java.util.Iterator<String> contentKeys = content.keys();
             while (contentKeys.hasNext()) {
                 String key = contentKeys.next();
-                if (!"posts".equals(key) && !"profile".equals(key)) {
+                if (!"posts".equals(key) && !"profile".equals(key) && !"config".equals(key)) {
                     throw new IOException("Invalid content map");
                 }
             }
@@ -489,9 +493,16 @@ final class JetNoteArchiveController {
                 throw new IOException("Invalid profile content path");
             }
             if (hasProfile) requireMetadataFile(profileFile);
+            boolean hasConfig = content.has("config");
+            if (hasConfig && !"data/config.json".equals(content.optString("config"))) {
+                throw new IOException("Invalid config content path");
+            }
+            if (hasConfig) requireMetadataFile(configFile);
 
             String postsJson = readUtf8Limited(postsFile);
             String profileJson = hasProfile ? readUtf8Limited(profileFile) : null;
+            String configJson = hasConfig ? readUtf8Limited(configFile) : null;
+            if (configJson != null) new JSONObject(configJson);
             if (profileJson != null) validateProfileJson(profileJson);
             JSONArray posts = new JSONArray(postsJson);
             JSONObject checksums = new JSONObject(readUtf8Limited(checksumsFile));
@@ -508,6 +519,13 @@ final class JetNoteArchiveController {
                 if (expectedProfileSha.isEmpty()
                         || !expectedProfileSha.equalsIgnoreCase(sha256ImportFile(profileFile))) {
                     throw new IOException("Checksum mismatch: data/profile.json");
+                }
+            }
+            if (hasConfig) {
+                String expectedConfigSha = checksums.optString("data/config.json", "");
+                if (expectedConfigSha.isEmpty()
+                        || !expectedConfigSha.equalsIgnoreCase(sha256ImportFile(configFile))) {
+                    throw new IOException("Checksum mismatch: data/config.json");
                 }
             }
             java.util.Iterator<String> keys=checksums.keys();
@@ -558,7 +576,7 @@ final class JetNoteArchiveController {
             Map<String, Long> mediaSizes = new HashMap<>();
             for (String path : referencedMedia) mediaSizes.put(path, fileInside(stageDir, path).length());
             throwIfImportCancelled();
-            ImportSession session = new ImportSession(token, mode, stageDir, postsJson, profileJson, referencedMedia, mediaDigests, mediaSizes);
+            ImportSession session = new ImportSession(token, mode, stageDir, postsJson, profileJson, configJson, referencedMedia, mediaDigests, mediaSizes);
             sessions.put(token, session);
             dispatchProgress("import", "ready", referencedMedia.size(), referencedMedia.size(), 75, "Validation complete. Waiting for import confirmation.");
             dispatchImportValidated(session);
@@ -814,6 +832,7 @@ final class JetNoteArchiveController {
         if (posts == null) throw new IOException("Missing posts");
         JSONObject profile = root.optJSONObject("profile");
         if (profile != null) validateProfileJson(profile.toString());
+        if (root.has("config") && root.optJSONObject("config") == null) throw new IOException("Invalid config");
         collectAttachments(posts);
     }
 
@@ -827,7 +846,8 @@ final class JetNoteArchiveController {
                         + JSONObject.quote(session.token) + ","
                         + JSONObject.quote(session.mode) + ","
                         + JSONObject.quote(session.postsJson) + ","
-                        + (session.profileJson == null ? "null" : JSONObject.quote(session.profileJson)) + ");", null);
+                        + (session.profileJson == null ? "null" : JSONObject.quote(session.profileJson)) + ","
+                        + (session.configJson == null ? "null" : JSONObject.quote(session.configJson)) + ");", null);
     }
 
     private void dispatchMediaCommitted(String token) {
@@ -992,7 +1012,8 @@ final class JetNoteArchiveController {
 
     private static void validateArchiveEntryName(String name) throws IOException {
         if ("manifest.json".equals(name) || "checksums.json".equals(name)
-                || "data/posts.json".equals(name) || "data/profile.json".equals(name)) return;
+                || "data/posts.json".equals(name) || "data/profile.json".equals(name)
+                || "data/config.json".equals(name)) return;
         validateMediaPath(name);
     }
 
@@ -1057,6 +1078,7 @@ final class JetNoteArchiveController {
         final File stageDir;
         final String postsJson;
         final String profileJson;
+        final String configJson;
         final List<String> mediaPaths;
         final Map<String, String> mediaDigests;
         final Map<String, Long> mediaSizes;
@@ -1069,6 +1091,7 @@ final class JetNoteArchiveController {
                 File stageDir,
                 String postsJson,
                 String profileJson,
+                String configJson,
                 List<String> mediaPaths,
                 Map<String, String> mediaDigests,
                 Map<String, Long> mediaSizes
@@ -1078,6 +1101,7 @@ final class JetNoteArchiveController {
             this.stageDir = stageDir;
             this.postsJson = postsJson;
             this.profileJson = profileJson;
+            this.configJson = configJson;
             this.mediaPaths = mediaPaths;
             this.mediaDigests = new HashMap<>(mediaDigests);
             this.mediaSizes = new HashMap<>(mediaSizes);

@@ -10,6 +10,8 @@
   let active = null;
   let dragging = false;
   let pointerId = null;
+  let touchIdentifier = null;
+  let dragMetrics = null;
 
   const clampPx = (value, fallback, min, max) => {
     const number = Number(value);
@@ -73,8 +75,21 @@
   };
 
   const getTarget = () => {
+    // Full-screen overlays own their scrolling. Settings in particular uses a
+    // fixed .settings-screen with an independently scrollable .settings-body;
+    // document.scrollingElement does not move while that screen is open.
+    const settings = document.getElementById('settingsScreen');
+    if (settings?.classList.contains('open')) {
+      const settingsBody = settings.querySelector('.settings-body');
+      if (settingsBody) return settingsBody;
+    }
+
     const composer = document.getElementById('postComposeScreen');
-    if (composer?.classList.contains('open')) return composer.querySelector('.post-compose-body');
+    if (composer?.classList.contains('open')) {
+      const composerBody = composer.querySelector('.post-compose-body');
+      if (composerBody) return composerBody;
+    }
+
     return document.scrollingElement || document.documentElement;
   };
 
@@ -96,53 +111,145 @@
     thumb.style.transform = `translateY(${top}px)`;
   }
 
-  const scrollFromClientY = y => {
+  const captureDragMetrics = () => {
     if (!active) active = getTarget();
+    if (!active) return null;
     const rect = track.getBoundingClientRect();
-    const th = thumb.getBoundingClientRect().height;
-    const maxTop = Math.max(0, rect.height - th);
-    const top = Math.max(0, Math.min(maxTop, y - rect.top - th / 2));
-    const ratio = maxTop ? top / maxTop : 0;
-    active.scrollTop = ratio * Math.max(0, active.scrollHeight - active.clientHeight);
+    const thumbHeight = thumb.offsetHeight || thumb.getBoundingClientRect().height;
+    return {
+      trackTop: rect.top,
+      maxThumbTop: Math.max(0, rect.height - thumbHeight),
+      maxScroll: Math.max(0, active.scrollHeight - active.clientHeight)
+    };
+  };
+
+  const scrollFromClientY = (y, metrics = dragMetrics) => {
+    if (!active) active = getTarget();
+    if (!active) return;
+    const m = metrics || captureDragMetrics();
+    if (!m) return;
+    const top = Math.max(0, Math.min(m.maxThumbTop, y - m.trackTop - (track.clientHeight - m.maxThumbTop) / 2));
+    const ratio = m.maxThumbTop ? top / m.maxThumbTop : 0;
+    active.scrollTop = ratio * m.maxScroll;
     update();
   };
 
-  // The whole configured lane owns the pointer. The narrow track/thumb below
-  // are visual only. This prevents taps beside the visible track from falling
-  // through into image/video DOM elements underneath the fixed scrollbar.
+  const beginDrag = y => {
+    active = getTarget();
+    dragMetrics = captureDragMetrics();
+    dragging = !!dragMetrics;
+    if (dragging) scrollFromClientY(y, dragMetrics);
+  };
+
+  const endTouchDrag = () => {
+    touchIdentifier = null;
+    dragging = false;
+    dragMetrics = null;
+  };
+
+  // Android WebView gets an explicit Touch Events path. Pointer Events remain
+  // as the mouse/stylus fallback, but touch dragging no longer depends on
+  // pointer capture surviving layout changes while Settings drawers animate.
+  bar.addEventListener('touchstart', event => {
+    if (!event.changedTouches.length) return;
+    const touch = event.changedTouches[0];
+    finishDrag();
+    touchIdentifier = touch.identifier;
+    beginDrag(touch.clientY);
+    event.preventDefault();
+    event.stopPropagation();
+  }, { passive: false });
+
+  bar.addEventListener('touchmove', event => {
+    if (touchIdentifier == null) return;
+    const touch = Array.from(event.changedTouches).find(item => item.identifier === touchIdentifier)
+      || Array.from(event.touches).find(item => item.identifier === touchIdentifier);
+    if (!touch) return;
+    scrollFromClientY(touch.clientY, dragMetrics);
+    event.preventDefault();
+    event.stopPropagation();
+  }, { passive: false });
+
+  const finishTouch = event => {
+    if (touchIdentifier == null) return;
+    const touch = Array.from(event.changedTouches || []).find(item => item.identifier === touchIdentifier);
+    if (!touch && event.type !== 'touchcancel') return;
+    if (touch) scrollFromClientY(touch.clientY, dragMetrics);
+    endTouchDrag();
+    event.preventDefault?.();
+    event.stopPropagation?.();
+  };
+  bar.addEventListener('touchend', finishTouch, { passive: false });
+  bar.addEventListener('touchcancel', finishTouch, { passive: false });
+  window.addEventListener('touchend', finishTouch, { capture: true, passive: false });
+  window.addEventListener('touchcancel', finishTouch, { capture: true, passive: false });
+
+  // Mouse/stylus fallback. Ignore touch-generated pointer events because the
+  // Touch Events path above is the authoritative Android input path.
   bar.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch') return;
     finishDrag();
     dragging = true;
     pointerId = event.pointerId;
+    active = getTarget();
+    dragMetrics = captureDragMetrics();
     try { bar.setPointerCapture?.(pointerId); } catch (_) {}
-    scrollFromClientY(event.clientY);
+    scrollFromClientY(event.clientY, dragMetrics);
     event.preventDefault();
     event.stopPropagation();
   });
 
   bar.addEventListener('pointermove', event => {
-    if (!dragging || event.pointerId !== pointerId) return;
-    scrollFromClientY(event.clientY);
+    if (event.pointerType === 'touch' || !dragging || event.pointerId !== pointerId) return;
+    scrollFromClientY(event.clientY, dragMetrics);
     event.preventDefault();
     event.stopPropagation();
   });
 
   bar.addEventListener('pointerup', event => {
+    if (event.pointerType === 'touch') return;
     if (dragging && event.pointerId === pointerId) {
-      scrollFromClientY(event.clientY);
+      scrollFromClientY(event.clientY, dragMetrics);
       event.preventDefault();
       event.stopPropagation();
     }
+    dragMetrics = null;
     finishDrag(event);
   });
-  bar.addEventListener('pointercancel', finishDrag);
-  bar.addEventListener('lostpointercapture', finishDrag);
-  window.addEventListener('pointerup', finishDrag, true);
-  window.addEventListener('pointercancel', finishDrag, true);
-  window.addEventListener('blur', () => finishDrag());
-  document.addEventListener('visibilitychange', () => { if (document.hidden) finishDrag(); });
+  bar.addEventListener('pointercancel', event => {
+    if (event.pointerType === 'touch') return;
+    dragMetrics = null;
+    finishDrag(event);
+  });
+  bar.addEventListener('lostpointercapture', event => {
+    dragMetrics = null;
+    finishDrag(event);
+  });
+  window.addEventListener('pointerup', event => {
+    if (event.pointerType === 'touch') return;
+    dragMetrics = null;
+    finishDrag(event);
+  }, true);
+  window.addEventListener('pointercancel', event => {
+    if (event.pointerType === 'touch') return;
+    dragMetrics = null;
+    finishDrag(event);
+  }, true);
+  window.addEventListener('blur', () => {
+    endTouchDrag();
+    dragMetrics = null;
+    finishDrag();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    endTouchDrag();
+    dragMetrics = null;
+    finishDrag();
+  });
   document.addEventListener('scroll', update, true);
   window.addEventListener('resize', update, {passive:true});
+  window.addEventListener('jet-note-scrollbar-refresh', update);
+  window.JetNoteScrollbar = Object.freeze({ refresh: update });
   const mo = new MutationObserver(update);
   mo.observe(document.body, {subtree:true, childList:true, attributes:true, attributeFilter:['class','style']});
   requestAnimationFrame(update);

@@ -7,10 +7,15 @@ import android.os.BatteryManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.view.HapticFeedbackConstants;
+import android.view.ViewTreeObserver;
+import android.graphics.Color;
+import android.widget.FrameLayout;
 
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -27,6 +32,8 @@ final class NativeBridge {
     private final AttachmentStore store;
     private final JetNoteArchiveController archive;
     private final NativeVideoPlayer videoPlayer;
+    private FrameLayout pendingTransitionCover;
+    private String pendingTransitionTarget;
 
     NativeBridge(
             Activity activity,
@@ -57,6 +64,51 @@ final class NativeBridge {
 
     @JavascriptInterface public boolean setRuntimeConfigJson(String json) {
         return RuntimeConfigStore.saveRuntime(activity, json);
+    }
+
+    /** Persist Browser Mode natively so MainActivity can route before Home is loaded. */
+    @JavascriptInterface public void setBrowserModeEnabled(boolean enabled) {
+        BrowserModeStore.setEnabled(activity, enabled);
+    }
+
+    @JavascriptInterface public boolean isBrowserModeEnabled() {
+        return BrowserModeStore.isEnabled(activity);
+    }
+
+    /** Editable Debug Post copy of the bundled README. */
+    @JavascriptInterface public String getRuntimeReadmeText() {
+        File file = new File(activity.getFilesDir(), "debug_README.txt");
+        try {
+            if (file.exists()) {
+                try (InputStream in = new java.io.FileInputStream(file)) {
+                    return readUtf8(in);
+                }
+            }
+            try (InputStream in = activity.getAssets().open("README.txt")) {
+                return readUtf8(in);
+            }
+        } catch (Exception error) {
+            return "";
+        }
+    }
+
+    @JavascriptInterface public boolean setRuntimeReadmeText(String text) {
+        File file = new File(activity.getFilesDir(), "debug_README.txt");
+        try (FileOutputStream out = new FileOutputStream(file, false)) {
+            out.write((text == null ? "" : text).getBytes(StandardCharsets.UTF_8));
+            out.flush();
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    private static String readUtf8(InputStream in) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int count;
+        while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
+        return out.toString(StandardCharsets.UTF_8.name());
     }
 
     @JavascriptInterface public boolean undoRuntimeConfigJson() {
@@ -102,6 +154,123 @@ final class NativeBridge {
     }
 
     @JavascriptInterface public void frontendReady(){ready.run();}
+
+    /**
+     * Run a reusable X -> target frozen split transition over the current local page.
+     * The destination is already laid out in the WebView; this method captures it
+     * once as a bitmap, so no destination DOM is cloned or mutated for animation.
+     */
+    /**
+     * Phase 1 of a local WebView A -> B transition. Install the opaque native
+     * background BEFORE JavaScript mutates the DOM from A to B. Only after the
+     * cover has participated in a native pre-draw do we tell JavaScript that it
+     * is safe to prepare the target.
+     */
+    @JavascriptInterface public void beginFrozenTransitionCover(String targetKey) {
+        beginFrozenTransitionCoverFromZAxisHeight(targetKey, webView.getZ());
+    }
+
+    @JavascriptInterface public void beginFrozenTransitionCoverFromZAxisHeight(String targetKey, double sourceZAxisHeight) {
+        activity.runOnUiThread(() -> {
+            try {
+                if (!(webView.getParent() instanceof FrameLayout)) return;
+                FrameLayout root = (FrameLayout) webView.getParent();
+                if (pendingTransitionCover != null) {
+                    root.removeView(pendingTransitionCover);
+                    pendingTransitionCover = null;
+                }
+                JSONObject effective = new JSONObject(RuntimeConfigStore.readEffective(activity));
+                int color;
+                try { color = Color.parseColor(effective.optString("global_set_background", "#AED194")); }
+                catch (Exception ignored) { color = Color.rgb(174, 209, 148); }
+                final String resolved = (targetKey == null || targetKey.trim().isEmpty()) ? "x_to_home" : targetKey.trim();
+                ZAxisHeights.TransitionHeights heights = ZAxisHeights.between((float) sourceZAxisHeight, webView.getZ());
+                FrameLayout cover = new FrameLayout(activity);
+                cover.setBackgroundColor(color);
+                cover.setClickable(true);
+                cover.setFocusable(true);
+                cover.setZ(heights.background);
+                root.addView(cover, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                pendingTransitionCover = cover;
+                pendingTransitionTarget = resolved;
+                ViewTreeObserver.OnPreDrawListener[] listener = new ViewTreeObserver.OnPreDrawListener[1];
+                listener[0] = () -> {
+                    ViewTreeObserver observer = cover.getViewTreeObserver();
+                    if (observer.isAlive()) observer.removeOnPreDrawListener(listener[0]);
+                    root.postOnAnimation(() -> webView.evaluateJavascript(
+                            "try{window.dispatchEvent(new CustomEvent('jetnote:frozen-cover-ready',{detail:{target:'" + resolved + "'}}));}catch(e){}", null));
+                    return true;
+                };
+                cover.getViewTreeObserver().addOnPreDrawListener(listener[0]);
+                cover.invalidate();
+                root.invalidate();
+            } catch (Exception ignored) { }
+        });
+    }
+
+    /** Complete a native toolbox_* -> Editor source mutation only after the X->Editor cover is visible. */
+    @JavascriptInterface public void completeNativeSourceToEditor() {
+        activity.runOnUiThread(() -> toolPages.completeCloseToEditorBehindTransitionCover());
+    }
+
+    /** Phase 2: target DOM is now stable but still hidden by the native cover. */
+    @JavascriptInterface public void runPreparedFrozenSplitTransition(String targetKey) {
+        activity.runOnUiThread(() -> {
+            FrameLayout oldCover = pendingTransitionCover;
+            pendingTransitionCover = null;
+            pendingTransitionTarget = null;
+            runFrozenSplitTransitionFromZAxisHeight(targetKey, webView.getZ());
+            // runFrozenSplitTransitionFromZAxisHeight installs its own opaque
+            // background and frozen layers synchronously on this UI turn. The
+            // preparation cover can therefore be removed only afterwards.
+            if (oldCover != null && oldCover.getParent() instanceof FrameLayout) {
+                ((FrameLayout) oldCover.getParent()).removeView(oldCover);
+            }
+        });
+    }
+
+    @JavascriptInterface public void runFrozenSplitTransition(String targetKey) {
+        runFrozenSplitTransitionFromZAxisHeight(targetKey, webView.getZ());
+    }
+
+    /**
+     * Variant used when A was a native overlay that has already been removed
+     * before B is captured. The caller supplies A's real semantic Z-axis height;
+     * B is always the current main WebView and keeps its own existing height.
+     */
+    @JavascriptInterface public void runFrozenSplitTransitionFromZAxisHeight(String targetKey, double sourceZAxisHeight) {
+        activity.runOnUiThread(() -> {
+            try {
+                if (!(webView.getParent() instanceof android.widget.FrameLayout)) return;
+                JSONObject effective = new JSONObject(RuntimeConfigStore.readEffective(activity));
+                final String resolvedTarget =
+                        (targetKey == null || targetKey.trim().isEmpty()) ? "x_to_home" : targetKey.trim();
+                FrozenSplitTransition transition = new FrozenSplitTransition(
+                        (android.widget.FrameLayout) webView.getParent(),
+                        webView,
+                        effective,
+                        resolvedTarget,
+                        (float) sourceZAxisHeight,
+                        webView.getZ());
+                transition.run(() -> {
+                    // The bitmap layers are already gone at this point. For Editor,
+                    // explicitly renegotiate WebView input before JS restores the
+                    // textarea selection/caret. This is a safeguard; the transition
+                    // itself no longer hides/disables the WebView.
+                    if ("x_to_editor".equals(resolvedTarget) && webView instanceof RichContentWebView) {
+                        ((RichContentWebView) webView).restoreInputAfterFrozenTransition();
+                    }
+                    webView.evaluateJavascript(
+                            "try{window.dispatchEvent(new CustomEvent('jetnote:frozen-split-complete',{detail:{target:'" +
+                                    resolvedTarget +
+                                    "'}}));}catch(e){}",
+                            null);
+                });
+            } catch (Exception ignored) {
+                // Transition failure must never block the already-rendered target page.
+            }
+        });
+    }
 
     /** Sync Browser res-Filter into the reusable Tool WebView host. */
     @JavascriptInterface
@@ -332,6 +501,11 @@ final class NativeBridge {
     @JavascriptInterface
     public void updateVideoRect(String mediaId, double left, double top, double width, double height, double devicePixelRatio) {
         videoPlayer.updateRect(mediaId, left, top, width, height, devicePixelRatio);
+    }
+
+    @JavascriptInterface
+    public void setVideoSurfaceRightEdgeGestureYieldPercent(double percent) {
+        videoPlayer.setRightEdgeGestureYieldPercent(percent);
     }
 
     @JavascriptInterface

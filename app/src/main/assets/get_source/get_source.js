@@ -209,8 +209,8 @@
     }
   };
 
-  const viewerLayer = () => Math.max(1, Number(config.layers && config.layers.get_source_image_video_viewer_z_index) || 2147483647);
-  const panelLayer = () => Math.max(1, Number(config.layers && config.layers.get_source_panel_z_index) || 2147483000);
+  const viewerLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_image_video_viewer_z_axis_height ?? config.layers.get_source_image_video_viewer_z_index)) || 100000);
+  const panelLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_panel_z_axis_height ?? config.layers.get_source_panel_z_index)) || 90000);
 
   const promoteViewer = () => {
     const viewer = document.getElementById('imageViewer');

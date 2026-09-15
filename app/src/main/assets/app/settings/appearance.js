@@ -8,8 +8,7 @@ let currentBackground = structuredClone(DEFAULT_BACKGROUND);
 let currentBody = structuredClone(DEFAULT_BODY);
 let appearanceDefaults = {
   background:structuredClone(DEFAULT_BACKGROUND),
-  body:structuredClone(DEFAULT_BODY),
-  picker:{rgb:{r:0,g:0,b:0}}
+  body:structuredClone(DEFAULT_BODY)
 };
 
 const AppearanceRepository = {
@@ -74,8 +73,7 @@ async function loadAppearanceDefaults(){
     const configured=await response.json();
     appearanceDefaults={
       background:colorHexToAppearance(configured?.global_set_background,DEFAULT_BACKGROUND),
-      body:colorHexToAppearance(configured?.global_set_body,DEFAULT_BODY),
-      picker:colorHexToAppearance(configured?.color_view_picker_after_reset,{rgb:{r:0,g:0,b:0}})
+      body:colorHexToAppearance(configured?.global_set_body,DEFAULT_BODY)
     };
   } catch(error) { console.warn('Appearance defaults unavailable',error); }
   return appearanceDefaults;
@@ -147,11 +145,9 @@ const ColorViewTool = (() => {
   let currentRgb = {r:255,g:0,b:0};
   let numericMode = 'decimal';
   let labels = {
-    reset:'Reset',
     hex:'HEX Format',
     decimal:'DEC Format',
     copy:'Copy',
-    resetComplete:'Color picker reset',
     copied:'Copied',
     copyFailed:'Copy failed'
   };
@@ -423,38 +419,24 @@ const ColorViewTool = (() => {
         const pairs=await Promise.all([
           get('color_view.preview_sample_1',''),
           get('color_view.preview_sample_2','ABCDEFGHIJKLMNOPQRSTUVWXYZ'),
-          get('color_view.reset','Reset'),
           get('color_view.format_hex','HEX Format'),
           get('color_view.format_decimal','DEC Format'),
           get('color_view.copy','Copy'),
-          get('color_view.reset_complete','Color picker reset'),
           get('color_view.copied','Copied'),
           get('color_view.copy_failed','Copy failed')
         ]);
-        const [preview1,preview2,resetLabel,hexLabel,decimalLabel,copyLabel,resetComplete,copied,copyFailed]=pairs;
+        const [preview1,preview2,hexLabel,decimalLabel,copyLabel,copied,copyFailed]=pairs;
         const one=document.getElementById('colorViewTextPreview1'), two=document.getElementById('colorViewTextPreview2');
         if(one) one.textContent=preview1;
         if(two) two.textContent=preview2;
-        labels={reset:resetLabel,hex:hexLabel,decimal:decimalLabel,copy:copyLabel,resetComplete,copied,copyFailed};
+        labels={hex:hexLabel,decimal:decimalLabel,copy:copyLabel,copied,copyFailed};
       }
-      const resetButton=document.getElementById('colorViewResetButton'); if(resetButton)resetButton.textContent=labels.reset;
       const copyButton=document.getElementById('colorViewCopyButton'); if(copyButton)copyButton.textContent=labels.copy;
       refreshModeSelector();
       await window.JetNoteUiLanguage?.apply?.(document);
     } catch(error) { console.warn('Color View UI language failed',error); }
   }
 
-
-  async function resetAppearance() {
-    clearCopyFeedback();
-    try {
-      const defaults=await loadAppearanceDefaults();
-      commitFromRgb(defaults.picker.rgb,true);
-      const status=document.getElementById('colorViewStatus'); if(status)status.textContent=labels.resetComplete;
-    } catch(error) {
-      console.error('Color picker reset failed',error);
-    }
-  }
 
   function setNumericMode(mode) {
     if(mode!=='hex' && mode!=='decimal') return;
@@ -612,7 +594,6 @@ const ColorViewTool = (() => {
         input.addEventListener('blur',()=>commitColorInputs(true));
         input.addEventListener('keydown',event=>{if(event.key!=='Enter')return;event.preventDefault();commitColorInputs(true);input.blur();});
       }
-      document.getElementById('colorViewResetButton')?.addEventListener('click',resetAppearance);
       document.getElementById('colorViewHexButton')?.addEventListener('click',()=>setNumericMode('hex'));
       document.getElementById('colorViewDecimalButton')?.addEventListener('click',()=>setNumericMode('decimal'));
       document.getElementById('colorViewCopyButton')?.addEventListener('click',copyExportColor);

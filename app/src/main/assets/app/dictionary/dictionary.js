@@ -166,7 +166,7 @@
     'right:10px;' +
     'bottom:calc(env(safe-area-inset-bottom, 0px) + 56px);' +
     'left:10px;' +
-    'z-index:2147483647;' +
+    'z-index:100000;' +
     'background:#fff;' +
     'color:#202124;' +
     'padding:20px;' +

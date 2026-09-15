@@ -87,7 +87,7 @@
       "enable_debug": "Enable Debug",
       "stop": "Stop",
       "stop_accessibility_label": "Stop the current import or export",
-      "date_time_viewer_title": "Date/Time Viewer",
+      "date_time_viewer_title": "Date View",
       "save_json": "Save JSON",
       "browser_title": "Browser",
       "relaunch": "Relaunch",
@@ -107,8 +107,6 @@
       "preview_sample_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       "set_background": "Set Background",
       "set_body": "Set Body",
-      "reset": "Reset",
-      "reset_accessibility_label": "Reset background, body, and color picker",
       "format_hex": "HEX Format",
       "format_decimal": "DEC Format",
       "format_selector_accessibility_label": "Color number format",
@@ -118,7 +116,6 @@
       "copy": "Copy",
       "background_set": "Background set",
       "body_set": "Body color set",
-      "reset_complete": "Background and body reset",
       "copied": "Copied",
       "copy_failed": "Copy failed",
       "sv_field_accessibility_label": "Saturation and brightness color field",
@@ -136,6 +133,9 @@
     },
     "date_time_viewer": {
       "reset": "Reset",
+      "copy": "Copy",
+      "copy_preview_accessibility_label": "Copy current date and time",
+      "copy_pattern_accessibility_label": "Copy date and time format pattern",
       "pattern_label": "Date/time format pattern",
       "pattern_accessibility_label": "Date and time format pattern",
       "preview_label": "Live preview",
@@ -173,7 +173,14 @@
       "hide_explanation": "Hide explanation",
       "set": "Set",
       "applied": "Applied",
-      "invalid_pattern": "Invalid pattern"
+      "invalid_pattern": "Invalid pattern",
+      "expand_letters": "Expand letters",
+      "collapse_letters": "Collapse letters",
+      "copied": "Copied"
+    },
+    "readme": {
+      "expand": "Expand",
+      "collapse": "Collapse"
     }
   },
   "archivePreparingExport": "Preparing export…",

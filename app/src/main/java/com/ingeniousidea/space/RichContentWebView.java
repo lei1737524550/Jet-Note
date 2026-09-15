@@ -53,6 +53,17 @@ final class RichContentWebView extends WebView {
         });
     }
 
+    /** Restore the native WebView input/caret after a visual-only frozen transition. */
+    void restoreInputAfterFrozenTransition() {
+        post(() -> {
+            requestFocus();
+            InputMethodManager imm =
+                    (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) imm.restartInput(this);
+            invalidate();
+        });
+    }
+
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
         final InputConnection base = super.onCreateInputConnection(outAttrs);

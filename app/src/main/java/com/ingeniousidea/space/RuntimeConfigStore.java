@@ -14,10 +14,10 @@ import java.security.MessageDigest;
  * Single source of truth for Jet Note's bundled config.json and the optional
  * in-app runtime/debug override.
  *
- * A runtime override belongs to the bundled config version it was created
- * from. If a newly installed APK contains a different config.json, the old
- * override is discarded automatically so stale SharedPreferences cannot mask
- * source edits made to config.json.
+ * Runtime values are user data, while the bundled config defines the current
+ * schema. On every read/save, the current APK schema is projected over the
+ * user's values: existing fields keep the user's value, newly bundled fields
+ * receive their bundled default, and fields removed by the APK disappear.
  */
 final class RuntimeConfigStore {
     static final String PREFS = "jet_note_debug_config";
@@ -38,76 +38,75 @@ final class RuntimeConfigStore {
     }
 
     static synchronized String readEffective(Context context) {
-        String bundled;
         try {
-            bundled = readBundled(context);
-            new JSONObject(bundled);
-        } catch (Exception error) {
-            bundled = "{}";
-        }
-
-        String bundledFingerprint = fingerprint(bundled);
-        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String runtime = prefs.getString(CURRENT, null);
-        String recordedFingerprint = prefs.getString(BUNDLED_FINGERPRINT, null);
-
-        if (runtime != null && !runtime.trim().isEmpty()) {
-            try {
-                new JSONObject(runtime);
-
-                if (recordedFingerprint == null) {
-                    // Compatibility with builds created before fingerprint tracking.
-                    // setRuntimeConfigJson used to save the pre-edit effective config
-                    // into PREVIOUS, so matching PREVIOUS proves this runtime override
-                    // was created from the currently bundled config.
-                    String previous = prefs.getString(PREVIOUS, null);
-                    if (previous != null && fingerprint(previous).equals(bundledFingerprint)) {
-                        prefs.edit().putString(BUNDLED_FINGERPRINT, bundledFingerprint).apply();
-                        return runtime;
-                    }
-
-                    clearStaleOverride(prefs, bundledFingerprint);
-                    return bundled;
+            JSONObject bundled = new JSONObject(readBundled(context));
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            String runtimeText = prefs.getString(CURRENT, null);
+            JSONObject effective = bundled;
+            if (runtimeText != null && !runtimeText.trim().isEmpty()) {
+                try {
+                    effective = mergeUserValuesIntoBundledSchema(bundled, new JSONObject(runtimeText));
+                } catch (Exception ignored) {
+                    effective = bundled;
                 }
-
-                if (!recordedFingerprint.equals(bundledFingerprint)) {
-                    clearStaleOverride(prefs, bundledFingerprint);
-                    return bundled;
-                }
-
-                return runtime;
-            } catch (Exception invalidRuntimeConfiguration) {
-                clearStaleOverride(prefs, bundledFingerprint);
-                return bundled;
             }
+            String normalized = effective.toString(2);
+            String bundledFingerprint = fingerprint(bundled.toString());
+            // Persist the migrated form so removed fields do not survive forever and
+            // newly added defaults become part of the user's next export.
+            prefs.edit()
+                    .putString(CURRENT, normalized)
+                    .putString(BUNDLED_FINGERPRINT, bundledFingerprint)
+                    .apply();
+            return normalized;
+        } catch (Exception error) {
+            return "{}";
         }
-
-        if (!bundledFingerprint.equals(recordedFingerprint)) {
-            prefs.edit().putString(BUNDLED_FINGERPRINT, bundledFingerprint).apply();
-        }
-        return bundled;
     }
 
     static synchronized boolean saveRuntime(Context context, String json) {
         try {
-            JSONObject parsed = new JSONObject(json);
-            String normalized = parsed.toString(2);
-            String bundled = readBundled(context);
-            new JSONObject(bundled);
-            String bundledFingerprint = fingerprint(bundled);
-
-            // readEffective first so a stale override from an older APK can never
-            // become PREVIOUS for a new runtime edit.
+            JSONObject bundled = new JSONObject(readBundled(context));
+            JSONObject incoming = new JSONObject(json);
+            JSONObject merged = mergeUserValuesIntoBundledSchema(bundled, incoming);
             String current = readEffective(context);
+            String bundledFingerprint = fingerprint(bundled.toString());
             SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
             return prefs.edit()
                     .putString(PREVIOUS, current)
-                    .putString(CURRENT, normalized)
+                    .putString(CURRENT, merged.toString(2))
                     .putString(BUNDLED_FINGERPRINT, bundledFingerprint)
                     .commit();
         } catch (Exception error) {
             return false;
         }
+    }
+
+    /**
+     * The bundled object owns field existence, structure AND field order. User values
+     * own only the value of fields that still exist. Objects are projected recursively
+     * in bundled-key order; arrays and scalar values are preserved as complete user
+     * values. This means an APK update may reorganize config.json without resetting
+     * the user's surviving custom values.
+     */
+    private static JSONObject mergeUserValuesIntoBundledSchema(JSONObject bundled, JSONObject user) throws Exception {
+        JSONObject result = new JSONObject();
+        java.util.Iterator<String> keys = bundled.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object bundledValue = bundled.get(key);
+            if (!user.has(key)) {
+                result.put(key, bundledValue);
+                continue;
+            }
+            Object userValue = user.get(key);
+            if (bundledValue instanceof JSONObject && userValue instanceof JSONObject) {
+                result.put(key, mergeUserValuesIntoBundledSchema((JSONObject) bundledValue, (JSONObject) userValue));
+            } else {
+                result.put(key, userValue);
+            }
+        }
+        return result;
     }
 
     static synchronized boolean undoRuntime(Context context) {
@@ -118,10 +117,23 @@ final class RuntimeConfigStore {
         String previous = prefs.getString(PREVIOUS, null);
         if (previous == null) return false;
         try {
-            new JSONObject(previous);
+            JSONObject bundled = new JSONObject(readBundled(context));
+            JSONObject previousObject = new JSONObject(previous);
+            // PREVIOUS may have been written by an older APK. Re-project it through
+            // the current bundled schema so Undo cannot restore obsolete key order,
+            // removed fields, or omit newly introduced fields.
+            String migratedPrevious = mergeUserValuesIntoBundledSchema(bundled, previousObject).toString(2);
             String current = prefs.getString(CURRENT, null);
-            SharedPreferences.Editor edit = prefs.edit().putString(CURRENT, previous);
-            if (current != null) edit.putString(PREVIOUS, current);
+            String migratedCurrent = current;
+            if (current != null) {
+                try {
+                    migratedCurrent = mergeUserValuesIntoBundledSchema(bundled, new JSONObject(current)).toString(2);
+                } catch (Exception ignored) {
+                    migratedCurrent = readEffective(context);
+                }
+            }
+            SharedPreferences.Editor edit = prefs.edit().putString(CURRENT, migratedPrevious);
+            if (migratedCurrent != null) edit.putString(PREVIOUS, migratedCurrent);
             else edit.remove(PREVIOUS);
             return edit.commit();
         } catch (Exception error) {
@@ -129,13 +141,6 @@ final class RuntimeConfigStore {
         }
     }
 
-    private static void clearStaleOverride(SharedPreferences prefs, String bundledFingerprint) {
-        prefs.edit()
-                .remove(CURRENT)
-                .remove(PREVIOUS)
-                .putString(BUNDLED_FINGERPRINT, bundledFingerprint)
-                .apply();
-    }
 
     private static String fingerprint(String text) {
         try {

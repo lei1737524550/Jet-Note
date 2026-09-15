@@ -18,32 +18,8 @@
   background: var(--jet-note-type-edit-post-background,var(--page-background));
 }
 
-/* New Post split entrance ---------------------------------------------------
-   The editor no longer appears as one instant full-screen cover. During a
-   user-open transition its upper and lower regions enter from opposite screen
-   edges and meet at their normal layout positions. Only transforms are
-   animated, so final geometry is unchanged and layout/reflow work stays low. */
-.post-compose-screen.composer-split-enter .post-compose-header,
-.post-compose-screen.composer-split-enter .post-compose-body {
-  will-change: transform;
-  transition: transform 320ms cubic-bezier(.22,.72,.22,1);
-}
-.post-compose-screen.composer-split-enter:not(.composer-split-enter-active) .post-compose-header {
-  transform: translate3d(0, -100vh, 0);
-}
-.post-compose-screen.composer-split-enter:not(.composer-split-enter-active) .post-compose-body {
-  transform: translate3d(0, 100vh, 0);
-}
-.post-compose-screen.composer-split-enter.composer-split-enter-active .post-compose-header,
-.post-compose-screen.composer-split-enter.composer-split-enter-active .post-compose-body {
-  transform: translate3d(0, 0, 0);
-}
-@media (prefers-reduced-motion: reduce) {
-  .post-compose-screen.composer-split-enter .post-compose-header,
-  .post-compose-screen.composer-split-enter .post-compose-body {
-    transition-duration: 1ms;
-  }
-}
+/* X -> Editor animation is native-only. The editor DOM keeps its original
+   geometry and appearance; FrozenSplitTransition snapshots the whole WebView. */
 
 /* New Post only supplies its page-specific control width/color. Its geometry
    comes entirely from the shared Jet Note Page Action Bar above. */
@@ -369,4 +345,21 @@
 }
 .post-compose-media-row .video-attachment-shell .video-inline-time {
   display:none !important;
+}
+
+/* Keyboard-hidden editor expansion -----------------------------------------
+   The configured offset is added to the text display region. Because the
+   attachment stack and Tools row stay in normal document flow, they travel
+   downward as one unit while the newly released vertical space belongs to the
+   editor content instead of becoming a dead gap. The screen/body remain
+   clipped, preventing transient frames from painting through another page. */
+#postComposerText {
+  flex-basis: calc(var(--new-post-text-area-height, 262px) + var(--post-editor-keyboard-hidden-text-display-offset, 0px));
+  height: calc(var(--new-post-text-area-height, 262px) + var(--post-editor-keyboard-hidden-text-display-offset, 0px));
+  transition: height 320ms cubic-bezier(.22,.72,.22,1), flex-basis 320ms cubic-bezier(.22,.72,.22,1);
+}
+.post-compose-screen,
+.post-compose-body {
+  isolation:isolate;
+  contain:paint;
 }

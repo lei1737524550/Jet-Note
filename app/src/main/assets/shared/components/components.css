@@ -798,17 +798,17 @@
 
 /* Published media height guard -------------------------------------------------
    A tall single photo must never take over the feed. The cap is driven by
-   config.json -> published_post_media_max_height_px (default: 262px), matching
+   config.json -> published_post_media_max_height_px (default: 234px), matching
    the current New Post text-region height. Natural aspect ratio is preserved. */
 #mainPosts article.post > .post-media-grid.one.post-published-single-photo {
-  max-height: var(--published-post-media-max-height, 262px);
+  max-height: var(--published-post-media-max-height, 234px);
   overflow: hidden;
 }
 
 #mainPosts article.post > .post-media-grid.one.post-published-single-photo > img {
   width: 100%;
   height: auto;
-  max-height: var(--published-post-media-max-height, 262px);
+  max-height: var(--published-post-media-max-height, 234px);
   object-fit: contain;
   object-position: center;
 }
@@ -819,12 +819,12 @@
    native video TextureView is separately suspended in JS because CSS cannot
    order native siblings. */
 #postActionPanel.post-action-panel {
-  z-index: 2147483000 !important;
+  z-index: var(--z-axis-height-post-action, 90000) !important;
   isolation: isolate;
   pointer-events: auto !important;
 }
 .delete-confirm-backdrop.post-menu-confirm {
-  z-index: 2147483001 !important;
+  z-index: calc(var(--z-axis-height-post-action, 90000) + 1) !important;
   pointer-events: auto !important;
 }
 #postFavoriteAction[data-post-action="favorite"] {

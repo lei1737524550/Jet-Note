@@ -142,8 +142,8 @@
     ]
   },
   "layers": {
-    "get_source_panel_z_index": 2147483000,
-    "get_source_image_video_viewer_z_index": 2147483647
+    "get_source_panel_z_axis_height": 90000,
+    "get_source_image_video_viewer_z_axis_height": 100000
   },
   "background_policy": {
     "default_source": "global_set_body",

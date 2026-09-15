@@ -136,6 +136,7 @@ final class DictionaryController {
 
         overlay = new FrameLayout(activity);
         overlay.setBackgroundColor(toolBackgroundColor);
+        overlay.setElevation(ZAxisHeights.TOOL);
         root.addView(overlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -224,7 +225,12 @@ final class DictionaryController {
         if (overlay == null) return;
         applyCachePolicyOnToolClose();
         root.removeView(overlay);
-        mainWebView.evaluateJavascript("if(window.EditorController&&window.EditorController.resume){if(window.EditorController.resume()){window.dispatchEvent(new CustomEvent('jetnote:editor-resume'));}}", null);
+        mainWebView.evaluateJavascript(
+                "(function(){if(window.EditorController&&window.EditorController.resume){" +
+                "if(window.EditorController.resume()){window.dispatchEvent(new CustomEvent('jetnote:editor-resume'));" +
+                "requestAnimationFrame(function(){requestAnimationFrame(function(){" +
+                "try{window.JetNoteNative&&window.JetNoteNative.runFrozenSplitTransitionFromZAxisHeight&&window.JetNoteNative.runFrozenSplitTransitionFromZAxisHeight('x_to_editor',200);}catch(e){}" +
+                "});});}}})()", null);
         if (downloadStatus != null) downloadStatus.removeCallbacks(hideStatusRunnable);
         if (dictionaryWebView != null) {
             dictionaryWebView.stopLoading();

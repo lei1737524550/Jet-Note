@@ -111,9 +111,14 @@ async function exportArchive(){
   setArchiveProgress({message:'Preparing export…',percent:0});
   try{
     const snapshot=await EntryStore.read();
+    let config=null;
+    try {
+      const response=await fetch('config.json',{cache:'no-store'});
+      if(response.ok)config=await response.json();
+    } catch (_) {}
     throwIfArchiveFallbackCancelled();
     const bytes=await ArchiveCodec.exportSnapshot({
-      ...snapshot
+      ...snapshot,config
     });
     throwIfArchiveFallbackCancelled();
     const name='JetNote_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jnote',blob=new Blob([bytes],{
@@ -361,8 +366,12 @@ async function exportNativeArchive(){
   setArchiveProgress({message:'Preparing export data…',percent:0});
   try{
     const state=await EntryStore.read(),payload={
-      appVersion:'4.0',posts:[]
+      appVersion:'4.0',posts:[],config:null
     };
+    try {
+      const configText=window.JetNoteNative?.getRuntimeConfigJson?.();
+      if(configText)payload.config=JSON.parse(configText);
+    } catch (_) { payload.config=null; }
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
     setArchiveOperationState('export','select',true);
@@ -384,7 +393,7 @@ window.JetNoteArchive={
       finished,error
     });
   },
-  onValidated(token,mode,postsJson,profileJson){
+  onValidated(token,mode,postsJson,profileJson,configJson){
     try{
       if(pendingArchive||!entriesReady||document.querySelector('#postComposeScreen.open'))throw Error('Finish the current edit or import first.');
       pendingArchive=ArchiveMapping.fromCanonical(JSON.parse(postsJson),attachment=>({
@@ -392,6 +401,7 @@ window.JetNoteArchive={
       }));
       // Legacy archives may still carry profile.json. It is intentionally ignored.
       pendingArchive.profile=null;
+      pendingArchive.config=configJson?JSON.parse(configJson):null;
       pendingArchive.nativeToken=token;
       showImportPreview();
       entriesBusy=false;
@@ -413,10 +423,16 @@ window.JetNoteArchive={
       setArchiveProgress({message:'Committing note data…',percent:96});
       archiveFallbackCancellationRequested=false;
       setArchiveOperationState('import','database',true);
+      const importedConfig=pendingArchive?.config||null;
       const stats=await importSnapshot(pendingArchive,pendingArchive.selectedMode);
+      if(importedConfig){
+        const saved=window.JetNoteNative?.setRuntimeConfigJson?.(JSON.stringify(importedConfig));
+        if(saved===false)throw Error('Unable to restore config.json from backup.');
+      }
       setArchiveOperationState('import','finalize',true,true);
       JetNoteNative.finalizeImport(token);
       finishImport(stats);
+      if(importedConfig)setTimeout(()=>location.reload(),120);
     }catch(error){
       JetNoteNative.rollbackImport(token);
       pendingArchive=null;

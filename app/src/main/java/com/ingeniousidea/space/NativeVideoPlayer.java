@@ -63,6 +63,7 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
     private final int touchSlop;
     private ScaleGestureDetector scaleDetector;
     private boolean scaleGestureOccurred;
+    private float rightEdgeGestureYieldPercent = 7f;
 
     // Same deliberate long-press reset contract as the proven Video Lab player.
     // The reset itself happens on ACTION_UP after the hold threshold has fired.
@@ -84,6 +85,15 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         this.webView = webView;
         this.store = store;
         this.touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
+    }
+
+
+    void setRightEdgeGestureYieldPercent(double percent) {
+        activity.runOnUiThread(() -> {
+            float value = (float) percent;
+            if (!Float.isFinite(value)) value = 7f;
+            rightEdgeGestureYieldPercent = Math.max(0f, Math.min(40f, value));
+        });
     }
 
     boolean isOpen() {
@@ -339,6 +349,12 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
             scaleDetector.onTouchEvent(event);
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
+                    // The configured right-most slice belongs to the WebView/right-edge scrollbar.
+                    // Returning false on DOWN lets Android continue hit-testing the WebView below;
+                    // that target then owns the complete gesture sequence.
+                    if (stage.getWidth() > 0 && event.getX() >= stage.getWidth() * (1f - rightEdgeGestureYieldPercent / 100f)) {
+                        return false;
+                    }
                     scaleGestureOccurred = false;
                     downX = event.getX();
                     downY = event.getY();
@@ -399,6 +415,7 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         });
 
         root.addView(stage, new FrameLayout.LayoutParams(1, 1));
+        stage.setElevation(ZAxisHeights.MEDIA);
         stage.bringToFront();
     }
 

@@ -1,3 +1,14 @@
+
+/* Semantic WebView Z-axis heights. Keep stacking policy centralized and avoid
+   Integer.MAX_VALUE-style z-index competition. */
+:root {
+  --z-axis-height-content: 0;
+  --z-axis-height-controls: 1000;
+  --z-axis-height-screen: 10000;
+  --z-axis-height-overlay: 50000;
+  --z-axis-height-post-action: 90000;
+  --z-axis-height-image-viewer: 100000;
+}
 :root {
   color-scheme: light;
   --ink:#111214;
@@ -192,6 +203,10 @@ button:focus-visible {
   width:100%;
   padding:0 var(--content-horizontal-padding);
   background:transparent;
+  position:relative;
+  z-index:var(--z-axis-height-content, 0);
+  /* Keep transformed/reflowing Posts inside their own stacking context. */
+  isolation:isolate;
 }
 .post-composer-wrap {
   width:100%;
@@ -232,6 +247,7 @@ button:focus-visible {
      without duplicating an unexplained 12px magic number elsewhere. */
   --published-post-horizontal-padding:12px;
   position:relative;
+  z-index:var(--z-axis-height-content, 0);
   width:100%;
   margin:0 0 6px;
   padding:12px var(--published-post-horizontal-padding) 14px;

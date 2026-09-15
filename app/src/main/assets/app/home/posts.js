@@ -43,6 +43,29 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
     })
   }),
   main_posts: Object.freeze({
+    interaction_timing: Object.freeze({
+      post_horizontal_ellipsis_menu_dismiss_delay_ms: 0,
+      delete_content_to_border_clear_delay_ms: 140,
+      delete_border_clear_to_reflow_delay_ms: 140,
+      post_delete_reflow_animation_duration_ms: 320,
+      post_reflow_animation_duration_ms: Object.freeze({
+        favorite: 320,
+        super_favorite: 320,
+        cancel_favorite: 320,
+        cancel_super_favorite: 320
+      }),
+      post_favorite_highlight: Object.freeze({
+        inset_width_px: 5,
+        normal: Object.freeze({
+          change_count: 1,
+          sequence: Object.freeze([{color: '#ffff00', duration_ms: 500}])
+        }),
+        super: Object.freeze({
+          change_count: 1,
+          sequence: Object.freeze([{color: '#ff0000', duration_ms: 500}])
+        })
+      })
+    }),
     non_star: Object.freeze({
       border_rule: Object.freeze({
         change_count: 0,
@@ -97,6 +120,7 @@ function configuredThreePostOneBody(config) {
     main_posts: {
       ...THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts,
       ...configured.main_posts,
+      interaction_timing: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.interaction_timing, configured.main_posts?.interaction_timing),
       non_star: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.non_star, configured.main_posts?.non_star),
       starred: mergeObject(THREE_POST_ONE_BODY_DEFAULT_CONFIG.main_posts.starred, configured.main_posts?.starred)
     }
@@ -112,6 +136,7 @@ Promise.all([
     ? window.JetNoteUiLanguage.get('home.welcome_post_default', WELCOME_POST_DEFAULT_STRING)
     : Promise.resolve(WELCOME_POST_DEFAULT_STRING)
 ]).then(([config, defaultString]) => {
+    window.__jetRuntimeConfig = config;
     welcomePostDefaultString = defaultString || WELCOME_POST_DEFAULT_STRING;
     threePostOneBodyConfig = configuredThreePostOneBody(config);
     applyThreePostOneBodyConfig();
@@ -226,7 +251,7 @@ function applyThreePostOneBodyBorderRule(name, rule, cssVariable, fallbackColor 
   stopThreePostOneBodyBorderRule(name);
   const sequence = normalizedBorderSequence(rule, fallbackColor);
   const changeCount = Number(rule?.change_count);
-  const mode = changeCount === -1 ? -1 : changeCount === 1 ? 1 : 0;
+  const mode = changeCount === -1 ? -1 : Number.isInteger(changeCount) && changeCount > 0 ? changeCount : 0;
   const root = document.documentElement;
 
   if (mode === 0 || sequence.length === 1) {
@@ -235,17 +260,20 @@ function applyThreePostOneBodyBorderRule(name, rule, cssVariable, fallbackColor 
   }
 
   let index = 0;
+  let completedPasses = 0;
   const show = () => {
     const item = sequence[index];
     root.style.setProperty(cssVariable, item.color);
 
-    if (mode === 1 && index === sequence.length - 1) {
+    const isLast = index === sequence.length - 1;
+    if (mode > 0 && isLast && completedPasses + 1 >= mode) {
       threePostOneBodyBorderTimers.delete(name);
       return;
     }
 
     const wait = mode === -1 ? Math.max(16, item.duration_ms) : item.duration_ms;
     const timer = setTimeout(() => {
+      if (isLast) completedPasses += 1;
       index = (index + 1) % sequence.length;
       show();
     }, wait);
@@ -375,7 +403,7 @@ async function savePosts() {
 }
 
 
-function renderPosts() {
+function renderPosts(options = {}) {
   const list = document.getElementById('mainPosts');
   const composerMount = document.getElementById('postComposerMount');
   if (!list || !composerMount) return;
@@ -436,7 +464,7 @@ function renderPosts() {
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
   bindPublishedInlineImageZoom?.(list);
-  requestAnimationFrame(fit);
+  if (options.scheduleFit !== false) requestAnimationFrame(fit);
 }
 
 function syncPostEditorDraft() {
@@ -517,51 +545,43 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
     body.scrollTop = 0;
     // Native video is a TextureView layered outside the WebView. Suppress it
     // before exposing the editor so there is no one-frame video flash-through.
+    window.JetNoteMediaResourceManager?.releaseScope?.('home','open-post-composer');
     window.JetNoteVideoOverlay?.suspend?.();
 
-    // Split entrance: prepare both regions off-screen before the editor becomes
-    // visible, then commit the transform on the next animation frame. Keeping
-    // this transform-only avoids layout thrashing and keeps the opening path fast.
-    const splitMotionMs = 320;
-    screen.classList.remove('composer-split-enter-active');
-    screen.classList.add('composer-split-enter');
-    screen.classList.add('open');
-    window.__jetSyncNativeVideoVisibility?.();
-    document.body.style.overflow = 'hidden';
-    ViewportManager.update();
+    // X -> Editor: lay out the real destination first, then hand the whole
+    // WebView to the native FrozenSplitTransition engine. Native captures one
+    // immutable bitmap and splits that bitmap; the editor DOM is never cloned
+    // or restyled by the transition.
+    const transitionRoot = window.__jetRuntimeConfig?.frozen_split_transition
+      || window.JetNoteConfig?.frozen_split_transition
+      || {};
+    const editorTransition = transitionRoot.x_to_editor || {};
+    const splitMotionMs = Math.max(0, Number(editorTransition.duration_ms ?? 320));
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!screen.classList.contains('open')) return;
-        screen.classList.add('composer-split-enter-active');
-      });
-    });
+    // X -> Editor is target-owned: every source uses the same Cover -> Prepare -> Capture transaction.
+    const prepareEditor = () => {
+      screen.classList.add('open');
+      window.__jetSyncNativeVideoVisibility?.();
+      document.body.style.overflow = 'hidden';
+      ViewportManager.update();
+    };
+    if (window.JetTargetTransition?.toEditor) {
+      void window.JetTargetTransition.toEditor(prepareEditor);
+    } else {
+      prepareEditor();
+    }
 
-    // Do not raise the Android keyboard while the two halves are moving: an IME
-    // viewport resize during the transform makes the lower half visibly jump.
-    // Focus once the panels have met, while preserving the original caret rule.
     const focusComposer = () => {
       if (!screen.classList.contains('open')) return;
       textarea.focus({preventScroll:true});
       const end = textarea.value.length;
       try { textarea.setSelectionRange(end, end); } catch (_) {}
     };
-    const splitSettledMs = splitMotionMs + 30;
-
-    // Finish the visual transition independently of the keyboard delay. A long
-    // configured IME delay must not leave animation classes hanging around.
-    setTimeout(() => {
-      if (!screen.classList.contains('open')) return;
-      screen.classList.remove('composer-split-enter', 'composer-split-enter-active');
-    }, splitSettledMs);
-
-    // Raise the keyboard as soon as the split animation has fully settled.
     setTimeout(() => {
       if (!screen.classList.contains('open')) return;
       focusComposer();
-      // One lightweight retry keeps Android WebView/IME hand-off reliable.
       setTimeout(focusComposer, 80);
-    }, splitSettledMs);
+    }, splitMotionMs + 30);
     return true;
   } catch (error) {
     console.error('[Editor] open failed', error);
@@ -570,6 +590,21 @@ async function openPostComposer(prefillText = '', postId = null, sourcePost = nu
     return false;
   }
 }
+// Restore the real editor focus/selection after the frozen bitmap layers are gone.
+// The native transition keeps the WebView alive underneath its opaque backdrop.
+window.addEventListener('jetnote:frozen-split-complete', event => {
+  if (event?.detail?.target !== 'x_to_editor') return;
+  const screen = document.getElementById('postComposeScreen');
+  const textarea = document.getElementById('postComposerText');
+  if (!screen?.classList.contains('open') || !textarea) return;
+  requestAnimationFrame(() => {
+    textarea.focus({preventScroll:true});
+    const end = textarea.value.length;
+    try { textarea.setSelectionRange(end, end); } catch (_) {}
+    window.JetComposerCaret?.refresh?.();
+  });
+});
+
 function closePostComposer() {
   if(entriesBusy)return;
   // Editor video is temporary. Stop/release it before the editor DOM is hidden
@@ -579,15 +614,22 @@ function closePostComposer() {
   closeToolbox?.();
   initAudioDraft('post',null);
   const screen = document.getElementById('postComposeScreen');
-  screen.classList.remove('open', 'composer-split-enter', 'composer-split-enter-active');
-  window.__jetSyncNativeVideoVisibility?.();
-  document.body.style.overflow = '';
-  document.getElementById('postComposerText').value = '';
-  editingPostId = null;
-  postDraftImages = [];
-  renderPostImagePreview();
-  renderPostVideoPreview();
-  void EditorController.discard();
+  const prepareHome = () => {
+    screen.classList.remove('open');
+    window.__jetSyncNativeVideoVisibility?.();
+    document.body.style.overflow = '';
+    document.getElementById('postComposerText').value = '';
+    editingPostId = null;
+    postDraftImages = [];
+    renderPostImagePreview();
+    renderPostVideoPreview();
+    void EditorController.discard();
+  };
+  if (window.JetTargetTransition?.toHome) {
+    void window.JetTargetTransition.toHome(prepareHome);
+  } else {
+    prepareHome();
+  }
 }
 
 async function pickPostImages() {
@@ -762,6 +804,8 @@ function renderPostVideoPreview() {
 
 let activePostActionId = null;
 let activePostActionAnchor = null;
+let postHorizontalEllipsisDismissTimer = null;
+let postHorizontalEllipsisDismissToken = 0;
 
 function positionMenuLeftOfAnchor(panel, anchorRect) {
   if (!panel || !anchorRect) return;
@@ -786,7 +830,64 @@ function positionMenuLeftOfAnchor(panel, anchorRect) {
   panel.style.setProperty('transform', 'none', 'important');
 }
 
+function postInteractionDelay(name, fallback) {
+  const configured = Number(threePostOneBodyConfig.main_posts?.interaction_timing?.[name]);
+  if (!Number.isFinite(configured)) return fallback;
+  return Math.max(0, Math.min(configured, 60000));
+}
+
+function waitForPostInteractionDelay(name, fallback) {
+  const delay = postInteractionDelay(name, fallback);
+  return delay > 0 ? new Promise(resolve => setTimeout(resolve, delay)) : Promise.resolve();
+}
+
+function cancelPostHorizontalEllipsisDismissTimer() {
+  postHorizontalEllipsisDismissToken += 1;
+  if (postHorizontalEllipsisDismissTimer !== null) {
+    clearTimeout(postHorizontalEllipsisDismissTimer);
+    postHorizontalEllipsisDismissTimer = null;
+  }
+}
+
+function schedulePostHorizontalEllipsisDismiss(postId) {
+  cancelPostHorizontalEllipsisDismissTimer();
+  const token = postHorizontalEllipsisDismissToken;
+  const delay = postInteractionDelay('post_horizontal_ellipsis_menu_dismiss_delay_ms', 0);
+  const dismiss = () => {
+    if (token !== postHorizontalEllipsisDismissToken) return;
+    postHorizontalEllipsisDismissTimer = null;
+    if (String(activePostActionId) === String(postId)) closePostActionPanel();
+  };
+  if (delay <= 0) {
+    dismiss();
+    return;
+  }
+  // T=0 is the user's star/unstar action, not the end of reflow/highlight/save.
+  postHorizontalEllipsisDismissTimer = setTimeout(dismiss, delay);
+}
+
+const POST_UI_SOUND_PATHS = Object.freeze({
+  starred: 'shared/sounds/starred.ogg',
+  super_starred: 'shared/sounds/super_starred.ogg',
+  cancel_starred: 'shared/sounds/cancel_starred.ogg',
+  open_trash: 'shared/sounds/open_trash.ogg',
+  delete_it: 'shared/sounds/delete_it.ogg',
+  send_post: 'shared/sounds/send_post.ogg',
+  error: 'shared/sounds/error.ogg'
+});
+
+function playPostUiSound(name) {
+  const source = POST_UI_SOUND_PATHS[name];
+  if (!source) return;
+  try {
+    const audio = new Audio(source);
+    audio.preload = 'auto';
+    audio.play().catch(() => {});
+  } catch (_) {}
+}
+
 function closePostActionPanel() {
+  cancelPostHorizontalEllipsisDismissTimer();
   const panel = document.getElementById('postActionPanel');
   if (panel) panel.classList.remove('open');
   activePostActionId = null;
@@ -809,9 +910,111 @@ function syncPostFavoriteAction() {
   if (icon) icon.src = state === 'super_starred' ? 'shared/icons/star_super.svg' : state === 'starred' ? 'shared/icons/star_active.svg' : 'shared/icons/star.svg';
 }
 
-async function commitStarStateChange(previous) {
+function captureMainPostRects() {
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const rects = new Map();
+  const indexes = new Map();
+  document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach((card, index) => {
+    const postId = String(card.dataset.postId);
+    indexes.set(postId, index);
+    const r = card.getBoundingClientRect();
+    if (r.bottom >= -64 && r.top <= viewportHeight + 64) rects.set(postId, r);
+  });
+  return { rects, indexes, viewportHeight, scrollX: window.scrollX, scrollY: window.scrollY };
+}
+
+async function animateMainPostReflow(snapshot, actionName, fallback = 320) {
+  if (!snapshot) return;
+  window.scrollTo(snapshot.scrollX, snapshot.scrollY);
+  const configuredDuration = threePostOneBodyConfig.main_posts?.interaction_timing?.post_reflow_animation_duration_ms?.[actionName];
+  const duration = Math.max(0, Number.isFinite(Number(configuredDuration)) ? Number(configuredDuration) : fallback);
+  if (duration <= 0) return;
+  const animations = [];
+  document.querySelectorAll('#mainPosts article.post[data-post-id]').forEach((card, afterIndex) => {
+    const postId = String(card.dataset.postId);
+    const before = snapshot.rects.get(postId);
+    if (!before) return;
+
+    // Reflow animation represents an actual list reorder, not incidental geometry
+    // changes caused by state styling, fit(), menus, shadows, or font/layout rounding.
+    // If a Post keeps the same list slot, it must remain visually stationary.
+    const beforeIndex = snapshot.indexes?.get(postId);
+    if (Number.isInteger(beforeIndex) && beforeIndex === afterIndex) return;
+
+    const after = card.getBoundingClientRect();
+    if (after.bottom < -64 || after.top > snapshot.viewportHeight + 64) return;
+    const dx = before.left - after.left, dy = before.top - after.top;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+    // Moving Posts are exactly one content layer above stationary Posts.
+    card.style.zIndex = 'calc(var(--z-axis-height-content, 0) + 1)';
+    card.style.willChange = 'transform';
+    const animation = card.animate(
+      [{transform:`translate(${dx}px, ${dy}px)`},{transform:'translate(0px, 0px)'}],
+      {duration, easing:'cubic-bezier(0.22, 0.72, 0.22, 1)', fill:'none'}
+    );
+    animations.push(animation.finished.catch(()=>{}).finally(()=>{
+      card.style.willChange='';
+      card.style.zIndex='';
+    }));
+  });
+  if (animations.length) await Promise.all(animations);
+}
+
+async function highlightStarredPost(postId, superStarred) {
+  const selector = superStarred
+    ? '#topPostCard'
+    : `#mainPosts article.post[data-post-id="${String(postId).replace(/["']/g, '\\$&')}"]`;
+  const card = document.querySelector(selector);
+  if (!card) return;
+
+  const highlightConfig = threePostOneBodyConfig.main_posts?.interaction_timing?.post_favorite_highlight || {};
+  const configuredWidth = Number(highlightConfig.inset_width_px);
+  const width = Math.max(0, Number.isFinite(configuredWidth) ? configuredWidth : 5);
+  if (width <= 0) return;
+  const fallbackColor = superStarred ? '#ff0000' : '#ffff00';
+  const fallbackRule = {change_count: 1, sequence: [{color: fallbackColor, duration_ms: 500}]};
+  const rule = (superStarred ? highlightConfig.super : highlightConfig.normal) || fallbackRule;
+  const sequence = normalizedBorderSequence(rule, fallbackColor);
+  const rawCount = Number(rule?.change_count);
+  const changeCount = rawCount === -1 ? -1 : Number.isInteger(rawCount) && rawCount > 0 ? rawCount : 0;
+  const oldShadow = card.style.boxShadow;
+  const apply = color => { card.style.boxShadow = `inset 0 0 0 ${width}px ${color}`; };
+
+  // 0 = permanent selection: keep the first configured highlight state.
+  if (changeCount === 0 || sequence.length === 0) {
+    apply(sequence[0]?.color || fallbackColor);
+    return;
+  }
+
+  const runPass = async () => {
+    for (const item of sequence) {
+      apply(item.color);
+      const wait = Math.max(changeCount === -1 ? 16 : 0, item.duration_ms);
+      if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
+    }
+  };
+
+  if (changeCount === -1) {
+    // Infinite mode must never block saving, menu dismissal, or other UI work.
+    (async () => { while (card.isConnected) await runPass(); })();
+    return;
+  }
+
+  for (let pass = 0; pass < changeCount; pass += 1) await runPass();
+  card.style.boxShadow = oldShadow;
+}
+async function commitStarStateChange(previous, reflowActionName, highlight = null) {
+  const snapshot = captureMainPostRects();
   syncPostFavoriteAction();
-  renderPosts();
+
+  // Rebuild the feed without scheduling fit() in the middle of FLIP. A viewport
+  // update during the transform animation made the border and inner content use
+  // different geometry for one or more frames.
+  renderPosts({scheduleFit: false});
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await animateMainPostReflow(snapshot, reflowActionName, 320);
+  requestAnimationFrame(fit);
+  if (highlight) await highlightStarredPost(highlight.postId, highlight.superStarred);
   const saved = await savePosts();
   if (!saved) {
     posts = previous;
@@ -824,7 +1027,8 @@ async function commitStarStateChange(previous) {
 
 async function toggleFavoriteActivePost() {
   if (!isWorkspaceWritable() || activePostActionId === null) return;
-  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  const actionPostId = String(activePostActionId);
+  const post = posts.find(item => String(item.id) === actionPostId);
   if (!post) return;
 
   const previous = structuredClone(posts);
@@ -833,38 +1037,45 @@ async function toggleFavoriteActivePost() {
   setPostStarState(post, nextState);
   if (nextState === 'starred') restartThreePostOneBodyStateBorderRule('starred');
 
-  // Every short-press favorite action closes the shared three-dot menu before
-  // renderPosts(). The panel lives under document.body, so rebuilding the post
-  // list cannot remove it for us. This also covers cancelling Super Star.
-  closePostActionPanel();
+  // Sound is direct interaction feedback: start it before persistence/render work.
+  playPostUiSound(nextState === 'starred' ? 'starred' : 'cancel_starred');
+  schedulePostHorizontalEllipsisDismiss(actionPostId);
 
-  await commitStarStateChange(previous);
+  // Keep the action surface visible after the state changes so the user can
+  // perceive the result. The delay is a home-post setting in config.json.
+  const saved = await commitStarStateChange(
+    previous,
+    nextState === 'starred' ? 'favorite' : (state === 'super_starred' ? 'cancel_super_favorite' : 'cancel_favorite'),
+    nextState === 'starred' ? {postId: actionPostId, superStarred: false} : null
+  );
+  if (!saved) return;
 }
 
 async function toggleSuperStarActivePost() {
   if (!isWorkspaceWritable() || activePostActionId === null) return;
-  const post = posts.find(item => String(item.id) === String(activePostActionId));
+  const actionPostId = String(activePostActionId);
+  const post = posts.find(item => String(item.id) === actionPostId);
   if (!post) return;
 
   const previous = structuredClone(posts);
   // Long-press is an idempotent "make this the Super Star" action.
-  // It never cancels the current Super Star; cancellation is click-only.
   for (const item of posts) {
     if (item !== post && getPostStarState(item) === 'super_starred') setPostStarState(item, 'none');
   }
   setPostStarState(post, 'super_starred');
   restartThreePostOneBodyStateBorderRule('super_starred');
 
-  // Super Star moves the post into Top Post, so the action menu anchored to the
-  // post's old screen coordinates must disappear before the list is rebuilt.
-  closePostActionPanel();
-
-  const saved = await commitStarStateChange(previous);
+  playPostUiSound('super_starred');
+  schedulePostHorizontalEllipsisDismiss(actionPostId);
+  const saved = await commitStarStateChange(
+    previous,
+    'super_favorite',
+    {postId: actionPostId, superStarred: true}
+  );
   if (!saved) return;
 
-  // Reuse exactly the same home-return behavior as Android's Back button.
-  // At this point overlays are closed, so the existing navigation function
-  // naturally scrolls the main sliding page to its top.
+  // Preserve the existing Super Star home-return behavior, but only after the
+  // configured result-display interval has completed.
   if (typeof returnToStandardHome === 'function') {
     returnToStandardHome();
   } else {
@@ -878,6 +1089,8 @@ function openPostActionPanel(event, postId) {
   event.preventDefault();
   event.stopPropagation();
 
+  // Menus must not inherit live media/pointer state from the feed.
+  window.JetNoteMediaResourceManager?.releaseScope?.('home','post-action-panel');
   // Hide Android's native TextureView synchronously. It is a sibling of the
   // WebView, so no CSS z-index can reliably place this menu above it.
   window.JetNoteVideoOverlay?.suspend?.();
@@ -931,6 +1144,7 @@ function deleteActivePost() {
   const postId = activePostActionId;
   const anchorRect = activePostActionAnchor ? {...activePostActionAnchor} : null;
   closePostActionPanel();
+  playPostUiSound('open_trash');
   openDeleteConfirm('post', postId, anchorRect);
 }
 
@@ -1142,6 +1356,8 @@ async function publishTextPost() {
   // Publishing is governed by PostDraftStore, never by a toolbar element.
   if (postPublishInFlight || !isWorkspaceWritable() || !entriesReady || entriesBusy || isPostDraftMediaLoading()) return;
   postPublishInFlight = true;
+  const isCreatingPost = EditorController.state !== EditorController.State.EDITING;
+  if (isCreatingPost) playPostUiSound('send_post');
   const publishButton = document.querySelector('#postComposeScreen [data-editor-action="publish"]');
   if (publishButton) publishButton.disabled = true;
   syncPostEditorDraft();

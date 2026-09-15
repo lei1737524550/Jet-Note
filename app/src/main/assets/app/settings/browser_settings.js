@@ -93,10 +93,22 @@
     browserEnabled(){ return enabled(BROWSER_KEY); },
     resourceFilterEnabled(){ return enabled(FILTER_ENABLED_KEY); },
     selectedExtensions: readSelected,
-    setBrowserEnabled(value){ setEnabled(BROWSER_KEY, value); window.JET_NOTE_BROWSER_MODE = Boolean(value); this.refreshSettings(); },
+    setBrowserEnabled(value){
+      const next = Boolean(value);
+      setEnabled(BROWSER_KEY, next);
+      window.JET_NOTE_BROWSER_MODE = next;
+      // Keep a native copy because the next process must choose its startup
+      // route before home.html/localStorage has been loaded.
+      try { window.JetNoteNative?.setBrowserModeEnabled?.(next); }
+      catch (error) { console.warn('Jet Note: unable to persist Browser Mode natively', error); }
+      this.refreshSettings();
+    },
     setResourceFilterEnabled(value){
       setEnabled(FILTER_ENABLED_KEY, value);
       syncNativeFilter();
+      // Migration/synchronization for installs that previously stored Browser
+      // Mode only in WebView localStorage.
+      try { window.JetNoteNative?.setBrowserModeEnabled?.(this.browserEnabled()); } catch (_) {}
       this.refreshSettings();
     },
     refreshSettings(){
@@ -120,17 +132,11 @@
     },
     async maybeAutoOpen(){
       syncNativeFilter();
-      const browserMode = this.browserEnabled();
-      window.JET_NOTE_BROWSER_MODE = browserMode;
-      if (!browserMode) return false;
-      if (typeof openToolboxToolById !== 'function') return false;
-      // Browser Mode enters the same toolbox_3 core directly. Do not create a
-      // draft, open New Post, unfold Toolbox, or synthesize a button click.
-      await openToolboxToolById('toolbox_3', {
-        browserMode: true,
-        skipEditorSuspend: true,
-      });
-      return true;
+      // Startup Browser routing is decided natively before Home is loaded.
+      // If Home exists, it was intentionally entered (for example by pressing
+      // Back in startup Browser Mode), so never reopen the browser here.
+      window.JET_NOTE_BROWSER_MODE = false;
+      return false;
     },
     bind(){
       const browserButton = document.getElementById('enableBrowserButton');
@@ -149,6 +155,9 @@
         relaunchButton.addEventListener('click', () => this.relaunch());
       }
       syncNativeFilter();
+      // Migration/synchronization for installs that previously stored Browser
+      // Mode only in WebView localStorage.
+      try { window.JetNoteNative?.setBrowserModeEnabled?.(this.browserEnabled()); } catch (_) {}
       this.refreshSettings();
     }
   };

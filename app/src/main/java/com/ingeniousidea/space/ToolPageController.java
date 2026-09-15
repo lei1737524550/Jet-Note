@@ -2,10 +2,15 @@ package com.ingeniousidea.space;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.net.http.SslError;
 import android.os.Build;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.view.animation.PathInterpolator;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,16 +27,17 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.io.File;
 import java.io.BufferedInputStream;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -63,7 +69,6 @@ final class ToolPageController {
     private final WebView mainWebView;
     private final AttachmentStore attachmentStore;
     private final ExecutorService audioImportExecutor = Executors.newSingleThreadExecutor();
-    private final ExecutorService toolNetworkExecutor = Executors.newSingleThreadExecutor();
     private final Set<String> observedAudioUrls = new LinkedHashSet<>();
 
     private FrameLayout overlay;
@@ -83,6 +88,12 @@ final class ToolPageController {
     private int toolBorderColor = 0xffbfc1c4;
     private volatile String getSourceExtensionFilterJson = "[]";
     private boolean browserMode;
+    private String fallbackPageUrl;
+    private String fallbackPageTitle;
+    private boolean fallbackAttempted;
+    private boolean homeRevealInProgress;
+    private TextView toolbarTitle;
+    private static final String HOME_PRELOAD_URL = "https://appassets.androidplatform.net/assets/app/home/home.html?startupBrowserPreload=1";
 
     ToolPageController(
             Activity activity, FrameLayout root, WebView mainWebView, AttachmentStore attachmentStore
@@ -124,6 +135,9 @@ final class ToolPageController {
             toolBackgroundColor = parseColor(backgroundColor, pageActionBarSpec.backgroundColor);
             toolBorderColor = parseColor(borderColor, pageActionBarSpec.borderColor);
             observedAudioUrls.clear();
+            fallbackPageUrl = null;
+            fallbackPageTitle = null;
+            fallbackAttempted = false;
             openOnUiThread();
         });
     }
@@ -156,48 +170,20 @@ final class ToolPageController {
             int timeoutMs,
             boolean browserMode
     ) {
-        final int safeTimeout = Math.max(500, timeoutMs);
-        toolNetworkExecutor.execute(() -> {
-            String selected = isReachable(primaryUrl, safeTimeout) ? primaryUrl : null;
-            boolean usingFallback = false;
-            if (selected == null && isReachable(fallbackUrl, safeTimeout)) {
-                selected = fallbackUrl;
-                usingFallback = true;
-            }
-            if (selected == null) {
-                if (!browserMode) {
-                    activity.runOnUiThread(() -> mainWebView.evaluateJavascript(
-                            "if(window.EditorController&&window.EditorController.resume){window.EditorController.resume();}",
-                            null));
-                }
-                activity.runOnUiThread(() ->
-                        MediaDownloadController.showJetNoteNotice(activity, UiLanguage.text(activity, "networkUnavailable")));
-                return;
-            }
-            String selectedTitle = usingFallback
-                    ? ((fallbackTitle == null || fallbackTitle.trim().isEmpty()) ? primaryTitle : fallbackTitle.trim())
-                    : primaryTitle;
-            open(selected, selectedTitle, language, backgroundColor, borderColor, browserMode);
+        activity.runOnUiThread(() -> {
+            if (overlay != null) close();
+            pageUrl = primaryUrl;
+            pageTitle = primaryTitle;
+            this.browserMode = browserMode;
+            pageLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
+            toolBackgroundColor = parseColor(backgroundColor, pageActionBarSpec.backgroundColor);
+            toolBorderColor = parseColor(borderColor, pageActionBarSpec.borderColor);
+            observedAudioUrls.clear();
+            fallbackPageUrl = (fallbackUrl != null && fallbackUrl.startsWith("https://")) ? fallbackUrl : null;
+            fallbackPageTitle = fallbackTitle == null || fallbackTitle.trim().isEmpty() ? primaryTitle : fallbackTitle.trim();
+            fallbackAttempted = false;
+            openOnUiThread();
         });
-    }
-
-    private boolean isReachable(String url, int timeoutMs) {
-        if (url == null || !url.startsWith("https://")) return false;
-        HttpURLConnection connection = null;
-        try {
-            connection = (HttpURLConnection) new URL(url).openConnection();
-            connection.setInstanceFollowRedirects(true);
-            connection.setConnectTimeout(timeoutMs);
-            connection.setReadTimeout(timeoutMs);
-            connection.setRequestMethod("GET");
-            connection.setRequestProperty("User-Agent", "Jet Note/ToolProbe");
-            int code = connection.getResponseCode();
-            return code >= 200 && code < 500;
-        } catch (Exception ignored) {
-            return false;
-        } finally {
-            if (connection != null) connection.disconnect();
-        }
     }
 
     private void openOnUiThread() {
@@ -205,6 +191,7 @@ final class ToolPageController {
 
         overlay = new FrameLayout(activity);
         overlay.setBackgroundColor(toolBackgroundColor);
+        overlay.setElevation(ZAxisHeights.TOOL);
         root.addView(overlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -269,7 +256,13 @@ final class ToolPageController {
             overlay.requestApplyInsets();
         }
 
+        if (browserMode) preloadHomeBehindBrowser();
         toolWebView.loadUrl(pageUrl);
+    }
+
+    private void preloadHomeBehindBrowser() {
+        if (mainWebView == null) return;
+        mainWebView.loadUrl(HOME_PRELOAD_URL);
     }
 
     boolean isOpen() {
@@ -282,9 +275,96 @@ final class ToolPageController {
 
     void close() {
         if (overlay == null) return;
+        if (browserMode) {
+            beginFrozenHomeReveal(0);
+            return;
+        }
+        requestCloseToEditorTransition();
+    }
+
+    /** X -> Editor owns the transaction; toolbox_* only requests the target. */
+    private void requestCloseToEditorTransition() {
+        if (overlay == null) return;
+        final float sourceZ = overlay.getZ();
+        mainWebView.evaluateJavascript(
+                "try{window.JetTargetTransition&&window.JetTargetTransition.nativeSourceToEditor(" + sourceZ + ");}catch(e){}", null);
+    }
+
+    /** Called by NativeBridge only after the common X -> Editor cover is visibly committed. */
+    void completeCloseToEditorBehindTransitionCover() {
+        if (overlay == null) {
+            dispatchNativeEditorPrepared();
+            return;
+        }
+        finishToolClose(true);
+        mainWebView.evaluateJavascript(
+                "(function(){if(window.EditorController&&window.EditorController.resume){" +
+                "window.EditorController.resume();window.dispatchEvent(new CustomEvent('jetnote:editor-resume'));}" +
+                "window.dispatchEvent(new CustomEvent('jetnote:native-target-prepared',{detail:{action:'editor'}}));})()", null);
+    }
+
+    private void dispatchNativeEditorPrepared() {
+        mainWebView.evaluateJavascript(
+                "try{window.dispatchEvent(new CustomEvent('jetnote:native-target-prepared',{detail:{action:'editor'}}));}catch(e){}", null);
+    }
+
+    /**
+     * Browser Mode keeps Home alive behind the native browser. On Back we do not
+     * animate live Home DOM nodes: status time, battery and post layout may update
+     * while an animation is running and produce visibly wrong intermediate frames.
+     * Instead, wait until Home reports ready, capture one stable WebView frame, cut
+     * that frame at the exact vertical midpoint, and animate the two immutable
+     * bitmap halves from the screen edges until they meet. Only after the merge is
+     * complete is the real Home WebView made visible/interactable again.
+     */
+    private void beginFrozenHomeReveal(int attempt) {
+        if (homeRevealInProgress || mainWebView == null || overlay == null) return;
+        mainWebView.evaluateJavascript(
+                "(function(){try{return !!(window.JetNoteStartupBrowserEntry&&window.JetNoteStartupBrowserEntry.isReady&&window.JetNoteStartupBrowserEntry.isReady());}catch(e){return false;}})()",
+                value -> {
+                    if (overlay == null || !browserMode) return;
+                    boolean ready = "true".equalsIgnoreCase(String.valueOf(value).replace("\"", "").trim());
+                    if (ready) {
+                        homeRevealInProgress = true;
+                        captureAndAnimateFrozenHome();
+                    } else if (attempt < 80) {
+                        mainWebView.postDelayed(() -> beginFrozenHomeReveal(attempt + 1), 50L);
+                    } else {
+                        // Keep the Browser visible while restarting the hidden Home;
+                        // never expose a half-initialized live page.
+                        mainWebView.loadUrl(HOME_PRELOAD_URL);
+                        mainWebView.postDelayed(() -> beginFrozenHomeReveal(0), 100L);
+                    }
+                });
+    }
+
+    private void captureAndAnimateFrozenHome() {
+        JSONObject effectiveConfig;
+        try {
+            effectiveConfig = new JSONObject(RuntimeConfigStore.readEffective(activity));
+        } catch (Exception ignored) {
+            effectiveConfig = new JSONObject();
+        }
+
+        FrozenSplitTransition transition =
+                new FrozenSplitTransition(root, mainWebView, effectiveConfig, "x_to_home",
+                        overlay == null ? ZAxisHeights.TOOL : overlay.getZ(), mainWebView.getZ());
+        transition.run(() -> {
+            homeRevealInProgress = false;
+            mainWebView.evaluateJavascript(
+                    "try{window.JetNoteStartupBrowserEntry&&window.JetNoteStartupBrowserEntry.finishFrozenReveal&&window.JetNoteStartupBrowserEntry.finishFrozenReveal();}catch(e){}",
+                    null);
+        });
+
+        // The Browser overlay is removed only after the frozen Home layers have
+        // been installed. App startup Splash is not part of this route.
+        finishToolClose(true);
+    }
+
+    private void finishToolClose(boolean returnToHome) {
+        if (overlay == null) return;
         applyCachePolicyOnToolClose();
         root.removeView(overlay);
-        mainWebView.evaluateJavascript("if(window.EditorController&&window.EditorController.resume){if(window.EditorController.resume()){window.dispatchEvent(new CustomEvent('jetnote:editor-resume'));}}", null);
         if (toolWebView != null) {
             toolWebView.stopLoading();
             toolWebView.setDownloadListener(null);
@@ -294,14 +374,16 @@ final class ToolPageController {
         }
         toolWebView = null;
         toolbar = null;
+        toolbarTitle = null;
         sourceActionButton = null;
         sourceActionActive = false;
         overlay = null;
-        loadStatePanel=null;
-        loadStateTitle=null;
-        loadStateCode=null;
-        loadSpinner=null;
+        loadStatePanel = null;
+        loadStateTitle = null;
+        loadStateCode = null;
+        loadSpinner = null;
         observedAudioUrls.clear();
+        browserMode = false;
     }
 
     private void applyCachePolicyOnToolClose() {
@@ -340,7 +422,6 @@ final class ToolPageController {
     void destroy() {
         close();
         audioImportExecutor.shutdownNow();
-        toolNetworkExecutor.shutdownNow();
     }
 
     private View createToolbar() {
@@ -353,6 +434,7 @@ final class ToolPageController {
         back.setContentDescription(UiLanguage.text(activity, "commonBack"));
         back.setOnClickListener(v -> close());
         TextView title = new TextView(activity);
+        toolbarTitle = title;
         title.setText(pageTitle);
         title.setTextColor(pageActionBarSpec.titleColor);
         title.setTextSize(pageActionBarSpec.titleSize);
@@ -713,6 +795,26 @@ final class ToolPageController {
         toolWebView.evaluateJavascript(script, null);
     }
 
+    private boolean tryFallback(WebView webView) {
+        if (fallbackAttempted || fallbackPageUrl == null || fallbackPageUrl.isEmpty()) return false;
+        fallbackAttempted = true;
+        pageUrl = fallbackPageUrl;
+        pageTitle = fallbackPageTitle == null || fallbackPageTitle.isEmpty() ? pageTitle : fallbackPageTitle;
+        if (toolbarTitle != null) toolbarTitle.setText(pageTitle);
+        showLoadingState();
+        webView.stopLoading();
+        webView.loadUrl(pageUrl);
+        return true;
+    }
+
+    private void failCurrentPage(String code) {
+        if (!browserMode) {
+            activity.runOnUiThread(() -> mainWebView.evaluateJavascript(
+                    "if(window.EditorController&&window.EditorController.resume){window.EditorController.resume();}", null));
+        }
+        showLoadFailure(code);
+    }
+
     private void configure(WebView view) {
         WebSettings settings = view.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -758,27 +860,27 @@ final class ToolPageController {
             public void onReceivedError(WebView webView, WebResourceRequest request, android.webkit.WebResourceError error) {
                 if (request != null && request.isForMainFrame()) {
                     int code = Build.VERSION.SDK_INT >= 23 ? error.getErrorCode() : -1;
-                    showLoadFailure("ERROR CODE: " + code);
+                    if (!tryFallback(webView)) failCurrentPage("ERROR CODE: " + code);
                 }
             }
 
             @SuppressWarnings("deprecation")
             @Override
             public void onReceivedError(WebView webView, int errorCode, String description, String failingUrl) {
-                showLoadFailure("ERROR CODE: " + errorCode);
+                if (!tryFallback(webView)) failCurrentPage("ERROR CODE: " + errorCode);
             }
 
             @Override
             public void onReceivedHttpError(WebView webView, WebResourceRequest request, android.webkit.WebResourceResponse response) {
                 if (request != null && request.isForMainFrame()) {
-                    showLoadFailure("HTTP ERROR: " + response.getStatusCode());
+                    if (!tryFallback(webView)) failCurrentPage("HTTP ERROR: " + response.getStatusCode());
                 }
             }
 
             @Override
             public void onReceivedSslError(WebView webView, SslErrorHandler handler, SslError error) {
-                showLoadFailure("SSL ERROR: " + error.getPrimaryError());
                 handler.cancel();
+                if (!tryFallback(webView)) failCurrentPage("SSL ERROR: " + error.getPrimaryError());
             }
 
             @Override

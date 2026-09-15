@@ -176,6 +176,11 @@ window.addEventListener('scroll', scheduleNativeVideoRect, true);
 window.addEventListener('resize', scheduleNativeVideoRect);
 
 function releaseVideoAttachmentUrls(container) {
+  const manager=window.JetNoteMediaResourceManager;
+  container?.querySelectorAll?.('.video-attachment-shell')?.forEach(shell=>{
+    if(shell.__jetVideoProgressResourceId)manager?.release?.(shell.__jetVideoProgressResourceId,'video-container-release');
+    manager?.releaseOwner?.(shell,'video-container-release');
+  });
   if (activeNativeVideoItem && container?.contains(activeNativeVideoItem)) {
     try { window.JetNoteNative?.stopVideo?.(activeNativeVideoItem.dataset.mediaId); } catch (_) {}
     activeNativeVideoItem = null;
@@ -211,6 +216,15 @@ function startNativeVideo(item) {
   }
 }
 
+function isPostMediaRightEdgeYield(element, event, kind) {
+  if (!element || event?.clientX == null || element.closest('.post-compose-screen')) return false;
+  const rect=element.getBoundingClientRect();
+  if (!rect.width) return false;
+  const config=window.JetNotePostMediaGestureConfig||{};
+  const percent=Math.max(0,Math.min(40,Number(config[kind] ?? 7)));
+  return event.clientX >= rect.right - rect.width*percent/100;
+}
+
 function fractionFromPointer(track, event) {
   const rect = track.getBoundingClientRect();
   if (!rect.width) return 0;
@@ -238,69 +252,30 @@ function bindVideoProgress(item) {
   if (!shell || !track || track.__jetBound) return;
   track.__jetBound = true;
 
-  let dragging = false;
-  let pointerId = null;
-  let lastFraction = 0;
-
-  const begin = event => {
-    const fraction = fractionFromPointer(track, event);
-    dragging = true;
-    pointerId = event.pointerId;
-    lastFraction = fraction;
-    track.classList.add('seeking');
-    try { track.setPointerCapture(pointerId); } catch (_) {}
-
-    // Seeking an unopened video is a valid launch gesture. Start the native
-    // player first, then queue the requested fraction; NativeVideoPlayer applies
-    // it as soon as duration becomes known and starts playback from that point.
-    if (!shell.__jetVideoEverStarted || !shell.__jetVideoDurationMs) {
-      startNativeVideo(item);
-      window.JetNoteNative?.beginVideoSeek?.(item.dataset.mediaId, fraction);
-    } else {
-      window.JetNoteNative?.beginVideoSeek?.(item.dataset.mediaId, fraction);
-    }
-    renderSeekPreview(shell, fraction);
-    event.preventDefault();
-  };
-
-  const move = event => {
-    if (!dragging || event.pointerId !== pointerId) return;
-    lastFraction = fractionFromPointer(track, event);
-    renderSeekPreview(shell, lastFraction);
-    event.preventDefault();
-  };
-
+  let dragging = false, pointerId = null, lastFraction = 0, disposed = false;
+  const listeners=[];
+  const on=(target,type,fn,options)=>{target.addEventListener(type,fn,options);listeners.push(()=>target.removeEventListener(type,fn,options));};
   const finishSeek = (event, useEventPosition = true) => {
     if (!dragging) return;
     if (event?.pointerId != null && pointerId != null && event.pointerId !== pointerId) return;
-    if (useEventPosition && event?.clientX != null) {
-      lastFraction = fractionFromPointer(track, event);
-      renderSeekPreview(shell, lastFraction);
-    }
-    const capturedId = pointerId;
-    dragging = false;
-    pointerId = null;
-    track.classList.remove('seeking');
-    try {
-      if (capturedId != null && track.hasPointerCapture?.(capturedId)) track.releasePointerCapture(capturedId);
-    } catch (_) {}
-    window.JetNoteNative?.endVideoSeek?.(item.dataset.mediaId, lastFraction);
-    if (event?.preventDefault) event.preventDefault();
+    if (useEventPosition && event?.clientX != null) {lastFraction=fractionFromPointer(track,event);renderSeekPreview(shell,lastFraction);}
+    const capturedId=pointerId; dragging=false; pointerId=null; track.classList.remove('seeking');
+    try{if(capturedId!=null&&track.hasPointerCapture?.(capturedId))track.releasePointerCapture(capturedId);}catch(_){}
+    if(!disposed)try{window.JetNoteNative?.endVideoSeek?.(item.dataset.mediaId,lastFraction);}catch(_){}
+    event?.preventDefault?.();
   };
+  const begin=event=>{if(disposed||isPostMediaRightEdgeYield(track,event,'videoSeek'))return;lastFraction=fractionFromPointer(track,event);dragging=true;pointerId=event.pointerId;track.classList.add('seeking');try{track.setPointerCapture(pointerId);}catch(_){}if(!shell.__jetVideoEverStarted||!shell.__jetVideoDurationMs)startNativeVideo(item);window.JetNoteNative?.beginVideoSeek?.(item.dataset.mediaId,lastFraction);renderSeekPreview(shell,lastFraction);event.preventDefault();};
+  const move=event=>{if(disposed||!dragging||event.pointerId!==pointerId)return;lastFraction=fractionFromPointer(track,event);renderSeekPreview(shell,lastFraction);event.preventDefault();};
+  const up=event=>finishSeek(event,true), cancel=event=>finishSeek(event,false), blur=()=>finishSeek(null,false), visibility=()=>{if(document.hidden)finishSeek(null,false);};
+  on(track,'pointerdown',begin); on(track,'pointermove',move); on(track,'pointerup',up); on(track,'pointercancel',cancel); on(track,'lostpointercapture',cancel);
+  on(window,'pointerup',up,true); on(window,'pointercancel',cancel,true); on(window,'blur',blur); on(document,'visibilitychange',visibility);
 
-  track.addEventListener('pointerdown', begin);
-  track.addEventListener('pointermove', move);
-  track.addEventListener('pointerup', event => finishSeek(event, true));
-  track.addEventListener('pointercancel', event => finishSeek(event, false));
-  track.addEventListener('lostpointercapture', event => finishSeek(event, false));
-  window.addEventListener('pointerup', event => finishSeek(event, true), true);
-  window.addEventListener('pointercancel', event => finishSeek(event, false), true);
-  window.addEventListener('blur', () => finishSeek(null, false));
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) finishSeek(null, false);
+  const manager=window.JetNoteMediaResourceManager;
+  shell.__jetVideoProgressResourceId=manager?.register?.({
+    id:`video-progress:${item.dataset.mediaId||Math.random()}:${Date.now()}`,kind:'video-progress',scope:manager.scopeFor(item),owner:shell,
+    release:()=>{disposed=true;finishSeek(null,false);for(const off of listeners.splice(0))try{off();}catch(_){}track.__jetBound=false;shell.__jetVideoProgressResourceId=null;}
   });
 }
-
 window.__jetNativeVideoViewerClosed = function(mediaId, currentMs, durationMs) {
   const id = String(mediaId || '');
   const current = Math.max(0, Number(currentMs || 0));
@@ -392,7 +367,7 @@ window.__jetNativeVideoSurfaceTapped = function(mediaId, currentMs) {
     startNativeVideo(item);
     return;
   }
-  openPublishedVideoViewerFromItem(item, currentMs);
+  startNativeVideo(item);
 };
 
 async function hydrateVideoAttachments(container, staged = new Map()) {
@@ -421,11 +396,12 @@ async function hydrateVideoAttachments(container, staged = new Map()) {
         if (isEditorVideo) {
           startNativeVideo(item);
         } else {
-          openPublishedVideoViewerFromItem(item, item.closest('.video-attachment-shell')?.__jetVideoCurrentMs || 0);
+          if (isPostMediaRightEdgeYield(item,event,'videoSurface')) return;
+          startNativeVideo(item);
         }
       };
       // Editor previews keep the existing double-click restart shortcut. Feed
-      // videos use ordinary tap for the dedicated Video Viewer instead.
+      // Published videos use tap for inline play/pause; the time text owns Video Viewer entry.
       item.ondblclick = isEditorVideo ? (event => {
         if (event.target.closest('.compose-image-remove')) return;
         event.preventDefault();
@@ -446,7 +422,7 @@ async function hydrateVideoAttachments(container, staged = new Map()) {
       shell?.querySelector('.video-playback-time-button')?.addEventListener('click', event => {
         event.preventDefault();
         event.stopPropagation();
-        startNativeVideo(item);
+        openPublishedVideoViewerFromItem(item, shell?.__jetVideoCurrentMs || 0);
       });
       document.querySelectorAll(`[data-video-time-button-for="${CSS.escape(String(item.dataset.mediaId || ''))}"]`)
         .forEach(button => {
@@ -455,7 +431,7 @@ async function hydrateVideoAttachments(container, staged = new Map()) {
           button.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
-            startNativeVideo(item);
+            openPublishedVideoViewerFromItem(item, item.closest('.video-attachment-shell')?.__jetVideoCurrentMs || 0);
           });
         });
     } catch (error) {

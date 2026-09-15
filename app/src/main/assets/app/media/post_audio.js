@@ -47,6 +47,10 @@ function resetAudioButton(item){
 
 function destroyAudioPlayer(item){
   if(!item)return;
+  const manager=window.JetNoteMediaResourceManager;
+  const resourceId=item.__jetAudioResourceId;
+  item.__jetAudioResourceId=null;
+  if(resourceId)manager?.release?.(resourceId,'audio-destroy');
   const audio=item.querySelector('audio');
   if(audio){
     audio.__jetDisposing=true;
@@ -112,6 +116,18 @@ function createAudioPlayer(item){
   audio.preload='metadata';
   audio.src=NativeMedia.url(record)||URL.createObjectURL(record.blob);
   item.appendChild(audio);
+  const manager=window.JetNoteMediaResourceManager;
+  item.__jetAudioResourceId=manager?.register?.({
+    id:`audio:${item.dataset.mediaId||Math.random()}:${Date.now()}`,
+    kind:'audio', scope:manager.scopeFor(item), owner:item,
+    release:()=>{
+      if(audio.__jetDisposing)return;
+      audio.__jetDisposing=true; removeActiveAudio(audio);
+      try{audio.pause();}catch(_){} audio.loop=false;
+      try{if(audio.src.startsWith('blob:'))URL.revokeObjectURL(audio.src);audio.removeAttribute('src');audio.load();}catch(_){}
+      try{audio.remove();}catch(_){} resetAudioButton(item); item.__jetAudioResourceId=null;
+    }
+  });
   const play=item.querySelector('.audio-token-play');
   audio.addEventListener('play',()=>{
     if(audio.__jetDisposing)return;

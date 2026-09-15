@@ -7,13 +7,7 @@
   margin:0 0 6px;
   padding:12px 12px 14px;
   background:var(--jet-note-type-three-post-set-body,#fff);
-  animation:debugConfigurationPostRgbBorder 750ms steps(1,end) infinite;
-}
-@keyframes debugConfigurationPostRgbBorder{
-  0%{border-color:#ff0000}
-  33.333%{border-color:#00aa00}
-  66.666%{border-color:#0000ff}
-}
+} 
 
 /* Keep the header compact: the title and pencil occupy one normal post-header
    row, with no floating element capable of creating accidental blank space. */
@@ -119,7 +113,8 @@
     );
 }
 .debug-configuration-editor-text-region{
-  /* Primary source: config.json -> debug_configuration_editor.text_area_height.
+  position:relative;
+  /* Primary source: config.json -> debug_configuration_editor.edit_debud_post_height.
      Fallback keeps the previous derived geometry for older config.json files. */
   --debug-configuration-editor-derived-text-region-height:
     calc(
@@ -152,6 +147,8 @@
   outline:0;
   background:transparent;
   color:var(--jet-note-type-body-foreground-color,#111);
+  position:relative;
+  z-index:2;
   padding:var(--post-editor-text-padding-top,0px)
           var(--post-editor-text-padding-right,0px)
           var(--post-editor-text-padding-bottom,0px)
@@ -183,3 +180,68 @@
 .debug-configuration-validation-error[hidden]{display:none!important}
 .debug-configuration-validation-error-title{font-size:13px;font-weight:700;line-height:1.25;margin-bottom:3px}
 .debug-configuration-validation-error-message{font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+
+/* Shared search row for every Debug Post. */
+.debug-editor-search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;width:100%;box-sizing:border-box}
+.debug-editor-search-input,.debug-editor-search-button{min-height:44px;background:transparent;color:inherit;font:inherit;box-sizing:border-box}
+.debug-editor-search-input{width:100%;padding:0 12px;outline:0}
+.debug-editor-search-button{min-width:92px;padding:0 16px}
+.debug-configuration-json-textarea::selection{background:var(--cursor-drop-color,#14A89A);color:var(--debug-search-selection-color,#fff)}
+
+
+/* Full-document search highlighting. The mirror layer renders every literal
+   match at once while the textarea remains the sole editable/focus surface. */
+.debug-configuration-search-highlight-layer{
+  position:absolute;
+  top:0;
+  left:0;
+  z-index:1;
+  box-sizing:border-box;
+  /* This element represents the entire textarea document. Its width/height
+     are assigned from textarea.scrollWidth/scrollHeight by debug_post.js.
+     Only the parent text-region clips the visible viewport. */
+  overflow:visible;
+  pointer-events:none;
+  padding:var(--post-editor-text-padding-top,0px)
+          var(--post-editor-text-padding-right,0px)
+          var(--post-editor-text-padding-bottom,0px)
+          var(--post-editor-text-padding-left,0px);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13px;
+  line-height:1.5;
+  tab-size:2;
+  white-space:pre;
+  color:var(--jet-note-type-body-foreground-color,#111);
+  transform:translate(0,0);
+  will-change:transform;
+}
+.debug-configuration-editor-text-region.search-highlights-active .debug-configuration-json-textarea{
+  color:transparent;
+  -webkit-text-fill-color:transparent;
+}
+.debug-configuration-editor-text-region.search-highlights-active .debug-configuration-json-textarea::selection{
+  background:var(--cursor-drop-color,#14A89A);
+  color:transparent;
+  -webkit-text-fill-color:transparent;
+}
+.debug-configuration-editor-text-region.search-highlights-active .debug-configuration-json-textarea{
+  caret-color:var(--cursor-drop-color,#14A89A);
+}
+
+/* JSON syntax diagnostics reuse the Debug Post text-range animation surface. */
+.debug-json-syntax-error-match{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:2px}
+
+/* Keyboard-hidden Debug Editor expansion. Search remains in normal flow, so
+   enlarging the JSON text region moves the complete Search row downward with
+   the same geometry and without independent transforms that can tear frames. */
+.debug-configuration-editor-text-region{
+  flex-basis:calc(var(--debug-configuration-editor-effective-text-region-height) + var(--debug-editor-keyboard-hidden-text-display-offset,0px));
+  height:calc(var(--debug-configuration-editor-effective-text-region-height) + var(--debug-editor-keyboard-hidden-text-display-offset,0px));
+  max-height:calc(var(--debug-configuration-editor-effective-text-region-height) + var(--debug-editor-keyboard-hidden-text-display-offset,0px));
+  transition:height 320ms cubic-bezier(.22,.72,.22,1), flex-basis 320ms cubic-bezier(.22,.72,.22,1), max-height 320ms cubic-bezier(.22,.72,.22,1);
+}
+.debug-configuration-editor-screen,
+.debug-configuration-editor-body{
+  isolation:isolate;
+  contain:paint;
+}

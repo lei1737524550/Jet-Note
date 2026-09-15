@@ -16,8 +16,17 @@
     const configuredMaxHeight=Number(config?.published_post_media_max_height_px);
     const maxHeight=Number.isFinite(configuredMaxHeight)
       ? Math.min(2000,Math.max(80,configuredMaxHeight))
-      : 262;
+      : 234;
     root.setProperty('--published-post-media-max-height',`${maxHeight}px`);
+
+    const yieldConfig=config?.post_media_right_edge_gesture_yield_percent||{};
+    const clampPercent=value=>Math.max(0,Math.min(40,Number.isFinite(Number(value))?Number(value):7));
+    window.JetNotePostMediaGestureConfig=Object.freeze({
+      image:clampPercent(yieldConfig.image),
+      videoSurface:clampPercent(yieldConfig.video_surface),
+      videoSeek:clampPercent(yieldConfig.video_seek)
+    });
+    try{window.JetNoteNative?.setVideoSurfaceRightEdgeGestureYieldPercent?.(window.JetNotePostMediaGestureConfig.videoSurface);}catch(_){}
   }).catch(()=>{});
 })();
 function compressImageFile(file, maxSide = 1280, quality = 0.82) {
@@ -220,6 +229,9 @@ function bindPublishedInlineImageZoom(container) {
     image.addEventListener('touchcancel', finishPinch, {passive:true});
 
     image.addEventListener('click', event => {
+      const rect=image.getBoundingClientRect();
+      const yieldPercent=window.JetNotePostMediaGestureConfig?.image ?? 7;
+      if(rect.width>0 && event.clientX >= rect.right - rect.width*yieldPercent/100) return;
       if (performance.now() < suppressClickUntil) {
         event.preventDefault();
         event.stopPropagation();

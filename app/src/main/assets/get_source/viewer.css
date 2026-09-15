@@ -1,4 +1,4 @@
-.image-viewer{position:fixed;inset:0;z-index:2147483647!important;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.96);overflow:hidden;touch-action:none}
+.image-viewer{position:fixed;inset:0;z-index:100000!important;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.96);overflow:hidden;touch-action:none}
 .image-viewer.open{display:flex}
 .image-viewer img,.image-viewer video{display:none;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);width:auto;height:auto;object-fit:contain;transform-origin:center center;transition:transform .14s ease-out;will-change:transform;touch-action:none;user-select:none;-webkit-user-drag:none;cursor:zoom-in}
 .image-viewer img.active,.image-viewer video.active{display:block}

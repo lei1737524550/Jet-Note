@@ -78,6 +78,9 @@ async function openConfiguredTool(tool, options = {}) {
     throw new Error(`Invalid configured toolbox tool: ${tool?.id}`);
   }
 
+  // as_a_browser is a startup-routing property only. A toolbox opened from
+  // Post Editor remains an ordinary tool page unless the caller explicitly
+  // identifies the startup route.
   const browserMode = options?.browserMode === true;
   if (!browserMode && options?.skipEditorSuspend !== true) {
     await EditorController.suspend(tool.id);

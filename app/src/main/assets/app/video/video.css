@@ -264,12 +264,12 @@
    affected by this rule. */
 #mainPosts article.post > .post-video-grid.one > .video-attachment-shell,
 #mainPosts article.post > .post-video-grid.one > .video-attachment-shell > .video-attachment-item {
-  max-height: var(--published-post-media-max-height, 262px);
+  max-height: var(--published-post-media-max-height, 234px);
 }
 
 #mainPosts article.post > .post-video-grid.one .video-poster,
 #mainPosts article.post > .post-video-grid.one .inline-video-player {
-  max-height: var(--published-post-media-max-height, 262px);
+  max-height: var(--published-post-media-max-height, 234px);
   object-fit: contain;
   object-position: center;
 }
