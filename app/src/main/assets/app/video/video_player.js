@@ -172,6 +172,12 @@ function scheduleNativeVideoRect() {
   nativeVideoRectFrame = requestAnimationFrame(sendNativeVideoRect);
 }
 
+// Android calls this only after WebView scrolling has settled. The DOM rect is
+// authoritative because getBoundingClientRect() already includes the final scroll.
+window.__jetRefreshNativeVideoRect = function() {
+  if (activeNativeVideoItem?.isConnected) sendNativeVideoRect();
+};
+
 window.addEventListener('scroll', scheduleNativeVideoRect, true);
 window.addEventListener('resize', scheduleNativeVideoRect);
 

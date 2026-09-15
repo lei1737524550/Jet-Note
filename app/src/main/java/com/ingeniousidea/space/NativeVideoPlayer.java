@@ -62,6 +62,21 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
     private int rectAnchorScrollX;
     private int rectAnchorScrollY;
     private boolean hasRectAnchor;
+    // The native video stage is a rounded Android sibling above WebView. Once it
+    // has rendered even one frame it remains alive while paused, which is why the
+    // reported "rounded shaking box" appears after a video has merely been loaded.
+    // Never try to chase WebView scrolling with that sibling. Hide only its pixels
+    // while WebView is moving, then re-anchor from a fresh DOM rect when scrolling
+    // settles. The HTML poster underneath stays phase-locked with WebView.
+    private boolean renderingStarted;
+    private boolean scrollReanchorPending;
+    private final Runnable scrollSettleReanchor = () -> {
+        if (!isOpen()) return;
+        scrollReanchorPending = true;
+        webView.evaluateJavascript(
+                "window.__jetRefreshNativeVideoRect&&window.__jetRefreshNativeVideoRect();",
+                null);
+    };
 
     private int videoWidth;
     private int videoHeight;
@@ -96,41 +111,20 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         this.webView = webView;
         this.store = store;
         this.touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
-        webView.getViewTreeObserver().addOnScrollChangedListener(this::syncRectToWebViewScroll);
+        webView.getViewTreeObserver().addOnScrollChangedListener(this::onWebViewScrolled);
     }
 
-    private void syncRectToWebViewScroll() {
-        if (stage == null || !hasRectAnchor) return;
-
-        // V7.3: never keep decoding/advancing inline video while the feed is moving.
-        // The native TextureView and WebView are separate compositor layers; even when
-        // their geometry is synchronized, a playing frame can be presented one frame
-        // out of phase during a scroll and look like the picture is bobbing vertically.
-        // Pause on the first actual scroll delta and leave playback paused until the
-        // user explicitly taps the video again. This applies to finger scrolling and
-        // programmatic camera/follow scrolling alike.
-        int scrollX = webView.getScrollX();
-        int scrollY = webView.getScrollY();
-        if (scrollX != rectAnchorScrollX || scrollY != rectAnchorScrollY) {
-            pauseForFeedMotion();
-        }
-
-        float x = rectAnchorX - (scrollX - rectAnchorScrollX);
-        float y = rectAnchorY - (scrollY - rectAnchorScrollY);
-        // Position-only updates avoid relayout and keep the native surface phase-locked
-        // with WebView scrolling. The next JS rectangle refreshes the anchor.
-        stage.setX(x);
-        stage.setY(y);
-    }
-
-    private void pauseForFeedMotion() {
-        if (!prepared || player == null) return;
-        try {
-            if (player.isPlaying()) {
-                player.pause();
-                dispatchProgress();
-            }
-        } catch (RuntimeException ignored) { }
+    private void onWebViewScrolled() {
+        if (stage == null) return;
+        // getBoundingClientRect() is already viewport-relative. Moving the native
+        // stage from WebView.getScrollY() as well created a second, asynchronous
+        // scroll path (WebView compositor vs Android sibling), producing the jitter.
+        // Alpha=0 keeps touch ownership intact if the gesture began on the video.
+        stage.animate().cancel();
+        stage.setAlpha(0f);
+        scrollReanchorPending = false;
+        webView.removeCallbacks(scrollSettleReanchor);
+        webView.postDelayed(scrollSettleReanchor, 96L);
     }
 
 
@@ -199,6 +193,8 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
             videoHeight = 0;
             zoom = 1f;
             scaleGestureOccurred = false;
+            renderingStarted = false;
+            scrollReanchorPending = false;
 
             createInlineStage();
             updateRectInternal(leftCss, topCss, widthCss, heightCss, devicePixelRatio);
@@ -502,6 +498,13 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         rectAnchorScrollY = webView.getScrollY();
         hasRectAnchor = true;
         applyVideoTransform();
+        if (scrollReanchorPending) {
+            scrollReanchorPending = false;
+            if (renderingStarted && overlayAllowed) {
+                stage.animate().cancel();
+                stage.setAlpha(1f);
+            }
+        }
     }
 
     private void createPlayer(Surface targetSurface) {
@@ -550,7 +553,10 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         candidate.setOnInfoListener((mp, what, extra) -> {
             if (generation != playerGeneration || player != mp || !isOpen()) return true;
             if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START && stage != null) {
-                stage.animate().alpha(1f).setDuration(80L).start();
+                renderingStarted = true;
+                if (!scrollReanchorPending) {
+                    stage.animate().alpha(1f).setDuration(80L).start();
+                }
             }
             return false;
         });
@@ -708,8 +714,11 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         if (stage != null && stage.getParent() instanceof ViewGroup) {
             ((ViewGroup) stage.getParent()).removeView(stage);
         }
+        webView.removeCallbacks(scrollSettleReanchor);
         stage = null;
         hasRectAnchor = false;
+        renderingStarted = false;
+        scrollReanchorPending = false;
         textureView = null;
         currentFile = null;
         mediaId = null;
