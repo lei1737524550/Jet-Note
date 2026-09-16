@@ -8,11 +8,11 @@
  */
 window.JetNotePostAttachmentPolicy = (() => {
   const DEFAULTS = Object.freeze({
-    audio_max_quantity: 20,
-    video_max_quantity: 9,
-    photo_max_quantity: 9,
+    audio_max_quantity: 7,
+    video_max_quantity: 3,
+    photo_max_quantity: 3,
     video_photo_coexistence: true,
-    video_photo_combined_max_quantity: 9,
+    video_photo_combined_max_quantity: 3,
   });
 
   let current = {...DEFAULTS};
@@ -37,17 +37,39 @@ window.JetNotePostAttachmentPolicy = (() => {
     });
   }
 
-  const ready = fetch('config.json', {cache: 'no-store'})
-    .then(response => response.ok ? response.json() : Promise.reject(new Error('config.json load failed')))
-    .then(config => {
-      current = normalize(config?.post_attachment);
-      return current;
-    })
-    .catch(error => {
-      console.warn('[PostAttachmentPolicy] using built-in defaults', error);
-      current = Object.freeze({...DEFAULTS});
-      return current;
-    });
+const ready = fetch('config/media.json', {cache: 'no-store'})
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(
+        'config/media.json load failed: HTTP ' + response.status
+      );
+    }
+    return response.json();
+  })
+  .then(config => {
+    console.log(
+      '[PostAttachmentPolicy] loaded config/media.json:',
+      config?.post_attachment
+    );
+
+    current = normalize(config?.post_attachment);
+
+    console.log(
+      '[PostAttachmentPolicy] effective policy:',
+      current
+    );
+
+    return current;
+  })
+  .catch(error => {
+    console.error(
+      '[PostAttachmentPolicy] CONFIG LOAD FAILED:',
+      error
+    );
+
+    current = Object.freeze({...DEFAULTS});
+    return current;
+  });
 
   function snapshot() {
     return current;
@@ -55,8 +77,9 @@ window.JetNotePostAttachmentPolicy = (() => {
 
   function counts(images = [], attachments = []) {
     const safeAttachments = Array.isArray(attachments) ? attachments : [];
+    
     return {
-      photo: Array.isArray(images) ? images.length : 0,
+      photo: safeAttachments.filter(item => item?.type === 'image').length,
       video: safeAttachments.filter(item => item?.type === 'video').length,
       audio: safeAttachments.filter(item => item?.type === 'audio').length,
     };

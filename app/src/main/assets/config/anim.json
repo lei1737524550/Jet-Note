@@ -30,168 +30,39 @@
   },
   "three_post_one_body": {
     "top_post": {
-      "welcome": {
-        "border_rule": {
-          "change_count": -1,
-          "sequence": [
-            {
-              "color": "#FF0000",
-              "duration_ms": 400
-            },
-            {
-              "color": "#00FF04",
-              "duration_ms": 400
-            }
-          ]
-        }
-      },
-      "super_star": {
-        "border_rule": {
-          "change_count": -1,
-          "sequence": [
-            {
-              "color": "#EE1313",
-              "duration_ms": 450
-            },
-            {
-              "color": "#EEFF00",
-              "duration_ms": 450
-            },
-            {
-              "color": "#F50CEB",
-              "duration_ms": 450
-            }
-          ]
-        }
-      }
+      "super_star": {}
     },
-    "post_composer": {
-      "border_rule": {
-        "change_count": -1,
-        "sequence": [
-          {
-            "color": "#FF043F",
-            "duration_ms": 200
-          },
-          {
-            "color": "#ED880C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#D3ED0C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#47ED0C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#0CEDA4",
-            "duration_ms": 200
-          },
-          {
-            "color": "#1A0CED",
-            "duration_ms": 200
-          }
-        ]
-      }
-    },
+    "post_composer": {},
     "main_posts": {
       "interaction_timing": {
         "post_delete_reflow_animation_duration_ms": 320,
         "post_reflow_animation": {
           "speed_or_duration": "speed",
-          "star_duration_ms": 900,
-          "cancel_star_duration_ms": 900,
-          "star_speed_px_per_second": 10,
-          "cancel_star_speed_px_per_second": 10,
-          "super_star_duration_ms": 900,
-          "cancel_super_star_duration_ms": 900,
-          "super_star_speed_px_per_second": 10,
-          "cancel_super_star_speed_px_per_second": 10
+          "star": {
+            "duration_ms": 900,
+            "speed_px_per_second": 600
+          },
+          "cancel_star": {
+            "duration_ms": 900,
+            "speed_px_per_second": 600
+          },
+          "super_star": {
+            "duration_ms": 900,
+            "speed_px_per_second": 600
+          },
+          "cancel_super_star": {
+            "duration_ms": 900,
+            "speed_px_per_second": 600
+          }
         },
         "post_star_highlight": {
           "inset_width_px": 2,
-          "normal": {
-            "change_count": 0,
-            "sequence": [
-              {
-                "color": "#ffff00",
-                "duration_ms": 500
-              }
-            ]
-          },
-          "super": {
-            "change_count": 0,
-            "sequence": [
-              {
-                "color": "#ff0000",
-                "duration_ms": 500
-              }
-            ]
-          },
           "display_delay_after_reflow_ms": 300
         }
       },
-      "non_star": {
-        "border_rule": {
-          "change_count": 0,
-          "sequence": [
-            {
-              "color": "#bfc1c4",
-              "duration_ms": 1000
-            }
-          ]
-        }
-      },
-      "star": {
-        "border_rule": {
-          "change_count": -1,
-          "sequence": [
-            {
-              "color": "#000000",
-              "duration_ms": 200
-            },
-            {
-              "color": "#bfc1c4",
-              "duration_ms": 200
-            },
-            {
-              "color": "#bfc1c4",
-              "duration_ms": 200
-            }
-          ]
-        }
-      }
+      "non_star": {},
+      "star": {}
     }
-  },
-  "debug_settings_expand_animation": {
-    "speed_or_duration": "speed",
-    "duration_ms": 900,
-    "speed_px_per_second": 10,
-    "comment": "Jet Note maximum-distance shared-duration model. Measure every Debug-only Settings card from the shared viewport-bottom edge to its final position. D_max = max(D_i); in speed mode T = D_max / V_ref; every card uses T and therefore V_i = D_i / T."
-  },
-  "debug_ui_border_rule": {
-    "change_count": -1,
-    "sequence": [
-      {
-        "color": "#FF0000",
-        "duration_ms": 200
-      },
-      {
-        "color": "#FF8C00",
-        "duration_ms": 200
-      },
-      {
-        "color": "#FFD700",
-        "duration_ms": 200
-      },
-      {
-        "color": "#00A000",
-        "duration_ms": 200
-      }
-    ],
-    "comment": "Shared dynamic border rule for Debug Posts and Debug-only Settings cards (Color View and Date View). Uses the standard change_count + sequence rule language; -1 means infinite cycling."
   },
   "color_view_copy_feedback_transition": {
     "copied_first_transition_color": "#34A853",
@@ -200,78 +71,20 @@
     "first_transition_color_display_duration_ms": 2000,
     "second_transition_color_display_duration_ms": 1050
   },
-  "date_time_viewer_set_success_text_color_rule": {
-    "change_count": 1,
-    "sequence": [
-      {
-        "color": "#34A853",
-        "duration_ms": 350
-      },
-      {
-        "color": "#111111",
-        "duration_ms": 0
-      }
-    ]
-  },
   "date_time_viewer_fold_animation": {
     "letters_duration_ms": 300,
     "explain_duration_ms": 300,
     "comment": "Drawer-style expand/collapse duration in milliseconds. Larger values make the animation slower; 150 ms is fast, 300 ms is moderate, and 500 ms is slow."
   },
-  "debug_post_search": {
-    "text_color_rule": {
-      "change_count": -1,
-      "sequence": [
-        {
-          "color": "#FF0000",
-          "duration_ms": 200
-        },
-        {
-          "color": "#FF8C00",
-          "duration_ms": 200
-        },
-        {
-          "color": "#FFD700",
-          "duration_ms": 200
-        },
-        {
-          "color": "#00A000",
-          "duration_ms": 200
-        }
-      ]
-    }
-  },
   "post_editor_text_caret": {
     "text_caret_visible_state_duration_ms": 750,
     "text_caret_hidden_state_duration_ms": 750
   },
-  "google_search_icon": {
-    "change_count": -1,
-    "sequence": [
-      {
-        "asset": "shared/icons/browser_search_1.svg",
-        "duration_ms": 2000
-      },
-      {
-        "asset": "shared/icons/browser_search_2.svg",
-        "duration_ms": 2000
-      },
-      {
-        "asset": "shared/icons/browser_search_3.svg",
-        "duration_ms": 2000
-      },
-      {
-        "asset": "shared/icons/browser_search_4.svg",
-        "duration_ms": 2000
-      }
-    ]
-  },
-  "debug_settings_close_animation": {
-    "end_hold_duration_ms": 0,
-    "remaining_settings_reflow_duration_ms": 0,
-    "comment": "Closing uses the same Jet Note maximum-distance shared-duration model and the same reference speed as opening. No post-close hold or secondary reflow delay is added, so reverse motion has matching perceived speed.",
+  "debug_settings_viewer_animation": {
     "speed_or_duration": "speed",
     "duration_ms": 900,
-    "speed_px_per_second": 10
+    "speed_px_per_second": 1800,
+    "close_speed_multiplier": 2,
+    "comment": "Single soft-coded source for Debug Settings viewer motion. speed_px_per_second is V_max for opening. Closing uses the same configured speed source with close_speed_multiplier. In speed mode: D_max=max(D_i), T=D_max/V_max, all participants share T, V_i=D_i/T."
   }
 }

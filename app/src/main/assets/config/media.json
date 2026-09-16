@@ -1,16 +1,16 @@
 {
   "post_attachment": {
-    "audio_max_quantity": 9,
-    "video_max_quantity": 9,
-    "photo_max_quantity": 9,
+    "audio_max_quantity": 7,
+    "video_max_quantity": 3,
+    "photo_max_quantity": 3,
     "video_photo_coexistence": true,
-    "video_photo_combined_max_quantity": 9
+    "video_photo_combined_max_quantity": 3
   },
   "videoPlayback": {
-    "maxConcurrentPlayingVideos": 1
+    "maxConcurrentPlayingVideos": 3
   },
   "audioPlayback": {
-    "maxConcurrentPlayingAudios": 2
+    "maxConcurrentPlayingAudios": 7
   },
   "published_single_media_spacing": {
     "top_px": 3,

@@ -48,17 +48,8 @@
 #postEditorTools.tools > .tool {
   min-height:44px;
 }
-.import-panel button {
-  min-height:44px;
-  padding:10px 12px;
-  background:white;
-  margin:4px;
-  font-size:15px;
-}
-#archiveStatus {
-  font-size:14px;
-  overflow-wrap:anywhere;
-}
+/* Jet Note import dialog. It is a Web surface rather than the native Android
+   select popup so it follows the live Settings Set Body palette. */
 .import-preview {
   display:none;
   position:fixed;
@@ -69,27 +60,51 @@
   justify-content:center;
   padding:16px;
 }
-.import-preview.open {
-  display:flex;
-}
+.import-preview.open { display:flex; }
 .import-panel {
   width:min(440px,100%);
   max-height:calc(100dvh - 60px);
   overflow:auto;
   padding:18px;
-  background:white;
+  border-radius:22px;
+  background:var(--settings-set-body-background,var(--jet-note-current-body-background,var(--jet-note-type-settings-set-body,#fff)));
+  color:var(--jet-note-type-body-foreground-color,#111111);
 }
-.import-panel select {
-  display:block;
-  width:100%;
-  min-height:44px;
+.import-panel p { font-size:14px; line-height:1.5; }
+.import-mode-label { margin-top:12px; font-size:14px; }
+.import-mode-choices {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
   margin:12px 0;
+}
+.import-mode-choice,
+.import-panel .import-dialog-actions button {
+  min-height:44px;
+  padding:10px 12px;
+  margin:0;
+  border-radius:14px;
+  background:var(--settings-set-body-background,var(--jet-note-current-body-background,var(--jet-note-type-settings-set-body,#fff)));
+  color:inherit;
   font:inherit;
 }
-.import-panel p {
-  font-size:14px;
-  line-height:1.5;
+.import-mode-choice {
+  width:100%;
+  text-align:left;
 }
+/* Whitelist: selected mode may use the normal selected-control treatment. */
+.import-mode-choice.selected {
+  background:var(--jet-note-type-three-post-internal-control-background,var(--settings-set-body-background,var(--jet-note-current-body-background,#fff)));
+  outline:2px solid var(--common-border-color,currentColor);
+  outline-offset:-2px;
+}
+.import-dialog-actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.import-mode-help { margin:10px 0 0; }
 button:disabled {
   opacity:.45;
 }
@@ -269,12 +284,6 @@ button:disabled {
 /* Top Post only: keep the audio layout container in its normal position.
    Only the speaker glyph inside each audio button receives an optical left shift.
    This intentionally does not affect normal timeline Post audio controls. */
-.top-post-super .top-post-content > .attachment-strip{
-  justify-content:flex-end;
-}
-.top-post-super .top-post-content .audio-token-play svg, .top-post-super .top-post-content .audio-token-play img{
-  transform:translateX(-2px);
-}
 
 
 /* 3 Post One Body integration: published audio speaker controls are ordinary

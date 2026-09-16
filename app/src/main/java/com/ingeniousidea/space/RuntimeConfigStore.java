@@ -27,6 +27,9 @@ final class RuntimeConfigStore {
     static final String CURRENT = "current";
     static final String PREVIOUS = "previous";
     private static final String BUNDLED_FINGERPRINT = "bundled_fingerprint_sha256";
+    private static final String CONFIG_STORAGE_VERSION = "config_storage_version";
+    private static final int OVERRIDE_STORAGE_VERSION = 2;
+    private static final String LEGACY_CURRENT_BACKUP = "legacy_current_v1_backup";
 
     private RuntimeConfigStore() { }
 
@@ -122,6 +125,8 @@ final class RuntimeConfigStore {
             if (name.isEmpty() || !listBundledSectionNames(context).contains(name)) return false;
             JSONObject sectionSchema = readAssetObject(context, "config/" + name);
             JSONObject incoming = new JSONObject(json);
+            // Missing fields mean "use bundled default". Full section snapshots and sparse
+            // override sections are both accepted; saveRuntime() stores only the resulting diff.
             JSONObject validatedSection = mergeUserValuesIntoBundledSchema(sectionSchema, incoming);
             JSONObject effective = new JSONObject(readEffective(context));
             replaceSchemaPaths(effective, sectionSchema, validatedSection);
@@ -166,57 +171,87 @@ final class RuntimeConfigStore {
         }
     }
 
+    /**
+     * V2 storage model:
+     *   effective = bundled defaults + explicit user overrides.
+     * CURRENT stores overrides only. Reading never writes the effective snapshot back.
+     */
     static synchronized String readEffective(Context context) {
         try {
             JSONObject bundled = new JSONObject(readBundled(context));
             SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-            String runtimeText = prefs.getString(CURRENT, null);
-            JSONObject effective = bundled;
-            if (runtimeText != null && !runtimeText.trim().isEmpty()) {
-                try {
-                    effective = mergeUserValuesIntoBundledSchema(bundled, new JSONObject(runtimeText));
-                } catch (Exception ignored) {
-                    effective = bundled;
-                }
-            }
-            String normalized = effective.toString(2);
-            String bundledFingerprint = fingerprint(bundled.toString());
-            // Persist the migrated form so removed fields do not survive forever and
-            // newly added defaults become part of the user's next export.
-            prefs.edit()
-                    .putString(CURRENT, normalized)
-                    .putString(BUNDLED_FINGERPRINT, bundledFingerprint)
-                    .apply();
-            return normalized;
+            ensureOverrideStorageV2(prefs, bundled);
+            JSONObject overrides = readOverrides(prefs);
+            return applyOverrides(bundled, overrides).toString(2);
         } catch (Exception error) {
             return "{}";
         }
     }
 
+    /** Save a full effective document, but persist only values that differ from the APK defaults. */
     static synchronized boolean saveRuntime(Context context, String json) {
         try {
             JSONObject bundled = new JSONObject(readBundled(context));
-            JSONObject incoming = new JSONObject(json);
-            JSONObject merged = mergeUserValuesIntoBundledSchema(bundled, incoming);
-            String current = readEffective(context);
-            String bundledFingerprint = fingerprint(bundled.toString());
+            JSONObject incoming = mergeUserValuesIntoBundledSchema(bundled, new JSONObject(json));
             SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            ensureOverrideStorageV2(prefs, bundled);
+            JSONObject previousOverrides = readOverrides(prefs);
+            JSONObject nextOverrides = diffFromBundled(bundled, incoming);
             return prefs.edit()
-                    .putString(PREVIOUS, current)
-                    .putString(CURRENT, merged.toString(2))
-                    .putString(BUNDLED_FINGERPRINT, bundledFingerprint)
+                    .putString(PREVIOUS, previousOverrides.toString(2))
+                    .putString(CURRENT, nextOverrides.toString(2))
+                    .putInt(CONFIG_STORAGE_VERSION, OVERRIDE_STORAGE_VERSION)
+                    .putString(BUNDLED_FINGERPRINT, fingerprint(bundled.toString()))
                     .commit();
         } catch (Exception error) {
             return false;
         }
     }
 
+    /** Return only explicit overrides belonging to one config section. Used by config-folder backup. */
+    static synchronized String readOverrideSection(Context context, String section) {
+        try {
+            String name = normalizeSectionName(section);
+            if (name.isEmpty() || !listBundledSectionNames(context).contains(name)) return "{}";
+            JSONObject bundled = new JSONObject(readBundled(context));
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            ensureOverrideStorageV2(prefs, bundled);
+            JSONObject sectionSchema = readAssetObject(context, "config/" + name);
+            return projectOverridesForSchema(sectionSchema, readOverrides(prefs)).toString(2);
+        } catch (Exception error) {
+            return "{}";
+        }
+    }
+
+    private static JSONObject readOverrides(SharedPreferences prefs) {
+        String text = prefs.getString(CURRENT, null);
+        if (text == null || text.trim().isEmpty()) return new JSONObject();
+        try { return new JSONObject(text); }
+        catch (Exception ignored) { return new JSONObject(); }
+    }
+
     /**
-     * The bundled object owns field existence, structure AND field order. User values
-     * own only the value of fields that still exist. Objects are projected recursively
-     * in bundled-key order; arrays and scalar values are preserved as complete user
-     * values. This means an APK update may reorganize config.json without resetting
-     * the user's surviving custom values.
+     * Legacy V1 CURRENT was a complete effective snapshot, so old APK defaults were
+     * indistinguishable from deliberate edits. Carrying it forward would freeze every
+     * old default forever. Preserve it as a safety backup, but start V2 with no overrides.
+     * This migration changes config only; posts/media are untouched.
+     */
+    private static void ensureOverrideStorageV2(SharedPreferences prefs, JSONObject bundled) {
+        if (prefs.getInt(CONFIG_STORAGE_VERSION, 1) >= OVERRIDE_STORAGE_VERSION) return;
+        String legacy = prefs.getString(CURRENT, null);
+        SharedPreferences.Editor edit = prefs.edit();
+        if (legacy != null && !legacy.trim().isEmpty()) edit.putString(LEGACY_CURRENT_BACKUP, legacy);
+        edit.putString(CURRENT, "{}")
+                .remove(PREVIOUS)
+                .putInt(CONFIG_STORAGE_VERSION, OVERRIDE_STORAGE_VERSION)
+                .putString(BUNDLED_FINGERPRINT, fingerprint(bundled.toString()))
+                .commit();
+    }
+
+    /**
+     * Project an incoming effective document through the current bundled schema.
+     * Unknown/removed keys are discarded, missing keys fall back to bundled defaults,
+     * and nested objects are handled recursively.
      */
     private static JSONObject mergeUserValuesIntoBundledSchema(JSONObject bundled, JSONObject user) throws Exception {
         JSONObject result = new JSONObject();
@@ -238,38 +273,85 @@ final class RuntimeConfigStore {
         return result;
     }
 
+    private static JSONObject applyOverrides(JSONObject bundled, JSONObject overrides) throws Exception {
+        JSONObject result = new JSONObject();
+        java.util.Iterator<String> keys = bundled.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object base = bundled.get(key);
+            if (!overrides.has(key)) { result.put(key, base); continue; }
+            Object override = overrides.get(key);
+            if (base instanceof JSONObject && override instanceof JSONObject) {
+                result.put(key, applyOverrides((JSONObject) base, (JSONObject) override));
+            } else {
+                result.put(key, override);
+            }
+        }
+        return result;
+    }
+
+    /** Compute the minimal recursive override object. Equal-to-default values disappear. */
+    private static JSONObject diffFromBundled(JSONObject bundled, JSONObject effective) throws Exception {
+        JSONObject result = new JSONObject();
+        java.util.Iterator<String> keys = bundled.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            Object base = bundled.get(key);
+            Object value = effective.has(key) ? effective.get(key) : base;
+            if (base instanceof JSONObject && value instanceof JSONObject) {
+                JSONObject child = diffFromBundled((JSONObject) base, (JSONObject) value);
+                if (child.length() > 0) result.put(key, child);
+            } else if (!jsonValueEquals(base, value)) {
+                result.put(key, value);
+            }
+        }
+        return result;
+    }
+
+    private static boolean jsonValueEquals(Object a, Object b) {
+        if (a == b) return true;
+        if (a == null || b == null) return false;
+        if (a instanceof Number && b instanceof Number) {
+            return Double.compare(((Number) a).doubleValue(), ((Number) b).doubleValue()) == 0;
+        }
+        return String.valueOf(a).equals(String.valueOf(b));
+    }
+
+    private static JSONObject projectOverridesForSchema(JSONObject schema, JSONObject overrides) throws Exception {
+        JSONObject result = new JSONObject();
+        java.util.Iterator<String> keys = schema.keys();
+        while (keys.hasNext()) {
+            String key = keys.next();
+            if (!overrides.has(key)) continue;
+            Object schemaValue = schema.get(key);
+            Object overrideValue = overrides.get(key);
+            if (schemaValue instanceof JSONObject && overrideValue instanceof JSONObject) {
+                JSONObject child = projectOverridesForSchema((JSONObject) schemaValue, (JSONObject) overrideValue);
+                if (child.length() > 0) result.put(key, child);
+            } else {
+                result.put(key, overrideValue);
+            }
+        }
+        return result;
+    }
+
     static synchronized boolean undoRuntime(Context context) {
-        // Synchronize the runtime state with the currently bundled config before
-        // using PREVIOUS. An APK update may have invalidated both saved values.
-        readEffective(context);
-        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
-        String previous = prefs.getString(PREVIOUS, null);
-        if (previous == null) return false;
         try {
             JSONObject bundled = new JSONObject(readBundled(context));
-            JSONObject previousObject = new JSONObject(previous);
-            // PREVIOUS may have been written by an older APK. Re-project it through
-            // the current bundled schema so Undo cannot restore obsolete key order,
-            // removed fields, or omit newly introduced fields.
-            String migratedPrevious = mergeUserValuesIntoBundledSchema(bundled, previousObject).toString(2);
-            String current = prefs.getString(CURRENT, null);
-            String migratedCurrent = current;
-            if (current != null) {
-                try {
-                    migratedCurrent = mergeUserValuesIntoBundledSchema(bundled, new JSONObject(current)).toString(2);
-                } catch (Exception ignored) {
-                    migratedCurrent = readEffective(context);
-                }
-            }
-            SharedPreferences.Editor edit = prefs.edit().putString(CURRENT, migratedPrevious);
-            if (migratedCurrent != null) edit.putString(PREVIOUS, migratedCurrent);
-            else edit.remove(PREVIOUS);
-            return edit.commit();
+            SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+            ensureOverrideStorageV2(prefs, bundled);
+            String previous = prefs.getString(PREVIOUS, null);
+            if (previous == null) return false;
+            JSONObject previousOverrides = new JSONObject(previous);
+            JSONObject currentOverrides = readOverrides(prefs);
+            return prefs.edit()
+                    .putString(CURRENT, previousOverrides.toString(2))
+                    .putString(PREVIOUS, currentOverrides.toString(2))
+                    .commit();
         } catch (Exception error) {
             return false;
         }
     }
-
 
     private static String fingerprint(String text) {
         try {

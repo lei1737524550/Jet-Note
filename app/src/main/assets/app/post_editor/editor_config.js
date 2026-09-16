@@ -1,7 +1,7 @@
 /**
  * Post editor runtime configuration.
- * Height is resolved from the *visible* viewport so the keyboard and differing
- * Android WebView viewport policies do not leave an oversized editor area.
+ * Applies Post Editor sizing and spacing configuration.
+ * Runtime keyboard state does not rewrite editor geometry here.
  */
 (() => {
   const CONFIG_URL = 'config.json';
@@ -10,15 +10,6 @@
   const VIEWPORT_HEIGHT_RATIO_RANGE = { min: 0.1, max: 0.8 };
   const TEXT_AREA_PADDING_RANGE = { min: 0, max: 120 };
   const ATTACHMENT_ROW_HEIGHT_RANGE = { min: 32, max: 120 };
-  const DEBUG_CONFIGURATION_TEXT_AREA_HEIGHT_RANGE = { min: 120, max: 3000 };
-  const KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE = { min: 0, max: 1200 };
-
-  let responsiveTextAreaConfig = null;
-  let resizeFrame = 0;
-  let normalKeyboardHiddenOffsetPx = 0;
-  let debugKeyboardHiddenOffsetPx = 0;
-  let lastKeyboardOpen = null;
-  let latestViewportHeight = NaN;
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -32,21 +23,8 @@
   }
 
   function readViewportHeightCssPixels() {
-    // visualViewport reflects the actually visible area when the Android keyboard
-    // is open. Do not multiply by devicePixelRatio; these are already CSS pixels.
-    const eventHeight = Number(latestViewportHeight);
-    if (Number.isFinite(eventHeight) && eventHeight > 0) return eventHeight;
-
-    const visualHeight = Number(window.visualViewport && window.visualViewport.height);
-    if (Number.isFinite(visualHeight) && visualHeight > 0) return visualHeight;
-
-    const innerHeight = Number(window.innerHeight);
-    if (Number.isFinite(innerHeight) && innerHeight > 0) return innerHeight;
-
-    const clientHeight = Number(document.documentElement && document.documentElement.clientHeight);
-    if (Number.isFinite(clientHeight) && clientHeight > 0) return clientHeight;
-
-    return NaN;
+    const height = Number(window.innerHeight);
+    return Number.isFinite(height) && height > 0 ? height : NaN;
   }
 
   function resolveResponsiveTextAreaHeight(rawValue) {
@@ -96,44 +74,6 @@
   }
 
 
-  function applyKeyboardLayoutState(keyboardOpen) {
-    const isOpen = Boolean(keyboardOpen);
-    lastKeyboardOpen = isOpen;
-    const root = document.documentElement;
-    root.dataset.jetnoteKeyboardOpen = isOpen ? 'true' : 'false';
-    root.style.setProperty('--post-editor-keyboard-hidden-text-display-offset', `${isOpen ? 0 : normalKeyboardHiddenOffsetPx}px`);
-    root.style.setProperty('--debug-editor-keyboard-hidden-text-display-offset', `${isOpen ? 0 : debugKeyboardHiddenOffsetPx}px`);
-  }
-
-  function readBoundedOffset(rawValue) {
-    const value = Number(rawValue);
-    if (!Number.isFinite(value)) return 0;
-    return clamp(value, KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE.min, KEYBOARD_HIDDEN_TEXT_DISPLAY_OFFSET_RANGE.max);
-  }
-
-  function scheduleResponsiveHeightRefresh() {
-    if (!responsiveTextAreaConfig) return;
-    if (resizeFrame) cancelAnimationFrame(resizeFrame);
-    resizeFrame = requestAnimationFrame(() => {
-      resizeFrame = 0;
-      resolveResponsiveTextAreaHeight(responsiveTextAreaConfig);
-    });
-  }
-
-  function bindViewportRefresh() {
-    window.addEventListener('resize', scheduleResponsiveHeightRefresh, { passive: true });
-    window.addEventListener('orientationchange', scheduleResponsiveHeightRefresh, { passive: true });
-    window.addEventListener('jetnote:viewport-change', event => {
-      const detailHeight = Number(event?.detail?.height);
-      if (Number.isFinite(detailHeight) && detailHeight > 0) latestViewportHeight = detailHeight;
-      applyKeyboardLayoutState(Boolean(event?.detail?.keyboardOpen));
-      scheduleResponsiveHeightRefresh();
-    }, { passive: true });
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', scheduleResponsiveHeightRefresh, { passive: true });
-      window.visualViewport.addEventListener('scroll', scheduleResponsiveHeightRefresh, { passive: true });
-    }
-  }
 
   async function applyEditorConfiguration() {
     try {
@@ -142,8 +82,7 @@
 
       const config = await response.json();
       setCssPixels('--new-post-font-size', config.new_post_font_size, FONT_SIZE_RANGE);
-      responsiveTextAreaConfig = config.new_post_text_area_height;
-      resolveResponsiveTextAreaHeight(responsiveTextAreaConfig);
+      resolveResponsiveTextAreaHeight(config.new_post_text_area_height);
 
       const layout = config.post_editor_layout || {};
       setCssPixels('--post-editor-text-padding-top', layout.text_area_padding_top, TEXT_AREA_PADDING_RANGE);
@@ -151,20 +90,6 @@
       setCssPixels('--post-editor-text-padding-bottom', layout.text_area_padding_bottom, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-text-padding-left', layout.text_area_padding_left, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-attachment-row-height', layout.attachment_row_height, ATTACHMENT_ROW_HEIGHT_RANGE);
-      normalKeyboardHiddenOffsetPx = readBoundedOffset(layout.keyboard_hidden_text_display_area_vertical_offset_px);
-
-      const debugConfigurationEditor = config.debug_configuration_editor || {};
-      setCssPixels(
-        '--debug-configuration-editor-text-area-height',
-        debugConfigurationEditor.edit_debud_post_height,
-        DEBUG_CONFIGURATION_TEXT_AREA_HEIGHT_RANGE
-      );
-      debugKeyboardHiddenOffsetPx = readBoundedOffset(debugConfigurationEditor.keyboard_hidden_text_display_area_vertical_offset_px);
-      applyKeyboardLayoutState(lastKeyboardOpen === null ? false : lastKeyboardOpen);
-
-      bindViewportRefresh();
-      // A second pass after first layout catches WebView viewport settling.
-      requestAnimationFrame(scheduleResponsiveHeightRefresh);
     } catch (error) {
       console.warn('[EditorConfig] unable to load config.json', error);
     }

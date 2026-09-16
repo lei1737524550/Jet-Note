@@ -1,7 +1,10 @@
 {
   "debug_configuration_editor": {
     "keyboard_hidden_text_display_area_vertical_offset_px": 180,
-    "edit_debud_post_height": 390
+    "edit_debud_post_height": 390,
+    "body_bottom_padding_px": 0,
+    "text_area_bottom_padding_px": 0,
+    "search_button_preserve_keyboard_state": true
   },
   "debug_post_search": {
     "enabled": true,

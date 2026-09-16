@@ -93,9 +93,11 @@
     <div class="home-actions three-posts-one-body__layout" aria-label="" data-language-aria-label="homeTopPostAccessibilityLabel">
       <section class="top-post-card three-posts-one-body__box common_border" id="topPostCard" aria-live="polite"></section>
     </div>
-    <div class="post-composer-wrap three-posts-one-body__layout" id="postComposerMount"></div>
-
-    <main class="main-posts three-posts-one-body__layout" id="mainPosts"></main>
+    <!-- Main Layout World: Composer + Main Posts share one global FLIP coordinate frame. -->
+    <div class="post-main-layout-world three-posts-one-body__layout" id="postMainLayoutWorld">
+      <div class="post-composer-wrap three-posts-one-body__layout" id="postComposerMount"></div>
+      <main class="main-posts three-posts-one-body__layout" id="mainPosts"></main>
+    </div>
   </div>
 
 
@@ -157,6 +159,7 @@
       'app/settings/browser_settings.js',
       'app/settings/date_time_viewer.js',
       'shared/core/json_syntax_validator.js',
+      'app/debug_post/debug_editor_config.js',
       'app/debug_post/debug_post.js',
       // Post editor is deliberately split into small modules; keep this order.
       'app/post_editor/editor_config.js',
@@ -173,6 +176,11 @@
       'app/media/image_viewer/close_control.js',
       'app/media/image_viewer.js',
       'shared/components/delete_confirm_dialog.js',
+      'app/home/post_movement/order_preserved_blocks.js',
+      'app/home/post_movement/flip_topology.js',
+      'app/home/post_movement/normal_star_flip.js',
+      'app/home/post_movement/super_star_two_body_flip.js',
+      'app/home/post_movement/super_star_three_body_flip.js',
       'app/home/posts.js',
       'app/home/main_status_bar.js',
       'shared/core/target_transition.js',

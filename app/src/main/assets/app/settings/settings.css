@@ -1133,3 +1133,37 @@
 \n\n/* Debug state control. Enable Debug becomes inert while Debug is already enabled. */
 
 #enableDebugButton:disabled{opacity:.46;cursor:default;pointer-events:none;filter:grayscale(1);background:#e3e5e3!important;border-color:#bfc1c4!important;box-shadow:none!important;}
+
+/* Debug Settings FLIP ownership boundary: temporary visual owners must never
+   escape the Settings viewport onto Home. */
+#settingsScreen { overflow: hidden; }
+#settingsScreen > [data-debug-setting-card="true"] { max-width: 100%; }
+
+/* V29: Debug viewer motion surfaces must stay visually identical to Set Body
+   while compositor-owned. Never let a promoted/animated card fall back to
+   transparent/white during its opening or closing movement. */
+#settingsScreen .settings-body > [data-debug-setting-card="true"] {
+  background-color: var(--settings-set-body-background, var(--jet-note-current-body-background, var(--jet-note-type-settings-set-body, #fff))) !important;
+}
+
+/* V35 — the two Debug viewer panels are ordinary Settings Body surfaces. */
+#colorViewCard,
+#dateTimeViewerCard{
+  background-color:var(--settings-set-body-background)!important;
+}
+
+/* Backup actions: three equal-width buttons. Keep the existing vertical size;
+   only divide the X axis so the config-inclusive export can sit in the middle. */
+.backup-option-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.backup-option-grid .settings-choice {
+  min-height: 74px;
+  padding-left: 10px;
+  padding-right: 10px;
+  text-align: center;
+}
+.backup-option-grid .settings-choice-main {
+  font-size: 14px;
+}

@@ -327,9 +327,15 @@
       refresh.dataset.action = 'refresh';
       refresh.style.width = '100%';
       refresh.onclick = () => {
-        stopAudioPreview(panel);
-        panel.remove();
-        window.location.reload();
+      stopAudioPreview(panel);
+      panel.remove();
+
+      window.location.href = 'jetnote-source-state://inactive';
+
+  // Reload after native has consumed the state notification.
+      setTimeout(() => {
+      window.location.reload();
+        }, 0);
       };
       tabs.appendChild(refresh);
     }

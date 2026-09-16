@@ -577,7 +577,7 @@
     },
     "new_post_text_area_height": {
       "code_location": [
-        "app/src/main/assets/config/config.json + app/src/main/assets/config/anim.json",
+        "app/src/main/assets/config.json",
         "app/src/main/assets/app/post_editor/editor_config.js",
         "app/src/main/assets/app/post_editor/post_editor.css"
       ],

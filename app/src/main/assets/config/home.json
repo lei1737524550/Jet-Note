@@ -2,10 +2,6 @@
   "three_post_one_body": {
     "vertical_move_px": -32,
     "font_size_px": 17,
-    "welcome_post": {
-      "text_color": "#F06E80",
-      "text_font_size_em": 2
-    },
     "top_post": {
       "super_star": {
         "time_stamp_color": "999da2",
@@ -15,7 +11,7 @@
     },
     "main_posts": {
       "interaction_timing": {
-        "post_horizontal_ellipsis_menu_dismiss_delay_ms": 0,
+        "post_horizontal_ellipsis_menu_dismiss_delay_ms": 100,
         "delete_content_to_border_clear_delay_ms": 140,
         "delete_border_clear_to_reflow_delay_ms": 140
       },

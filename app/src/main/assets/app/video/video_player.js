@@ -36,7 +36,7 @@ function syncNativeVideoOverlayVisibility() {
   // A full-screen editor suppresses feed videos, but its own temporary video is
   // allowed to use the same native TextureView/player implementation.
   const editorAllowsVideo = !openEditor || activeVideoBelongsToOpenEditor;
-  const allowed = !blocked && editorAllowsVideo && !document.hidden;
+  const allowed = postMovementVideoFreezeDepth === 0 && !blocked && editorAllowsVideo && !document.hidden;
   if (allowed !== nativeVideoOverlayAllowed) {
     nativeVideoOverlayAllowed = allowed;
     try { window.JetNoteNative?.setVideoOverlayAllowed?.(allowed); } catch (_) {}
@@ -49,6 +49,44 @@ window.JetNoteVideoOverlay = Object.freeze({
   suspend: suspendNativeVideoOverlay,
   sync: syncNativeVideoOverlayVisibility
 });
+
+// Post FLIP and Android TextureView must never animate independently. The native
+// video surface lives outside the WebView compositor, so CSS transform cannot move it.
+// During a Post transaction the WebView poster/proxy is the single visual owner.
+let postMovementVideoFreezeDepth = 0;
+let postMovementDetachedNativeVideoId = null;
+window.__jetBeginPostMovementVideoFreeze = function() {
+  postMovementVideoFreezeDepth += 1;
+  if (postMovementVideoFreezeDepth !== 1) return;
+  // A moving Video Post must be indistinguishable from an image Post to FLIP.
+  // The Android player remains alive, but its TextureView is completely hidden
+  // and detached from DOM geometry until LAST has settled.
+  postMovementDetachedNativeVideoId = activeNativeVideoItem?.dataset?.mediaId || null;
+  document.documentElement.classList.add('jet-post-movement-video-freeze');
+  nativeVideoOverlayAllowed = false;
+  if (nativeVideoRectFrame) {
+    cancelAnimationFrame(nativeVideoRectFrame);
+    nativeVideoRectFrame = 0;
+  }
+  try { window.JetNoteNative?.setVideoOverlayAllowed?.(false); } catch (_) {}
+};
+window.__jetEndPostMovementVideoFreeze = function() {
+  postMovementVideoFreezeDepth = Math.max(0, postMovementVideoFreezeDepth - 1);
+  if (postMovementVideoFreezeDepth > 0) return;
+
+  // renderPosts() replaces the old Video Post DOM. Rebind the still-alive native
+  // player to the FINAL card only now; never feed it an intermediate FLIP rect.
+  if (postMovementDetachedNativeVideoId) {
+    const id = String(postMovementDetachedNativeVideoId);
+    activeNativeVideoItem = document.querySelector(`.native-video-card[data-media-id="${CSS.escape(id)}"]`);
+  }
+  postMovementDetachedNativeVideoId = null;
+  document.documentElement.classList.remove('jet-post-movement-video-freeze');
+  syncNativeVideoOverlayVisibility();
+  if (activeNativeVideoItem?.isConnected && nativeVideoOverlayAllowed) {
+    requestAnimationFrame(() => requestAnimationFrame(() => sendNativeVideoRect()));
+  }
+};
 
 const nativeVideoVisibilityObserver = new MutationObserver(() => syncNativeVideoOverlayVisibility());
 nativeVideoVisibilityObserver.observe(document.documentElement, {
@@ -161,6 +199,7 @@ function nativeVideoRect(item) {
 
 function sendNativeVideoRect() {
   nativeVideoRectFrame = 0;
+  if (postMovementVideoFreezeDepth > 0) return;
   const item = activeNativeVideoItem;
   if (!item?.isConnected || !window.JetNoteNative?.updateVideoRect) return;
   const r = nativeVideoRect(item);
@@ -168,7 +207,7 @@ function sendNativeVideoRect() {
 }
 
 function scheduleNativeVideoRect() {
-  if (nativeVideoRectFrame) return;
+  if (postMovementVideoFreezeDepth > 0 || nativeVideoRectFrame) return;
   nativeVideoRectFrame = requestAnimationFrame(sendNativeVideoRect);
 }
 
@@ -188,8 +227,15 @@ function releaseVideoAttachmentUrls(container) {
     manager?.releaseOwner?.(shell,'video-container-release');
   });
   if (activeNativeVideoItem && container?.contains(activeNativeVideoItem)) {
-    try { window.JetNoteNative?.stopVideo?.(activeNativeVideoItem.dataset.mediaId); } catch (_) {}
-    activeNativeVideoItem = null;
+    if (postMovementVideoFreezeDepth > 0) {
+      // DOM rebuild during FLIP must NOT destroy the Android player. Remember its
+      // identity and detach only the obsolete DOM reference; LAST will rebind it.
+      postMovementDetachedNativeVideoId = activeNativeVideoItem.dataset.mediaId || postMovementDetachedNativeVideoId;
+      activeNativeVideoItem = null;
+    } else {
+      try { window.JetNoteNative?.stopVideo?.(activeNativeVideoItem.dataset.mediaId); } catch (_) {}
+      activeNativeVideoItem = null;
+    }
   }
 }
 
@@ -314,6 +360,7 @@ window.__jetNativeVideoViewerClosed = function(mediaId, currentMs, durationMs) {
 };
 
 window.__jetNativeVideoProgress = function(mediaId, currentMs, durationMs, playing, everStarted) {
+  if (postMovementVideoFreezeDepth > 0) return;
   const item = activeNativeVideoItem;
   if (!item?.isConnected || item.dataset.mediaId !== String(mediaId)) return;
   const shell = item.closest('.video-attachment-shell');
@@ -348,6 +395,7 @@ window.__jetNativeVideoProgress = function(mediaId, currentMs, durationMs, playi
 };
 
 window.__jetNativeVideoClosed = function(mediaId) {
+  if (postMovementVideoFreezeDepth > 0) return;
   if (activeNativeVideoItem?.dataset.mediaId === String(mediaId)) {
     activeNativeVideoItem = null;
   }
@@ -356,6 +404,7 @@ window.__jetNativeVideoClosed = function(mediaId) {
 // Native long-press cold reset: the whole decoder/surface was destroyed.
 // Reset only UI state here; the real first-frame poster is already underneath.
 window.__jetNativeVideoReset = function(mediaId) {
+  if (postMovementVideoFreezeDepth > 0) return;
   const id = String(mediaId);
   const item = activeNativeVideoItem?.dataset.mediaId === id ? activeNativeVideoItem : null;
   if (item) {
@@ -367,6 +416,7 @@ window.__jetNativeVideoReset = function(mediaId) {
 };
 
 window.__jetNativeVideoSurfaceTapped = function(mediaId, currentMs) {
+  if (postMovementVideoFreezeDepth > 0) return;
   const item = activeNativeVideoItem;
   if (!item?.isConnected || item.dataset.mediaId !== String(mediaId)) return;
   if (item.closest('.post-compose-screen')) {

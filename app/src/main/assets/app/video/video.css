@@ -130,7 +130,7 @@
    right edges meet the Post border. This selector is deliberately scoped to
    article.post + .post-video-grid.one, so editor previews and 1xN mixed-media
    strips keep their own geometry. */
-#mainPosts article.post > .post-video-grid.one {
+.published-post-surface > .post-video-grid.one {
   width:calc(100% + var(--published-post-horizontal-padding, 12px) + var(--published-post-horizontal-padding, 12px) - var(--published-single-media-spacing-left, 3px) - var(--published-single-media-spacing-right, 3px));
   margin-left:calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-left, 3px));
   margin-right:calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-right, 3px));
@@ -138,7 +138,7 @@
   margin-bottom:var(--published-single-media-spacing-bottom, 3px);
 }
 
-#mainPosts article.post > .post-video-grid.one > .video-attachment-shell {
+.published-post-surface > .post-video-grid.one > .video-attachment-shell {
   border-left:0;
   border-right:0;
   border-radius:1px !important;
@@ -234,7 +234,7 @@
 .video-playback-time-button {
   appearance:none;
   -webkit-appearance:none;
-  background:#fff;
+  background:transparent;
   color:#757a80;
   font:inherit;
   font-size:12px;
@@ -277,11 +277,11 @@
 
 /* Published video polish: keep the media shell visually transparent and let the
    seek track begin immediately at the video edge. */
-#mainPosts article.post .video-attachment-shell {
+.published-post-surface .video-attachment-shell {
   background: transparent !important;
 }
 
-#mainPosts article.post .video-attachment-item + .video-progress-track {
+.published-post-surface .video-attachment-item + .video-progress-track {
   margin-top: 0 !important;
 }
 
@@ -290,14 +290,14 @@
    Single and multi-video Posts share exactly the same internal component.
    Quantity changes only the cell width; controls are never moved into the
    Post footer. */
-#mainPosts article.post .video-attachment-shell {
+.published-post-surface .video-attachment-shell {
   background: transparent !important;
   border: 0 !important;
   border-radius: 1px !important;
   box-shadow: none !important;
 }
 
-#mainPosts article.post .video-attachment-shell > .video-attachment-item {
+.published-post-surface .video-attachment-shell > .video-attachment-item {
   border: 0 !important;
   border-radius: 1px !important;
   box-shadow: none !important;
@@ -305,7 +305,7 @@
 
 /* Seek track touches the video directly. It has no decorative border and no
    radius; only the neutral track and current-position fill remain. */
-#mainPosts article.post .video-progress-track {
+.published-post-surface .video-progress-track {
   display:block;
   width:100%;
   height:7px;
@@ -318,12 +318,12 @@
   overflow:hidden;
 }
 
-#mainPosts article.post .video-progress-track::before {
+.published-post-surface .video-progress-track::before {
   display:none !important;
   content:none !important;
 }
 
-#mainPosts article.post .video-progress-fill {
+.published-post-surface .video-progress-fill {
   top:0;
   height:7px;
   border:0 !important;
@@ -333,7 +333,7 @@
 
 /* The time string is the play/pause control. Keep the Jet Note border, but
    wrap only the text instead of creating a full-width control row. */
-#mainPosts article.post .video-inline-time.video-playback-time-button {
+.published-post-surface .video-inline-time.video-playback-time-button {
   display:block;
   width:max-content;
   max-width:calc(100% - 8px);
@@ -358,8 +358,36 @@
    The fill remains a semantic progress indicator so played progress stays
    visible against the Post-internal track surface. */
 .three-posts-one-body .published-post-surface .video-progress-track {
-  background: var(--three-post-internal-surface-background) !important;
+  background: transparent !important;
 }
 .three-posts-one-body .published-post-surface .video-inline-time.video-playback-time-button {
   background: var(--three-post-internal-surface-background) !important;
+}
+
+/* v17 Unified Post media geometry: main/top share the exact same video cap. */
+.post-surface[data-post-role="main"] .post-video-grid.one > .video-attachment-shell,
+.post-surface[data-post-role="main"] .post-video-grid.one > .video-attachment-shell > .video-attachment-item,
+.post-surface[data-post-role="top"] .post-video-grid.one > .video-attachment-shell,
+.post-surface[data-post-role="top"] .post-video-grid.one > .video-attachment-shell > .video-attachment-item,
+.post-surface[data-post-role="main"] .post-video-grid.one .video-poster,
+.post-surface[data-post-role="main"] .post-video-grid.one .inline-video-player,
+.post-surface[data-post-role="top"] .post-video-grid.one .video-poster,
+.post-surface[data-post-role="top"] .post-video-grid.one .inline-video-player {
+  max-height: var(--published-post-media-max-height, 234px) !important;
+  object-fit: contain !important;
+  object-position: center !important;
+}
+
+
+/* During Post FLIP, video is a static WebView body. Android TextureView is hidden. */
+html.jet-post-movement-video-freeze .native-video-card .video-poster {
+  display:block !important;
+  visibility:visible !important;
+  opacity:1 !important;
+}
+html.jet-post-movement-video-freeze .native-video-card .inline-video-player {
+  visibility:hidden !important;
+}
+html.jet-post-movement-video-freeze .video-progress-fill {
+  transition:none !important;
 }

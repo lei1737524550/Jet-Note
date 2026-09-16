@@ -1,4 +1,9 @@
 .post-compose-screen {
+  --audio-control-background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
+
   position: fixed;
   left: var(--viewport-offset-left, 0px);
   top: var(--viewport-offset-top, 0px);
@@ -9,13 +14,19 @@
   overflow: hidden;
   flex-direction: column;
   min-height: 0;
-  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
   transform: none !important;
 }
 
 .post-compose-screen.open {
   display: flex;
-  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
 }
 
 /* X -> Editor animation is native-only. The editor DOM keeps its original
@@ -24,31 +35,44 @@
 /* New Post only supplies its page-specific control width/color. Its geometry
    comes entirely from the shared Jet Note Page Action Bar above. */
 .post-compose-header { }
+
 .post-compose-title { }
-.post-compose-cancel,.post-compose-publish {
+
+.post-compose-cancel,
+.post-compose-publish {
   width: var(--page-action-bar-icon-width);
   min-width: var(--page-action-bar-icon-width);
   padding: 0;
 }
-.post-compose-cancel.page-action-bar-string,.post-compose-publish.page-action-bar-string {
-  width:auto;
-  min-width:var(--page-action-bar-text-min-width);
-  padding-inline:12px;
+
+.post-compose-cancel.page-action-bar-string,
+.post-compose-publish.page-action-bar-string {
+  width: auto;
+  min-width: var(--page-action-bar-text-min-width);
+  padding-inline: 12px;
 }
-.post-compose-cancel { color:var(--page-action-bar-normal-color); }
-.post-compose-publish { color:var(--page-action-bar-primary-color); }
+
+.post-compose-cancel {
+  color: var(--page-action-bar-normal-color);
+}
+
+.post-compose-publish {
+  color: var(--page-action-bar-primary-color);
+}
+
 .post-compose-cancel-icon {
-  width:24px;
-  height:24px;
-  display:block;
+  width: 24px;
+  height: 24px;
+  display: block;
 }
+
 .post-compose-send-icon {
-  width:24px;
-  height:24px;
-  display:block;
-  background:currentColor;
-  -webkit-mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
-  mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+  width: 24px;
+  height: 24px;
+  display: block;
+  background: currentColor;
+  -webkit-mask: url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+  mask: url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
 }
 
 .post-compose-body {
@@ -61,7 +85,10 @@
   overflow: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
   padding: 22px 20px 16px;
 }
 
@@ -71,7 +98,10 @@
      JSON text-editor height. Keep these names explicit to avoid hidden magic
      numbers drifting between editor variants. */
   --post-editor-vertical-section-gap: 12px;
-  --post-editor-tools-row-height: var(--post-editor-attachment-row-height, 48px);
+  --post-editor-tools-row-height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
 
   display: flex;
   flex-direction: column;
@@ -84,6 +114,7 @@
 #postComposerText {
   display: block;
   width: 100%;
+
   /* Responsive source of truth:
      config.json new_post_text_area_height -> editor_config.js -> resolved CSS px.
      The resolved value is clamp(viewport height * ratio, minimum_px, maximum_px).
@@ -93,10 +124,13 @@
   max-height: 100%;
   min-height: 0;
   box-sizing: border-box;
-  padding: var(--post-editor-text-padding-top, 0px)
-           var(--post-editor-text-padding-right, 0px)
-           var(--post-editor-text-padding-bottom, 0px)
-           var(--post-editor-text-padding-left, 0px);
+
+  padding:
+    var(--post-editor-text-padding-top, 0px)
+    var(--post-editor-text-padding-right, 0px)
+    var(--post-editor-text-padding-bottom, 0px)
+    var(--post-editor-text-padding-left, 0px);
+
   scroll-margin-top: 70px;
   resize: none;
   border: 0;
@@ -106,8 +140,9 @@
   font: inherit;
   font-size: var(--new-post-font-size, 17px);
   line-height: 1.55;
+
   /* Native WebView caret: position stays aligned with Android selection handle. */
-  caret-color: var(--post-compose-caret-color,#14A89A);
+  caret-color: var(--post-compose-caret-color, #14A89A);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-all;
@@ -116,18 +151,27 @@
 #postComposerText::placeholder {
   color: #a5a8ad;
 }
-#postComposerText::selection { background:var(--cursor-drop-color,#14A89A); color:#fff; }
+
+#postComposerText::selection {
+  background: var(--cursor-drop-color, #14A89A);
+  color: #fff;
+}
+
 /* Legacy custom mirror-caret DOM is no longer rendered. Native caret positioning
    avoids cross-WebView cumulative text-metric drift. */
 
 .post-input-row .tool,
 .post-input-row .toolbox_tool,
 .post-input-row .toolbox-trigger {
-  color:var(--jet-note-type-body-foreground-color,#111111);
+  color: var(--jet-note-type-body-foreground-color, #111111);
 }
 
-
-.post-compose-screen .common_border{border-color:var(--jet-note-type-edit-post-border-color,var(--common-border-color));}
+.post-compose-screen .common_border {
+  border-color: var(
+    --jet-note-type-edit-post-border-color,
+    var(--common-border-color)
+  );
+}
 
 
 /* Edit Post attachment geometry
@@ -174,6 +218,7 @@
   overflow-y: hidden;
   scrollbar-width: none;
 }
+
 .post-compose-audio-row #postAudioDraft .attachment-strip::-webkit-scrollbar {
   display: none;
 }
@@ -194,10 +239,12 @@
   overflow-y: hidden;
   scrollbar-width: none;
 }
+
 .post-compose-media-row .post-compose-images::-webkit-scrollbar,
 .post-compose-media-row .post-compose-videos::-webkit-scrollbar {
   display: none;
 }
+
 .post-compose-media-row .post-compose-images:empty,
 .post-compose-media-row .post-compose-videos:empty {
   display: none;
@@ -213,6 +260,7 @@
   box-sizing: border-box;
   margin: 0;
 }
+
 .post-compose-media-row .compose-image-item img,
 .post-compose-media-row .video-attachment-shell .compose-video-item,
 .post-compose-media-row .video-attachment-shell .video-poster {
@@ -227,6 +275,7 @@
 .post-compose-media-row .video-attachment-shell .video-inline-time {
   display: none !important;
 }
+
 .post-compose-media-row .video-attachment-shell .compose-video-item {
   aspect-ratio: 1 / 1;
 }
@@ -243,8 +292,9 @@
 
 /* Edit Post only: the musical-note glyph is optically right-heavy. Correct the
    glyph, not the button geometry, so the already-correct Tools row stays put. */
-#postEditorTools .tool[data-tool-action="sound"] svg, #postEditorTools .tool[data-tool-action="sound"] img {
-  transform: translateX(-1.5px);
+#postEditorTools .tool[data-tool-action="sound"] svg,
+#postEditorTools .tool[data-tool-action="sound"] img {
+  transform: translateX(-2.5px);
 }
 
 /* Attachment alignment and draft-control safety
@@ -269,14 +319,18 @@
   place-items: center;
   overflow: visible;
 }
+
 .post-compose-audio-row #postAudioDraft .audio-token-play {
   margin: 0;
 }
-.post-compose-audio-row #postAudioDraft .audio-token-play svg, .post-compose-audio-row #postAudioDraft .audio-token-play img {
+
+.post-compose-audio-row #postAudioDraft .audio-token-play svg,
+.post-compose-audio-row #postAudioDraft .audio-token-play img {
   /* Speaker path is optically right-heavy in its viewBox. Correct only the
      glyph; the button/cell geometry remains unchanged. */
-  transform: translateX(-1.5px);
+  transform: translateX(-4.0px);
 }
+
 .post-compose-audio-row #postAudioDraft .audio-token-remove {
   top: 0;
   right: 0;
@@ -297,11 +351,13 @@
   padding-left: 0 !important;
   padding-right: 0 !important;
 }
+
 .post-compose-media-row .post-compose-images,
 .post-compose-media-row .post-compose-videos {
   gap: 0;
   width: 100%;
 }
+
 .post-compose-media-row .compose-image-item,
 .post-compose-media-row .video-attachment-shell {
   flex: 0 0 calc(100% / 3);
@@ -311,183 +367,271 @@
   border-radius: 0;
   border: 0 !important;
 }
+
 .post-compose-media-row .compose-image-item img,
 .post-compose-media-row .video-attachment-shell .compose-video-item,
 .post-compose-media-row .video-attachment-shell .video-poster {
-  width:100%;
-  height:100%;
-  aspect-ratio:auto;
-  object-fit:contain;
-  border-radius:0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  object-fit: contain;
+  border-radius: 0;
 }
+
 /* Editor video reuses the normal playback state/progress machinery. Keep the
    timeline as a compact overlay so the fixed attachment row does not grow. */
 .post-compose-media-row .video-attachment-shell {
-  position:relative;
-  overflow:hidden;
-  background:#111;
-}
-.post-compose-media-row .video-attachment-shell .video-progress-track {
-  display:block !important;
-  position:absolute;
-  z-index:7;
-  left:0;
-  right:0;
-  bottom:0;
-  width:100%;
-  height:12px;
-  margin:0 !important;
-}
-.post-compose-media-row .video-attachment-shell .video-progress-track::before,
-.post-compose-media-row .video-attachment-shell .video-progress-fill {
-  top:5px;
-  height:4px;
-}
-.post-compose-media-row .video-attachment-shell .video-inline-time {
-  display:none !important;
+  position: relative;
+  overflow: hidden;
+  background: #111;
 }
 
-/* Keyboard-hidden editor expansion -----------------------------------------
-   The configured offset is added to the text display region. Because the
-   attachment stack and Tools row stay in normal document flow, they travel
-   downward as one unit while the newly released vertical space belongs to the
-   editor content instead of becoming a dead gap. The screen/body remain
-   clipped, preventing transient frames from painting through another page. */
-#postComposerText {
-  flex-basis: calc(var(--new-post-text-area-height, 262px) + var(--post-editor-keyboard-hidden-text-display-offset, 0px));
-  height: calc(var(--new-post-text-area-height, 262px) + var(--post-editor-keyboard-hidden-text-display-offset, 0px));
-  transition: height 320ms cubic-bezier(.22,.72,.22,1), flex-basis 320ms cubic-bezier(.22,.72,.22,1);
+.post-compose-media-row .video-attachment-shell .video-progress-track {
+  display: block !important;
+  position: absolute;
+  z-index: 7;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 12px;
+  margin: 0 !important;
 }
-.post-compose-screen,
-.post-compose-body {
-  isolation:isolate;
-  contain:paint;
+
+.post-compose-media-row .video-attachment-shell .video-progress-track::before,
+.post-compose-media-row .video-attachment-shell .video-progress-fill {
+  top: 5px;
+  height: 4px;
+}
+
+.post-compose-media-row .video-attachment-shell .video-inline-time {
+  display: none !important;
 }
 
 /* V6.0 unified ordered visual-attachment rail. Image and video no longer own
    separate layout tracks: insertion order is the display order. */
 .post-compose-media-row {
-  align-items:flex-end;
-  padding-bottom:2px !important;
-  overflow:visible;
+  align-items: flex-end;
+  padding-bottom: 2px !important;
+  overflow: visible;
 }
+
 .post-compose-visual-media {
-  position:relative;
-  display:flex;
-  flex-wrap:nowrap;
-  align-items:flex-end;
-  gap:4px;
-  width:100%;
-  height:var(--post-editor-attachment-row-height,84px);
-  overflow-x:auto;
-  overflow-y:hidden;
-  scrollbar-width:none;
-  scroll-snap-type:x proximity;
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: 4px;
+  width: 100%;
+  height: var(--post-editor-attachment-row-height, 84px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
 }
-.post-compose-visual-media::-webkit-scrollbar { display:none; }
+
+.post-compose-visual-media::-webkit-scrollbar {
+  display: none;
+}
+
 .post-compose-visual-media .compose-image-item,
 .post-compose-visual-media .video-attachment-shell {
-  position:relative;
-  flex:0 0 calc((100% - 8px) / 3);
-  width:calc((100% - 8px) / 3);
-  min-width:calc((100% - 8px) / 3);
-  height:100%;
-  margin:0;
-  box-sizing:border-box;
-  overflow:hidden;
-  scroll-snap-align:start;
-  border-radius:0;
-  border:0 !important;
-  background:transparent;
+  position: relative;
+  flex: 0 0 calc((100% - 8px) / 3);
+  width: calc((100% - 8px) / 3);
+  min-width: calc((100% - 8px) / 3);
+  height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  scroll-snap-align: start;
+  border-radius: 0;
+  border: 0 !important;
+  background: transparent;
 }
+
 .post-compose-visual-media .compose-image-item img {
-  width:100%; height:100%; object-fit:contain; display:block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
+
 .post-compose-visual-media .video-attachment-shell {
-  display:grid;
-  grid-template-rows:minmax(0,1fr) 6px 16px;
-  background:#111;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 6px 16px;
+  background: #111;
 }
+
 .post-compose-visual-media .compose-video-item,
 .post-compose-visual-media .video-poster {
-  width:100%; height:100%; min-height:0; object-fit:contain; display:block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  display: block;
 }
+
 .post-compose-visual-media .video-progress-track {
-  display:block !important;
-  position:relative !important;
-  inset:auto !important;
-  width:100%; height:6px; margin:0 !important; z-index:7;
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100%;
+  height: 6px;
+  margin: 0 !important;
+  z-index: 7;
 }
+
 .post-compose-visual-media .video-progress-track::before,
-.post-compose-visual-media .video-progress-fill { top:1px; height:4px; }
+.post-compose-visual-media .video-progress-fill {
+  top: 1px;
+  height: 4px;
+}
+
 .post-compose-visual-media .video-inline-time {
-  display:block !important;
-  position:relative;
-  height:16px;
-  line-height:16px;
-  text-align:center;
-  font-size:11px;
-  white-space:nowrap;
-  background:var(--jet-note-type-body-background-color,#D2E9C2);
-  color:var(--jet-note-type-body-foreground-color,#111);
-  z-index:7;
+  display: block !important;
+  position: relative;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+  background: var(--jet-note-type-body-background-color, #D2E9C2);
+  color: var(--jet-note-type-body-foreground-color, #111);
+  z-index: 7;
 }
+
 .post-compose-visual-media .compose-image-remove {
-  position:absolute;
-  top:2px; right:2px;
-  width:20px; height:20px;
-  padding:0; margin:0;
-  border:0; border-radius:50%;
-  background:transparent;
-  color:#fff;
-  font-size:18px; line-height:20px;
-  z-index:20;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 18px;
+  line-height: 20px;
+  z-index: 20;
 }
+
 /* White under difference blending yields the exact RGB complement of the pixel
    underneath the X without expensive frame-by-frame video canvas sampling. */
 .post-compose-visual-media .adaptive-complement-remove {
-  mix-blend-mode:difference;
-  isolation:auto;
+  mix-blend-mode: difference;
+  isolation: auto;
 }
+
 .post-compose-visual-media .compose-media-more-indicator {
-  position:sticky;
-  right:0;
-  align-self:center;
-  flex:0 0 12px;
-  width:12px;
-  height:28px;
-  display:grid;
-  place-items:center;
-  z-index:30;
-  pointer-events:none;
+  position: sticky;
+  right: 0;
+  align-self: center;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  z-index: 30;
+  pointer-events: none;
 }
+
 .post-compose-visual-media .compose-media-more-indicator img {
-  width:12px; height:28px; display:block;
+  width: 12px;
+  height: 28px;
+  display: block;
 }
 
 
 /* V6.9: keep the configured four-state editor geometry authoritative.
    The current visual viewport owns screen height; keyboard-hidden offset only
    enlarges the text display area. Optional attachment rows still collapse. */
-.post-compose-attachment-stack{flex:0 0 auto;height:auto;overflow:visible;gap:var(--post-editor-vertical-section-gap,12px);}
-.post-compose-attachment-row{flex:0 0 var(--post-editor-attachment-row-height,48px);height:var(--post-editor-attachment-row-height,48px);}
-.post-compose-audio-row:not(:has(#postAudioDraft > *)){display:none!important;}
-.post-compose-media-row:not(:has(#postVisualMediaPreview > *)){display:none!important;}
+.post-compose-attachment-stack {
+  flex: 0 0 auto;
+  height: auto;
+  overflow: visible;
+  gap: var(--post-editor-vertical-section-gap, 12px);
+}
+
+.post-compose-attachment-row {
+  flex: 0 0 var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+}
+
+.post-compose-audio-row:not(:has(#postAudioDraft > *)) {
+  display: none !important;
+}
+
+.post-compose-media-row:not(:has(#postVisualMediaPreview > *)) {
+  display: none !important;
+}
 
 /* V6.9 viewport-chain repair -------------------------------------------------
    The visual viewport owns the editor screen. The body then gives its actual
    remaining height to the content column; fixed attachment/tool rows consume
    their real footprint and the text display receives the remainder. No
    keyboard-state Y offset participates in this chain. */
-.post-compose-body > .post-input-row{
-  flex:1 1 auto;
-  height:100%;
-  min-height:0;
-  overflow:hidden;
+.post-compose-body > .post-input-row {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
-#postComposerText{
-  flex:1 1 0!important;
-  height:auto!important;
-  min-height:0!important;
-  max-height:none!important;
+
+#postComposerText {
+  flex: 1 1 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+/* V35 — keyboard/layout invariant. The editor content is an explicit three-row
+   grid: text absorbs viewport loss; media and toolbar retain their configured
+   geometry. Values remain sourced from config/post_composer.json. */
+.post-compose-body > .post-input-row {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  align-content: stretch;
+}
+
+#postComposerText {
+  grid-row: 1;
+  min-height: 0 !important;
+}
+
+.post-compose-attachment-stack {
+  grid-row: 2;
+  min-height: 0;
+}
+
+#postEditorTools {
+  grid-row: 3;
+  flex: 0 0 auto;
+  min-height: var(--post-editor-attachment-row-height, 48px);
+}
+
+/* V36 — ordinary Post Editor: keyboard must not change the composer work-area.
+   shared/styles/layout.css intentionally changes --content-bottom to 0 while
+   IME is open. That is correct for general routes, but it made the Post Editor
+   bottom padding disappear and therefore moved the media/tool rows downward.
+   Keep the keyboard-hidden safe-bottom reservation for this editor only. */
+.post-compose-screen {
+  box-sizing: border-box;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+}
+
+
+/* Post Editor audio controls
+   --------------------------
+   Keep the audio play button and remove button background tied to the editor
+   page background. Scope this rule to Post Editor only so published posts and
+   other audio controls are not affected. */
+.post-compose-screen .audio-token-play,
+.post-compose-screen .audio-token-remove {
+  background-color: var(--audio-control-background);
 }

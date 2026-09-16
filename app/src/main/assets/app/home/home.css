@@ -127,3 +127,42 @@ button:active {
   overflow: hidden;
   isolation: isolate;
 }
+
+/* FLIP surface transparency: playback time is text/control chrome, not a Body paint owner. */
+.three-posts-one-body .three-posts-one-body__box .video-playback-time-button {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+
+/* FLIP layout world: geometry-only wrapper. It must never own Set Body paint. */
+#postMainLayoutWorld.post-main-layout-world {
+  background: transparent !important;
+  background-color: transparent !important;
+  transform-origin: 0 0;
+}
+
+/* Unified Post architecture -------------------------------------------------
+   Top/Main/Composer are roles of the same Post surface. Role selectors below
+   may add behavior/layout, but .post-surface owns the common surface identity. */
+.three-posts-one-body .post-surface {
+  box-sizing: border-box;
+  background-color: var(--jet-note-type-three-post-set-body,#fff);
+}
+.three-posts-one-body .post-surface[data-post-role="top"],
+.three-posts-one-body .post-surface[data-post-role="main"],
+.three-posts-one-body .post-surface[data-post-role="composer"] {
+  background-clip: padding-box;
+}
+.three-posts-one-body .post-surface[data-post-role="composer"] {
+  width:100%; margin:0; padding:0;
+}
+/* Top/Main published Posts use the exact same .post box geometry.
+   A role must not override padding/margins; only .post owns them. */
+
+/* v19 geometry invariant: published Post geometry is role-independent.
+   data-post-role may change paint/state, never padding/content/media geometry. */
+.published-post-surface[data-post-role="main"],
+.published-post-surface[data-post-role="top"] {
+  --published-post-horizontal-padding: 12px;
+}

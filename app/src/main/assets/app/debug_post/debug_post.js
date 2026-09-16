@@ -6,7 +6,8 @@
   const DEFAULT_SEARCH_CONFIG = Object.freeze({
     enabled:true,
     text_color_rule:{change_count:-1,sequence:[{color:'#FF0000',duration_ms:200},{color:'#FF8C00',duration_ms:200},{color:'#FFD700',duration_ms:200},{color:'#00A000',duration_ms:200}]},
-    case_sensitive:false
+    case_sensitive:false,
+    search_button_preserve_keyboard_state:true
   });
   let readmeText = '';
   let readmeLoadStarted = false;
@@ -27,7 +28,8 @@
       const rawRule=cfg.text_color_rule || DEFAULT_SEARCH_CONFIG.text_color_rule;
       const sequence=Array.isArray(rawRule?.sequence) && rawRule.sequence.length ? rawRule.sequence.map(step=>({color:String(step?.color||'#000000'),duration_ms:Math.max(20,Number(step?.duration_ms)||200)})) : DEFAULT_SEARCH_CONFIG.text_color_rule.sequence;
       const changeCount=Number.isInteger(Number(rawRule?.change_count)) ? Number(rawRule.change_count) : -1;
-      searchConfig = {enabled:cfg.enabled!==false,case_sensitive:cfg.case_sensitive===true,text_color_rule:{change_count:changeCount,sequence}};
+      const editorCfg = parsed?.debug_configuration_editor || {};
+      searchConfig = {enabled:cfg.enabled!==false,case_sensitive:cfg.case_sensitive===true,search_button_preserve_keyboard_state:editorCfg.search_button_preserve_keyboard_state!==false,text_color_rule:{change_count:changeCount,sequence}};
     } catch (_) { searchConfig = {...DEFAULT_SEARCH_CONFIG}; }
     applySearchAnimationCss();
   }
@@ -122,15 +124,21 @@
     get searchTextRegion(){return this.textareaElement?.closest('.debug-configuration-editor-text-region')||null}
     captureFocusState(){
       const active=document.activeElement, textarea=this.textareaElement, input=document.getElementById('debugEditorSearchInput');
-      if(active===textarea)return{element:textarea,start:textarea.selectionStart,end:textarea.selectionEnd,direction:textarea.selectionDirection};
-      if(active===input)return{element:input,start:input.selectionStart,end:input.selectionEnd,direction:input.selectionDirection};
+      const keyboardOpen=document.documentElement.dataset.jetnoteKeyboardOpen==='true';
+      if(active===textarea)return{element:textarea,start:textarea.selectionStart,end:textarea.selectionEnd,direction:textarea.selectionDirection,keyboardOpen};
+      if(active===input)return{element:input,start:input.selectionStart,end:input.selectionEnd,direction:input.selectionDirection,keyboardOpen};
       return{element:active};
     }
     restoreFocusState(state){
       if(!state?.element?.isConnected)return;
       if(state.element===this.textareaElement||state.element===document.getElementById('debugEditorSearchInput')){
-        state.element.focus({preventScroll:true});
-        try{state.element.setSelectionRange(state.start,state.end,state.direction||'none')}catch(_){}
+        const alreadyActive=document.activeElement===state.element;
+        // Search is focus-neutral when configured. Never turn a manually hidden
+        // keyboard back on merely to restore selection.
+        if(alreadyActive || !searchConfig.search_button_preserve_keyboard_state || state.keyboardOpen){
+          if(!alreadyActive) state.element.focus({preventScroll:true});
+          try{state.element.setSelectionRange(state.start,state.end,state.direction||'none')}catch(_){}
+        }
       }
     }
     clearSearchHighlights(){
@@ -198,9 +206,11 @@
     searchInEditor(){
       const input=document.getElementById('debugEditorSearchInput'),textarea=this.textareaElement;
       if(!input||!textarea||searchConfig.enabled===false)return;
-      const state=this.captureFocusState(),query=input.value;
+      const query=input.value;
       if(query)this.renderAllSearchMatches(query);else this.clearSearchHighlights();
-      this.restoreFocusState(state);
+      // Search is focus-neutral: never call focus() here. The pointerdown guard
+      // keeps the current focus when a keyboard is already visible, while a
+      // manually hidden keyboard remains hidden.
     }
 
     async saveCurrentPostAndClose(){if(this.isSavingConfiguration)return;const t=this.textareaElement,b=this.screenElement?.querySelector('.debug-configuration-editor-save-button');if(!t)return;this.clearValidationError();if(this.currentPostId!=='readme'){const focusState=this.captureFocusState(),scrollTop=t.scrollTop,scrollLeft=t.scrollLeft,result=this.latestSyntaxResult||this.validateConfigurationJson(t.value);if(!result.valid){playPostUiSound?.('error');this.renderDiagnosticRanges(result.errors);const first=result.errors?.[0];this.showValidationError(`${result.errors.length} JSON syntax error${result.errors.length===1?'':'s'}. ${first?.message||'Invalid JSON.'}`);t.scrollTop=scrollTop;t.scrollLeft=scrollLeft;this.syncSearchHighlightScroll();this.restoreFocusState(focusState);return}}playPostUiSound?.('send_post');this.isSavingConfiguration=true;if(b)b.disabled=true;try{const n=window.JetNoteNative;if(!n)throw new Error('Runtime bridge is unavailable.');if(this.currentPostId==='readme'){if(typeof n.setRuntimeReadmeText!=='function'||!n.setRuntimeReadmeText(t.value))throw new Error('Unable to save README.txt.');readmeText=t.value}else{if(typeof n.setRuntimeConfigSectionJson!=='function'||!n.setRuntimeConfigSectionJson(this.currentPostId,t.value))throw new Error(`Unable to save ${this.currentPostId}.`)}this.closeWithoutSaving();if(typeof n.relaunchForConfigReload==='function'){n.relaunchForConfigReload();return}location.reload()}catch(error){this.showValidationError(error?.message||'Unable to save Debug Post.')}finally{this.isSavingConfiguration=false;if(b?.isConnected)b.disabled=false}}
@@ -212,9 +222,10 @@
     enabled(){return localStorage.getItem(DEBUG_MODE_STORAGE_KEY)==='1'},
     async setEnabled(value){
       const next=Boolean(value);
+      console.log(`[DEBUG OPEN CHAIN] 2/setEnabled next=${next} enabledBefore=${this.enabled()}`);
       if(next){
         localStorage.setItem(DEBUG_MODE_STORAGE_KEY,'1');
-        this.refreshSettings({animate:true,show:true});
+        await this.refreshSettings({animate:true,show:true});
         ensureReadmeLoaded();
         if(typeof renderPosts==='function')renderPosts();
         return;
@@ -237,40 +248,101 @@
     openEditor(event,postId){event?.preventDefault?.();event?.stopPropagation?.();const id=postId==='readme'?'readme':String(postId||'config.json');const text=id==='readme'?readmeText:this.getCurrentConfigurationSectionJson(id);getEditor().openDebugPost(id,text)},
     closeEditor(){if(!editor?.isOpen())return false;editor.closeWithoutSaving();return true}, isEditorOpen(){return Boolean(editor?.isOpen())},
     saveJsonToDownloads(){const status=document.getElementById('debugSettingsStatus');if(status)status.textContent='';try{const n=window.JetNoteNative;if(!n||typeof n.saveEffectiveConfigJsonToDownloads!=='function')throw new Error('Config export bridge is unavailable.');const ok=n.saveEffectiveConfigJsonToDownloads();if(!ok&&status)status.textContent='Unable to save config.json.'}catch(error){if(status)status.textContent=error?.message||'Unable to save config.json.'}},
-    getDebugSettingsAnimationConfig(){let cfg={};try{const raw=window.JetNoteNative?.getRuntimeConfigJson?.();cfg=raw?JSON.parse(raw)?.debug_settings_expand_animation||{}:{}}catch(_){}const choice=String(cfg.speed_or_duration||'speed').toLowerCase()==='duration'?'duration':'speed';return{speed_or_duration:choice,duration_ms:Math.max(0,Number(cfg.duration_ms)||900),speed_px_per_second:Math.max(1,Number(cfg.speed_px_per_second)||10)}},
-    getDebugSettingsCloseConfig(){let cfg={};try{const raw=window.JetNoteNative?.getRuntimeConfigJson?.();cfg=raw?JSON.parse(raw)?.debug_settings_close_animation||{}:{}}catch(_){}const choice=String(cfg.speed_or_duration||'speed').toLowerCase()==='duration'?'duration':'speed';return{speed_or_duration:choice,duration_ms:Math.max(0,Number(cfg.duration_ms)||900),speed_px_per_second:Math.max(1,Number(cfg.speed_px_per_second)||10),end_hold_duration_ms:Math.max(0,Number(cfg.end_hold_duration_ms)||200),remaining_settings_reflow_duration_ms:Math.max(0,Number(cfg.remaining_settings_reflow_duration_ms)||700)}},
-    debugSettingCards(){return Array.from(document.querySelectorAll('[data-debug-setting-card="true"]'))},
-    debugSettingsMovementEntries(cards){const viewportBottom=Math.max(0,window.innerHeight||document.documentElement.clientHeight||0);return cards.map(card=>{const rect=card.getBoundingClientRect();const dy=viewportBottom-rect.bottom;return{card,dy,distance:Math.abs(dy)}})},
+    getDebugSettingsViewerAnimationConfig(){let cfg={};try{const raw=window.JetNoteNative?.getRuntimeConfigJson?.();cfg=raw?JSON.parse(raw)?.debug_settings_viewer_animation||{}:{}}catch(_){}const choice=String(cfg.speed_or_duration||'speed').toLowerCase()==='duration'?'duration':'speed';return{speed_or_duration:choice,duration_ms:Math.max(0,Number(cfg.duration_ms)||900),speed_px_per_second:Math.max(1,Number(cfg.speed_px_per_second)||1800),close_speed_multiplier:Math.max(1,Number(cfg.close_speed_multiplier)||2)}},
+    getDebugSettingsAnimationConfig(){return this.getDebugSettingsViewerAnimationConfig()},
+    getDebugSettingsCloseConfig(){const cfg=this.getDebugSettingsViewerAnimationConfig();return{...cfg,speed_px_per_second:cfg.speed_px_per_second*cfg.close_speed_multiplier}},
+    debugSettingCards(){const screen=document.getElementById('settingsScreen');if(!screen)return[];return Array.from(screen.querySelectorAll('.settings-body > [data-debug-setting-card="true"]'))},
+    debugSettingsMovementEntries(cards){const screen=document.getElementById('settingsScreen'),sr=screen?.getBoundingClientRect();const viewportBottom=sr?.bottom??Math.max(0,window.innerHeight||document.documentElement.clientHeight||0);return cards.map(card=>{const rect=card.getBoundingClientRect();const dy=Math.max(0,viewportBottom-rect.top);return{card,dy,distance:Math.abs(dy)}})},
     resolveMaximumDistanceAnimationPlan(entries,cfg){const maximumDistance=entries.reduce((maximum,item)=>Math.max(maximum,Number(item.distance)||0),0);let sharedDuration=0;if(cfg.speed_or_duration==='speed'){if(maximumDistance>0&&cfg.speed_px_per_second>0)sharedDuration=maximumDistance/cfg.speed_px_per_second*1000}else sharedDuration=cfg.duration_ms;return entries.map(item=>({...item,duration:sharedDuration,effectiveSpeedPxPerSecond:sharedDuration>0?item.distance/(sharedDuration/1000):0}))},
-    debugSettingsAnimationPlan(cards,closing=false){const cfg=this.getDebugSettingsAnimationConfig();return this.resolveMaximumDistanceAnimationPlan(this.debugSettingsMovementEntries(cards),cfg)},
-    followDebugMovement(plan,animations){const body=document.querySelector('.settings-body');if(!body||!plan.length||!animations.length)return;const reference=plan.reduce((best,item)=>(Number(item.distance)||0)>(Number(best?.distance)||-1)?item:best,null);if(!reference?.card)return;let frame=0;const tick=()=>{const active=animations.some(animation=>animation.playState==='running'||animation.playState==='pending');if(!active){frame=0;return}const viewport=body.getBoundingClientRect(),rect=reference.card.getBoundingClientRect();const visibleHeight=Math.max(0,viewport.height);const maxScroll=Math.max(0,body.scrollHeight-body.clientHeight);let desired=body.scrollTop+(rect.top+rect.height/2-(viewport.top+visibleHeight/2));desired=Math.max(0,Math.min(maxScroll,desired));if(rect.height<=visibleHeight){if(rect.top<viewport.top)desired=Math.max(0,body.scrollTop-(viewport.top-rect.top));else if(rect.bottom>viewport.bottom)desired=Math.min(maxScroll,body.scrollTop+(rect.bottom-viewport.bottom))}if(Math.abs(desired-body.scrollTop)>.25)body.scrollTop=desired;frame=requestAnimationFrame(tick)};frame=requestAnimationFrame(tick)},
-    animateDebugSettingCard(card,show,duration,startDy){card.getAnimations?.().forEach(animation=>animation.cancel());if(show){card.hidden=false;card.classList.add('debug-ui-dynamic-border');if(!duration)return null;return card.animate([{transform:`translate3d(0,${startDy}px,0)`,opacity:0},{transform:'translate3d(0,0,0)',opacity:1}],{duration,easing:'linear',fill:'none'})}card.classList.remove('debug-ui-dynamic-border');if(!duration){card.hidden=true;return null}return card.animate([{transform:'translate3d(0,0,0)',opacity:1},{transform:`translate3d(0,${startDy}px,0)`,opacity:0}],{duration,easing:'linear',fill:'forwards'})},
-    async closeDebugSettingsWithReflow(){
-      const cards=this.debugSettingCards().filter(card=>!card.hidden);
-      const closeCfg=this.getDebugSettingsCloseConfig();
-      const plan=this.debugSettingsAnimationPlan(cards,true);
-      const closeAnimations=plan.map(item=>this.animateDebugSettingCard(item.card,false,item.duration,item.dy)).filter(Boolean);
-      this.followDebugMovement(plan,closeAnimations);
-      await Promise.all(closeAnimations.map(animation=>animation.finished.catch(()=>{})));
-      // Enable and Cancel are exact reverse transactions: no close-only hold.
+    debugSettingsAnimationPlan(cards){const cfg=this.getDebugSettingsAnimationConfig();return this.resolveMaximumDistanceAnimationPlan(this.debugSettingsMovementEntries(cards),cfg)},
+    nextPaint(){return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))},
+    remainingSettings(body,cards){return body?Array.from(body.children).filter(element=>element instanceof HTMLElement&&!cards.includes(element)&&!element.hidden):[]},
+    async openDebugSettingsZeroFlash(){
+      const screen=document.getElementById('settingsScreen'),body=screen?.querySelector('.settings-body'),cards=this.debugSettingCards();
+      console.log(`[DEBUG OPEN CHAIN] 3/open-enter screenOpen=${Boolean(screen?.classList.contains('open'))} cards=${cards.length}`);
+      if(!screen?.classList.contains('open')||!body||!cards.length){console.warn('[DEBUG OPEN CHAIN] abort: Settings is not open or viewer cards are missing');return;}
+      const cfg=this.getDebugSettingsAnimationConfig();
+      const remaining=this.remainingSettings(body,cards);
+      const firstRemaining=new Map(remaining.map(el=>[el,el.getBoundingClientRect()]));
 
-      const body=document.querySelector('.settings-body');
-      const remaining=body?Array.from(body.children).filter(element=>element instanceof HTMLElement&&!cards.includes(element)&&!element.hidden):[];
-      const before=new Map(remaining.map(element=>[element,element.getBoundingClientRect()]));
-      cards.forEach(card=>{card.getAnimations?.().forEach(animation=>animation.cancel());card.hidden=true;card.classList.remove('debug-ui-dynamic-border');card.style.transform='';card.style.clipPath='';card.style.opacity=''});
-      void body?.offsetHeight;
-      const moving=[];
-      remaining.forEach(element=>{
-        const first=before.get(element),last=element.getBoundingClientRect();
-        const dx=first.left-last.left,dy=first.top-last.top;
-        if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return;
-        element.getAnimations?.().forEach(animation=>animation.cancel());
-        moving.push(element.animate([{transform:`translate3d(${dx}px,${dy}px,0)`},{transform:'translate3d(0,0,0)'}],{duration:(plan[0]?.duration||0),easing:'linear',fill:'none'}).finished.catch(()=>{}));
+      // Commit the real LAST layout while the two new viewers are invisible.
+      cards.forEach(card=>{
+        card.getAnimations?.().forEach(a=>a.cancel());
+        card.hidden=false;
+        card.classList.add('debug-ui-dynamic-border');
+        card.style.visibility='hidden';
+        card.style.transition='none';
+        card.style.transform='none';
+        card.style.backgroundColor='var(--settings-set-body-background, var(--jet-note-current-body-background, var(--jet-note-type-settings-set-body, #fff)))';
       });
-      await Promise.all(moving);
+      void body.offsetHeight;
+
+      // LAST measurements. New viewers enter upward from the Settings viewport bottom;
+      // existing settings use their truthful FIRST→LAST displacement and therefore move down.
+      const sr=screen.getBoundingClientRect(),viewportBottom=sr.bottom;
+      const entries=[];
+      cards.forEach(card=>{
+        const last=card.getBoundingClientRect();
+        const dy=Math.max(0,viewportBottom-last.top);
+        entries.push({el:card,kind:'viewer',dx:0,dy,distance:Math.abs(dy)});
+      });
+      remaining.forEach(el=>{
+        const a=firstRemaining.get(el),b=el.getBoundingClientRect();
+        const dx=a.left-b.left,dy=a.top-b.top,distance=Math.hypot(dx,dy);
+        if(distance>=.5)entries.push({el,kind:'setting',dx,dy,distance});
+      });
+      const Dmax=Math.max(0,...entries.map(x=>x.distance));
+      const duration=cfg.speed_or_duration==='speed'?(Dmax>0?Dmax/cfg.speed_px_per_second*1000:0):cfg.duration_ms;
+      console.log(`[DEBUG OPEN CHAIN] 4/measured Dmax=${Dmax.toFixed(1)} Vmax=${cfg.speed_px_per_second.toFixed(1)} T=${duration.toFixed(1)}ms entries=${entries.map(x=>`${x.kind}:${x.distance.toFixed(1)}`).join(',')}`);
+
+      // INVERT every participant before any viewer is visible.
+      entries.forEach(x=>{
+        x.el.getAnimations?.().forEach(a=>a.cancel());
+        x.el.style.transition='none';
+        x.el.style.transform=`translate3d(${x.dx}px,${x.dy}px,0)`;
+        x.el.style.willChange='transform';
+      });
+      void body.offsetHeight;
+      cards.forEach(card=>card.style.visibility='visible');
+      console.log('[DEBUG OPEN CHAIN] 5/invert-visible');
+
+      // Present one real inverted frame, then PLAY all bodies with the same T.
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      console.log('[DEBUG OPEN CHAIN] 6/play');
+      const waits=entries.map(x=>{
+        const animation=x.el.animate(
+          [{transform:`translate3d(${x.dx}px,${x.dy}px,0)`},{transform:'translate3d(0,0,0)'}],
+          {duration,easing:'linear',fill:'forwards'}
+        );
+        return animation.finished.catch(()=>{});
+      });
+      await Promise.all(waits);
+      entries.forEach(x=>{
+        x.el.getAnimations?.().forEach(a=>a.cancel());
+        x.el.style.transition='';x.el.style.transform='';x.el.style.willChange='';
+      });
+      cards.forEach(card=>{card.style.visibility='';card.style.backgroundColor=''});
+      console.log('[DEBUG OPEN CHAIN] 7/cleanup');
     },
-    refreshSettings(options={}){const b=document.getElementById('enableDebugButton');if(!b)return;const on=options.show??this.enabled(),animate=options.animate===true;const cards=this.debugSettingCards();if(animate&&on){cards.forEach(card=>{card.hidden=false;card.classList.add('debug-ui-dynamic-border')});void document.documentElement.offsetHeight;const plan=this.debugSettingsAnimationPlan(cards,false);const animations=plan.map(item=>this.animateDebugSettingCard(item.card,true,item.duration,item.dy)).filter(Boolean);this.followDebugMovement(plan,animations)}else cards.forEach(card=>{if(!animate){card.getAnimations?.().forEach(animation=>animation.cancel());card.hidden=!on;card.classList.toggle('debug-ui-dynamic-border',on)}});applyDebugUiBorderCss();b.classList.remove('debug-enabled');const l=b.querySelector('.settings-choice-main');const enableDebugLabel=window.JetNoteLanguage?.value?.('ui_strings.settings.enable_debug','Enable Debug')||'Enable Debug';if(l)l.textContent=enableDebugLabel;else b.textContent=enableDebugLabel;b.setAttribute('aria-pressed',String(on));b.disabled=Boolean(on);b.setAttribute('aria-disabled',String(Boolean(on)))},
-    bind(){getEditor();loadSearchConfig();if(this.enabled())ensureReadmeLoaded();this.refreshSettings();if(document.documentElement.dataset.debugConfigurationFeatureEventsBound==='true')return;document.documentElement.dataset.debugConfigurationFeatureEventsBound='true';document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-debug-configuration-editor-action="search"]'))event.preventDefault()});document.addEventListener('click',event=>{if(event.target.closest('#colorViewCancelDebugButton')){event.preventDefault();void this.setEnabled(false);return}const action=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugConfigurationPostAction;if(action==='edit'){const postId=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugPostId;this.openEditor(event,postId);return}const ea=event.target.closest('[data-debug-configuration-editor-action]')?.dataset.debugConfigurationEditorAction;if(!ea)return;const c=getEditor();if(ea==='search'){event.preventDefault();c.searchInEditor()}else if(ea==='cancel'){event.preventDefault();c.closeWithoutSaving()}else if(ea==='save'){event.preventDefault();void c.saveCurrentPostAndClose()}});document.addEventListener('keydown',event=>{if(event.target?.id==='debugEditorSearchInput'&&event.key==='Enter'){event.preventDefault();getEditor().searchInEditor()}})}
+    async closeDebugSettingsWithReflow(){
+      const screen=document.getElementById('settingsScreen'),body=screen?.querySelector('.settings-body'),cards=this.debugSettingCards().filter(card=>!card.hidden);if(!screen?.classList.contains('open')||!body||!cards.length){cards.forEach(card=>{card.hidden=true;card.classList.remove('debug-ui-dynamic-border')});return;}
+      const cfg=this.getDebugSettingsCloseConfig(),remaining=this.remainingSettings(body,cards),first=new Map(remaining.map(el=>[el,el.getBoundingClientRect()]));
+      // The outgoing cards become fixed visual owners. Their real slots can now be
+      // removed to obtain a truthful LAST layout without exposing that LAST frame.
+      const proxies=cards.map(card=>{const r=card.getBoundingClientRect(),clone=card.cloneNode(true);clone.removeAttribute('id');clone.querySelectorAll('[id]').forEach(n=>n.removeAttribute('id'));const sr=screen.getBoundingClientRect();Object.assign(clone.style,{position:'absolute',left:`${r.left-sr.left}px`,top:`${r.top-sr.top}px`,width:`${r.width}px`,height:`${r.height}px`,margin:'0',pointerEvents:'none',transform:'translate3d(0,0,0)',willChange:'transform, opacity',zIndex:'3',backgroundColor:'var(--jet-note-current-body-background, var(--jet-note-type-settings-set-body, #fff))'});screen.appendChild(clone);return{card,clone,rect:r}});
+      cards.forEach(card=>{card.hidden=true;card.classList.remove('debug-ui-dynamic-border')});
+      const last=new Map(remaining.map(el=>[el,el.getBoundingClientRect()])),entries=[];
+      remaining.forEach(el=>{const a=first.get(el),b=last.get(el),dx=a.left-b.left,dy=a.top-b.top;if(Math.abs(dx)<.5&&Math.abs(dy)<.5)return;el.style.transition='none';el.style.transform=`translate3d(${dx}px,${dy}px,0)`;el.style.willChange='transform';entries.push({el,dx,dy,distance:Math.hypot(dx,dy)})});
+      const proxyEntries=proxies.map(x=>{const dy=Math.max(0,window.innerHeight||0)-x.rect.bottom;return{...x,dy,distance:Math.abs(dy)}}),maximum=Math.max(0,...entries.map(x=>x.distance),...proxyEntries.map(x=>x.distance));
+      const duration=cfg.speed_or_duration==='speed'?(maximum>0?maximum/cfg.speed_px_per_second*1000:0):cfg.duration_ms;
+      await this.nextPaint();
+      const waits=[];entries.forEach(x=>{const a=x.el.animate([{transform:`translate3d(${x.dx}px,${x.dy}px,0)`},{transform:'translate3d(0,0,0)'}],{duration,easing:'linear',fill:'none'});waits.push(a.finished.catch(()=>{}));x.el.style.transform=''});
+      proxyEntries.forEach(x=>{const a=x.clone.animate([{transform:'translate3d(0,0,0)',opacity:1},{transform:`translate3d(0,${x.dy}px,0)`,opacity:0}],{duration,easing:'linear',fill:'forwards'});waits.push(a.finished.catch(()=>{}))});
+      await Promise.all(waits);entries.forEach(x=>{x.el.style.transition='';x.el.style.transform='';x.el.style.willChange=''});proxies.forEach(x=>x.clone.remove())
+    },
+    async refreshSettings(options={}){const b=document.getElementById('enableDebugButton');if(!b)return;const on=options.show??this.enabled(),animate=options.animate===true;const cards=this.debugSettingCards();if(animate&&on){await this.openDebugSettingsZeroFlash()}else cards.forEach(card=>{if(!animate){card.getAnimations?.().forEach(animation=>animation.cancel());card.hidden=!on;card.classList.toggle('debug-ui-dynamic-border',on)}});applyDebugUiBorderCss();b.classList.remove('debug-enabled');const l=b.querySelector('.settings-choice-main');const enableDebugLabel=window.JetNoteLanguage?.value?.('ui_strings.settings.enable_debug','Enable Debug')||'Enable Debug';if(l)l.textContent=enableDebugLabel;else b.textContent=enableDebugLabel;b.setAttribute('aria-pressed',String(on));b.disabled=Boolean(on);b.setAttribute('aria-disabled',String(Boolean(on)))},
+    bind(){getEditor();loadSearchConfig();if(this.enabled())ensureReadmeLoaded();this.refreshSettings();if(document.documentElement.dataset.debugConfigurationFeatureEventsBound==='true')return;document.documentElement.dataset.debugConfigurationFeatureEventsBound='true';const enableButton=document.getElementById('enableDebugButton');if(enableButton){enableButton.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();console.log(`[DEBUG OPEN CHAIN] 1/direct-click enabledBefore=${this.enabled()}`);void this.setEnabled(true);});console.log('[DEBUG OPEN CHAIN] bind direct #enableDebugButton listener');}else console.warn('[DEBUG OPEN CHAIN] bind failed: #enableDebugButton missing');document.addEventListener('pointerdown',event=>{if(event.target.closest('[data-debug-configuration-editor-action="search"]')){event.preventDefault();const active=document.activeElement;if(active?.id==='debugEditorSearchInput'||active?.classList?.contains('debug-configuration-json-textarea'))active.blur();}});document.addEventListener('click',event=>{if(event.target.closest('#colorViewCancelDebugButton')){event.preventDefault();void this.setEnabled(false);return}const action=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugConfigurationPostAction;if(action==='edit'){const postId=event.target.closest('[data-debug-configuration-post-action]')?.dataset.debugPostId;this.openEditor(event,postId);return}const ea=event.target.closest('[data-debug-configuration-editor-action]')?.dataset.debugConfigurationEditorAction;if(!ea)return;const c=getEditor();if(ea==='search'){event.preventDefault();const active=document.activeElement;if(active?.id==='debugEditorSearchInput'||active?.classList?.contains('debug-configuration-json-textarea'))active.blur();c.searchInEditor()}else if(ea==='cancel'){event.preventDefault();c.closeWithoutSaving()}else if(ea==='save'){event.preventDefault();void c.saveCurrentPostAndClose()}});document.addEventListener('keydown',event=>{if(event.target?.id==='debugEditorSearchInput'&&event.key==='Enter'){event.preventDefault();getEditor().searchInEditor()}})}
   };
   window.DebugConfigurationFeature=DebugConfigurationFeature;window.DebugPostFeature=DebugConfigurationFeature;window.DebugConfigurationPostRenderer=DebugTextPostRenderer;window.DebugConfigurationEditorController=DebugConfigurationEditorController;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>DebugConfigurationFeature.bind(),{once:true});else DebugConfigurationFeature.bind();

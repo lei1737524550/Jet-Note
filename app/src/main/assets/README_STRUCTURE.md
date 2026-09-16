@@ -87,3 +87,7 @@ All URL-based `toolbox_N` entries reuse `ToolPageController` and the modular `as
 ## Get Source resource project
 
 `assets/get_source/` owns page-resource capture. `get_source.js` is the shared observer/UI core; `get_text.js`, `get_audio.js`, `get_image.js`, and `get_video.js` own type-specific matching/rendering. `get_source/config.json` stores extension filters and priority order so the root app config does not become overloaded. The result header is split 1:1: close control on the left half and four equal Text/Audio/Image/Video controls on the right half. Matching resources sort first in green; other captured candidates follow in red. Images and videos reuse the existing `app/media/image_viewer.js` viewer.
+
+## Home Post behavior
+
+Home Post naming/ownership follows `README_HOME_POST_LOGIC.md` and `language/jet_note_ui_language.json`. Product terms take precedence over generic browser implementation names.

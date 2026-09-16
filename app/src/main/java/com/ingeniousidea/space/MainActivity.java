@@ -228,6 +228,13 @@ public class MainActivity extends Activity {
         webView = new RichContentWebView(this);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
+        // NativeVideoPlayer is overlaid above the WebView. Android WebView edge
+        // overscroll can visually stretch/bounce the page without producing a
+        // matching content scroll offset for that native overlay, briefly making
+        // an already-loaded video protrude from its HTML slot. Disable WebView
+        // overscroll so page content and the native video layer share the same
+        // hard top/bottom boundaries. Normal scrolling is unaffected.
+        webView.setOverScrollMode(android.view.View.OVER_SCROLL_NEVER);
         webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
 
         // Keep the WebView's pre-render surface identical to the native startup

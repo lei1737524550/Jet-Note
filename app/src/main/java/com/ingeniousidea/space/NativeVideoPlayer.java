@@ -70,13 +70,7 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
     // settles. The HTML poster underneath stays phase-locked with WebView.
     private boolean renderingStarted;
     private boolean scrollReanchorPending;
-    private final Runnable scrollSettleReanchor = () -> {
-        if (!isOpen()) return;
-        scrollReanchorPending = true;
-        webView.evaluateJavascript(
-                "window.__jetRefreshNativeVideoRect&&window.__jetRefreshNativeVideoRect();",
-                null);
-    };
+    private final Runnable scrollSettleReanchor;
 
     private int videoWidth;
     private int videoHeight;
@@ -110,6 +104,15 @@ final class NativeVideoPlayer implements TextureView.SurfaceTextureListener {
         this.root = root;
         this.webView = webView;
         this.store = store;
+        // Initialize after webView is assigned. A field-initializer lambda that reads
+        // the final webView field is rejected by javac as potentially uninitialized.
+        this.scrollSettleReanchor = () -> {
+            if (!isOpen()) return;
+            scrollReanchorPending = true;
+            this.webView.evaluateJavascript(
+                    "window.__jetRefreshNativeVideoRect&&window.__jetRefreshNativeVideoRect();",
+                    null);
+        };
         this.touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
         webView.getViewTreeObserver().addOnScrollChangedListener(this::onWebViewScrolled);
     }

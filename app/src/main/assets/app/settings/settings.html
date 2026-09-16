@@ -101,8 +101,9 @@
           <div class="settings-row-title" data-ui-string="settings.backup_title"></div>
           <button class="backup-stop-button common_border" id="archiveStopButton" type="button" disabled onclick="cancelArchiveOperation()" data-ui-string="settings.stop" aria-label="" data-ui-aria-label="settings.stop_accessibility_label"></button>
         </div>
-        <div class="settings-option-grid">
+        <div class="settings-option-grid backup-option-grid">
           <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main" data-ui-string="settings.export_jnote"></span></button>
+          <button class="settings-choice settings-action-choice common_border" onclick="exportArchiveWithConfig()"><span class="settings-choice-main" data-ui-string="settings.export_jnote_with_config_folder">Export .jnote (with config folder)</span></button>
           <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main" data-ui-string="settings.import_jnote"></span></button>
         </div>
         <p id="archiveStatus" role="status"></p>
@@ -126,7 +127,7 @@
       <div class="settings-card setting-box debug-settings-card common_border" id="debugSettingsCard" data-setting-id="setting_5" data-setting-name="Debug">
         <div class="settings-row-title" data-ui-string="settings.debug_title"></div>
         <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" id="enableDebugButton" type="button" onclick="DebugConfigurationFeature.setEnabled(!DebugConfigurationFeature.enabled())"><span class="settings-choice-main" data-ui-string="settings.enable_debug"></span></button>
+          <button class="settings-choice settings-action-choice common_border" id="enableDebugButton" type="button"><span class="settings-choice-main" data-ui-string="settings.enable_debug"></span></button>
           <button class="settings-choice settings-action-choice common_border" id="saveConfigJsonButton" type="button" onclick="DebugConfigurationFeature.saveJsonToDownloads()"><span class="settings-choice-main" data-ui-string="settings.save_json"></span></button>
         </div>
         <p id="debugSettingsStatus" role="status"></p>

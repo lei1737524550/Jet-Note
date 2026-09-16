@@ -13,7 +13,30 @@
 let toolboxUnfoldAnimationPromise = null;
 let currentToolsConfig = null;
 let toolboxExpanded = false;
-const animatedToolIconTimers = new Set();
+let toolKeyboardSnapshot = null;
+
+function captureToolKeyboardState() {
+  const textarea = document.getElementById('postComposerText');
+  toolKeyboardSnapshot = {
+    textareaFocused: document.activeElement === textarea,
+    selectionStart: textarea?.selectionStart ?? 0,
+    selectionEnd: textarea?.selectionEnd ?? 0,
+  };
+  return toolKeyboardSnapshot;
+}
+
+function enforceToolKeyboardState() {
+  const snapshot = toolKeyboardSnapshot;
+  if (!snapshot) return;
+  const textarea = document.getElementById('postComposerText');
+  if (!textarea) return;
+  try { textarea.setSelectionRange(snapshot.selectionStart, snapshot.selectionEnd); } catch (_) {}
+  // Never manufacture focus for a tool click. If the user had manually hidden
+  // the IME while the textarea retained DOM focus, keeping that focus untouched
+  // is what preserves the caret without reopening the keyboard.
+  if (!snapshot.textareaFocused && document.activeElement === textarea) textarea.blur();
+}
+
 
 function toolIcon(name) {
   const files = {
@@ -24,48 +47,9 @@ function toolIcon(name) {
     dictionary: 'dictionary.svg',
     sentence: 'sentences.svg',
   };
-  if (name === 'google_search') return '';
+  if (name === 'google_search') return `<img src="shared/icons/google_search.svg" alt="" aria-hidden="true">`;
   const file = files[name] || files.tools;
   return `<img src="shared/icons/${file}" alt="" aria-hidden="true">`;
-}
-
-function stopAnimatedToolIcons() {
-  for (const timer of animatedToolIconTimers) clearTimeout(timer);
-  animatedToolIconTimers.clear();
-}
-
-function normalizeAnimatedIconSequence(rule) {
-  const raw = Array.isArray(rule?.sequence) ? rule.sequence : [];
-  return raw.map(item => ({
-    asset: typeof item?.asset === 'string' ? item.asset.trim() : '',
-    durationMs: Math.max(0, Math.min(Number(item?.duration_ms) || 0, 86400000)),
-  })).filter(item => item.asset);
-}
-
-function applyAnimatedToolIcon(img, rule) {
-  const sequence = normalizeAnimatedIconSequence(rule);
-  if (!img || !sequence.length) return;
-
-  const changeCount = Number(rule?.change_count);
-  const mode = changeCount === -1 ? -1 : changeCount === 1 ? 1 : 0;
-  let index = 0;
-
-  const show = () => {
-    const item = sequence[index];
-    img.src = item.asset;
-
-    if (mode === 0 || sequence.length === 1 || (mode === 1 && index === sequence.length - 1)) return;
-
-    const wait = mode === -1 ? Math.max(16, item.durationMs) : item.durationMs;
-    const timer = setTimeout(() => {
-      animatedToolIconTimers.delete(timer);
-      index = (index + 1) % sequence.length;
-      show();
-    }, wait);
-    animatedToolIconTimers.add(timer);
-  };
-
-  show();
 }
 
 function toolLabel(tool) {
@@ -85,7 +69,9 @@ async function openConfiguredTool(tool, options = {}) {
   if (!browserMode && options?.skipEditorSuspend !== true) {
     await EditorController.suspend(tool.id);
   }
-  document.activeElement?.blur?.();
+  // Tool activation must not steal editor focus or dismiss/raise the keyboard.
+  // pointerdown is suppressed on every tool button below, so the textarea/caret
+  // keeps exactly the focus state it had before the tool was invoked.
   const title = toolLabel(tool);
   const fallbackTitle = String(tool?.fallbackTitle || '').trim()
     || (() => {
@@ -98,6 +84,7 @@ async function openConfiguredTool(tool, options = {}) {
   const fallbackBackground =
     getComputedStyle(document.documentElement).getPropertyValue('--page-background').trim()
     || 'rgb(255,255,255)';
+  // Every toolbox child resolves through the same default Tool color contract.
   const background =
     (await window.JetNoteType?.toolBackground?.(tool.id)) || fallbackBackground;
   const borderColor =
@@ -167,26 +154,30 @@ function createToolButton(tool) {
   button.title = toolLabel(tool);
   button.setAttribute('aria-label', button.title);
 
-  if (tool.icon === 'google_search') {
-    const icon = document.createElement('img');
-    icon.alt = '';
-    icon.setAttribute('aria-hidden', 'true');
-    button.appendChild(icon);
-    applyAnimatedToolIcon(icon, currentToolsConfig?.googleSearchIconRule);
-  } else {
-    button.innerHTML = toolIcon(tool.icon);
-  }
+  button.innerHTML = toolIcon(tool.icon);
+
+  // Tool actions are keyboard-neutral: suppress the button's default focus and
+  // explicitly release any editable focus before the action runs. This also
+  // covers dynamically rendered Toolbox children, because every tool is built
+  // through createToolButton().
+  button.addEventListener('pointerdown', event => {
+    captureToolKeyboardState();
+    event.preventDefault();
+    const active = document.activeElement;
+    if (active && typeof active.blur === 'function') active.blur();
+  });
 
   if (isToolboxTrigger) {
     button.dataset.collapsedIcon = tool.icon || 'tools';
     button.setAttribute('aria-expanded', String(toolboxExpanded));
-    // Keep Gboard open while toggling the toolbox.
-    button.addEventListener('pointerdown', event => event.preventDefault());
   }
   if (tool.action === 'video') button.dataset.addVideo = 'post';
   if (tool.action === 'sound') button.dataset.addAudio = 'post';
 
-  button.addEventListener('click', () => void ToolActions.run(tool));
+  button.addEventListener('click', () => {
+    const run = ToolActions.run(tool);
+    Promise.resolve(run);
+  });
   return button;
 }
 
@@ -194,7 +185,6 @@ function renderTools({ animate = false } = {}) {
   const toolsElement = document.getElementById('postEditorTools');
   if (!toolsElement || !currentToolsConfig) return;
 
-  stopAnimatedToolIcons();
   const visibleTools = ToolLoader.buildVisibleTools(currentToolsConfig, toolboxExpanded);
   const buttons = visibleTools.map(createToolButton);
   toolsElement.replaceChildren(...buttons);
@@ -287,7 +277,9 @@ async function reloadTools() {
   await initializeTools();
 }
 
-window.addEventListener('pagehide', stopAnimatedToolIcons);
+window.addEventListener('jetnote:editor-resume', () => {
+  requestAnimationFrame(() => requestAnimationFrame(enforceToolKeyboardState));
+});
 
 registerBuiltInToolActions();
 window.initializeTools = initializeTools;

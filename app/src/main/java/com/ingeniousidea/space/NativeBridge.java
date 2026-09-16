@@ -76,6 +76,10 @@ final class NativeBridge {
         return RuntimeConfigStore.readEffectiveSection(activity, section);
     }
 
+    @JavascriptInterface public String getRuntimeConfigSectionOverridesJson(String section) {
+        return RuntimeConfigStore.readOverrideSection(activity, section);
+    }
+
     @JavascriptInterface public boolean setRuntimeConfigSectionJson(String section, String json) {
         return RuntimeConfigStore.saveRuntimeSection(activity, section, json);
     }

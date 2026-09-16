@@ -1,5 +1,5 @@
 {
-  "schema_version": 9,
+  "schema_version": 10,
   "purpose": "Shared UI terminology and naming language for Jet Note development.",
   "ui_language_primitives": {
     "jetnote_style_border": {
@@ -88,7 +88,7 @@
   "regions": {
     "top_post": {
       "display_name": "Top Post",
-      "description": "The first semantic region inside three_post_one_body. It owns the top post surface and may render welcome_post when no Super Star post occupies the region."
+      "description": "The first semantic region inside Three Posts, One Body. Top Post has one product form only: the current Super Star Post. When no Super Star exists, Top Post renders no fallback Post and occupies no Post-content role."
     },
     "post_composer": {
       "display_name": "Post Composer",
@@ -109,10 +109,6 @@
     "system_safe_area": {
       "display_name": "System Safe Area",
       "description": "The device-dependent inset reserved for display cutouts, hidden/visible system bars, and other physical screen obstructions. In the Android app, WindowInsets is the only authoritative source for this geometry."
-    },
-    "welcome_post": {
-      "display_name": "Welcome Post",
-      "description": "The welcome-state content rendered inside top_post when no Super Star post occupies Top Post. welcome_post is not a fourth member of Three Posts, One Body."
     }
   },
   "layout_terms": {
@@ -212,20 +208,16 @@
     "system_safe_area_single_source": {
       "description": "System safe-area geometry must have one owner. Android WindowInsets provides the values; CSS consumes the resulting variables. Do not add env(safe-area-inset-*) or a second guessed top padding on top of the native inset."
     },
-    "three_post_one_body_canonical_names": {
-      "english": "Use exactly three canonical region names inside three_post_one_body: top_post, post_composer, and main_posts. The top-post empty/default state is named welcome_post. Do not introduce post_1/post_2/post_3, write_sth, feed_composer, composer_area, top_post_default, or other parallel aliases."
-    }
+    "three_post_one_body_canonical_names": {}
   },
   "concepts": {
     "three_posts_one_body": {
       "display_name": "Three Posts, One Body",
-      "description": "Top Post, Post Composer, and Main Posts are the three canonical regions of the Jet Note home body. welcome_post is a state/content configuration inside top_post rather than a fourth region.",
       "members": [
         "top_post",
         "post_composer",
         "main_posts"
-      ],
-      "top_post_welcome_state": "welcome_post"
+      ]
     },
     "settings_module_model": {
       "display_name": "Settings Module Model",
@@ -352,7 +344,6 @@
         "top_post_box": {
           "selector": "#topPostCard.three-posts-one-body__box",
           "code_location": "app/home/home.html + app/home/posts.js",
-          "visual_location": "The actual Top Post box, including welcome_post or Super Star content.",
           "background_role": "Set Body"
         },
         "post_composer_layout": {
@@ -477,17 +468,10 @@
     },
     "top_post": {
       "display_name": "Top Post",
-      "english": "The first canonical region inside three_post_one_body. It may contain welcome_post or a Super Star post.",
       "not_the_same_as": [
-        "welcome_post",
         "main_status_bar",
         "page_action_bar"
       ]
-    },
-    "welcome_post": {
-      "display_name": "Welcome Post",
-      "english": "The welcome-state content inside Top Post. Its text appearance is configured at config.json -> three_post_one_body.welcome_post and its string is stored at language/english.json -> ui_strings.home.welcome_post_default.",
-      "parent_region": "top_post"
     },
     "post_composer": {
       "display_name": "Post Composer",
@@ -516,12 +500,6 @@
       "description": "A Super Star post promoted from Main Posts into Top Post. Border timing and timestamp presentation live in the Top Post state block.",
       "configuration": "config.json -> three_post_one_body.top_post.super_star",
       "selector": "#topPostCard.top-post-super"
-    },
-    "welcome": {
-      "display_name": "Welcome Top Post",
-      "description": "The default Top Post state shown when no Super Star occupies Top Post.",
-      "configuration": "config.json -> three_post_one_body.top_post.welcome",
-      "selector": "#topPostCard.welcome-post"
     }
   },
   "state_and_sync_terms": {
@@ -547,6 +525,10 @@
     },
     "main_status_bar_height_semantics": {
       "english": "main_status_bar.main_status_bar_height is the literal CSS box height of #mainStatusBar only. It does not include .phone system-safe-area padding and does not include three_post_one_body.vertical_move_px. 0 means exactly 0px."
+    },
+    "horizontal_ellipsis_menu_family": {
+      "display_name": "Horizontal Ellipsis Menu Family",
+      "description": "Both menus opened from a Post horizontal ellipsis belong to one menu family: the full horizontal-ellipsis action menu and the horizontal-ellipsis trash-mode menu. Position, anchor-following, reflow-following, and movement behavior that is defined for the horizontal ellipsis menu applies to both variants unless a setting explicitly says otherwise."
     }
   },
   "configuration_terms": {
@@ -580,9 +562,7 @@
       "display_name": "System Safe Area Is Not a Configurable Height",
       "description": "Do not place a guessed cutout/status-bar height in config.json. page_action_bar.height and main_status_bar.height describe component geometry; system_safe_area is runtime device geometry supplied by Android."
     },
-    "three_post_one_body_config": {
-      "english": "config.json -> three_post_one_body owns vertical_move_px, font_size_px, welcome_post, and the top_post state, post_composer, and main_posts state border rules."
-    },
+    "three_post_one_body_config": {},
     "three_post_one_body_background_config": {
       "english": "jet_note_type.jet_note_type_background.three_post_one_body contains set_background for exposed outer/gap space, set_body for the three real Post boxes (Top Post, Post Composer, Main Posts), and internal_controls for explicit controls inside those boxes. Do not restore separate wrapper background fields."
     },
@@ -621,9 +601,7 @@
     "main_status_bar_single_owner": {
       "english": "main_status_bar.js alone reads config.json -> main_status_bar and applies its CSS variables. posts.js must not own or reinterpret main_status_bar geometry. Java owns system safe-area insets and native battery data, not the web component height."
     },
-    "three_post_one_body_single_naming_source": {
-      "english": "Code must use welcome_post, top_post, post_composer, and main_posts as the canonical names. When old code/config uses top_post_default, write_sth, feed_composer, composer_area, postList, or similar aliases, migrate the old reference instead of adding compatibility aliases."
-    },
+    "three_post_one_body_single_naming_source": {},
     "three_post_one_body_border_rule_engine": {
       "english": "posts.js owns one timer per canonical Three Posts, One Body state border rule. Reapplying config clears the old timer first. pagehide clears remaining timers so duplicate loops cannot survive navigation."
     },
@@ -687,13 +665,13 @@
       "cancel": "Cancel"
     },
     "home": {
-      "settings_accessibility_label": "Settings",
-      "welcome_post_default": "welcome to Jet Note"
+      "settings_accessibility_label": "Settings"
     },
     "settings": {
       "page_title": "Settings",
       "backup_title": "Backup",
       "export_jnote": "Export .jnote",
+      "export_jnote_with_config_folder": "Export .jnote (with config folder)",
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
       "color_view_title": "Color View",
@@ -913,7 +891,9 @@
         "shared_duration_seconds": "T = D_max / V_ref",
         "element_duration": "T_i = T",
         "element_speed": "V_i = D_i / T",
-        "reference_element_speed": "V_max = D_max / T = V_ref"
+        "reference_element_speed": "V_max = D_max / T = V_ref",
+        "speed_mode_assignment": "When speed_or_duration is speed, configured speed_px_per_second is assigned directly to V_max (the participant with D_max). Do not multiply it by a hidden runtime factor.",
+        "coordinated_settings_example": "For Debug Settings open/close: measure all viewer and existing-setting FIRST→LAST distances; D_max receives V_max; T = D_max / V_max; every smaller displacement D_i derives V_i = D_i / T so all participants arrive together."
       },
       "debug_geometry": "Enable Debug 展开时，Debug-only Settings cards 的起始底边对齐 viewport bottom；关闭时反向移动到同一个 viewport-bottom 底边。每个元素的 D_i 都由真实起点与终点计算。",
       "rules": [
@@ -926,5 +906,25 @@
       "bidirectional_debug_rule": "Enable Debug 与 Cancel Debug 使用同一个 V_ref；相同轨迹反向播放必须得到相同 shared duration，不允许关闭侧附加更慢的 duration 或 hold。",
       "dynamic_viewport_follow": "Debug 展开与收回的每一帧都跟随当前移动目标：先保证元素完整可见；滚动边界允许时再尽量将目标垂直居中；到达顶部/底部合法滚动边界后 viewport 停止而元素继续完成运动。"
     }
+  },
+  "code_language_contract": {
+    "display_name": "Jet Note Code Language Contract",
+    "description": "Code names for Home/Post behavior should follow Jet Note UI Language instead of introducing generic aliases.",
+    "canonical_terms": {
+      "post_movement": "Post Movement — the visible movement of Posts during Star / Cancel Star / Super Star state changes. FLIP is the implementation technique, not the product-facing name.",
+      "horizontal_ellipsis_menu_family": "Horizontal Ellipsis Menu Family — the horizontal action menu opened from a Post ellipsis. It follows its Post and does not own Post movement.",
+      "post_movement_snapshot": "Post Movement Snapshot — the geometry captured before a Star/Super Star layout state change for visual continuity.",
+      "post_movement_transaction": "Post Movement Transaction — guards one Star/Super Star movement operation from overlapping with another."
+    },
+    "naming_rules": [
+      "Prefer postMovement over postReflow in Home code. Reflow is a browser implementation detail and does not describe the Jet Note behavior.",
+      "Use horizontalEllipsisMenu for the menu family when a name would otherwise be ambiguous.",
+      "A refactor must preserve event order, persistence, configuration reads, sound calls, menu state, and DOM lifecycle unless a behavior change is explicitly requested."
+    ]
+  },
+  "animation_speed_configuration_schema": {
+    "standard": "Each independently configurable motion uses an object containing speed_px_per_second (and duration_ms only when duration mode is supported). Avoid action-prefixed flat speed keys.",
+    "speed_semantics": "Configured speed_px_per_second is V_max. D_max=max(D_i); T=D_max/V_max; all participants share T; V_i=D_i/T.",
+    "debug_settings": "debug_settings_viewer_animation is the single configuration source for both open and close; close may derive its V_max using close_speed_multiplier without introducing a second speed setting."
   }
 }

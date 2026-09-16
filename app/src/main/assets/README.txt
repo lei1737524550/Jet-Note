@@ -4,7 +4,6 @@
   "regions": {
     "top_post": {
       "display_name": "Top Post",
-      "description": "The first semantic region inside three_post_one_body. It owns the top post surface and may render welcome_post when no Super Star post occupies the region."
     },
     "post_composer": {
       "display_name": "Post Composer",
@@ -26,9 +25,7 @@
       "display_name": "System Safe Area",
       "description": "The device-dependent inset reserved for display cutouts, hidden/visible system bars, and other physical screen obstructions. In the Android app, WindowInsets is the only authoritative source for this geometry."
     },
-    "welcome_post": {
       "display_name": "Welcome Post",
-      "description": "The welcome-state content rendered inside top_post when no Super Star post occupies Top Post. welcome_post is not a fourth member of Three Posts, One Body."
     }
   },
   "layout_terms": {
@@ -129,19 +126,16 @@
       "description": "System safe-area geometry must have one owner. Android WindowInsets provides the values; CSS consumes the resulting variables. Do not add env(safe-area-inset-*) or a second guessed top padding on top of the native inset."
     },
     "three_post_one_body_canonical_names": {
-      "english": "Use exactly three canonical region names inside three_post_one_body: top_post, post_composer, and main_posts. The top-post empty/default state is named welcome_post. Do not introduce post_1/post_2/post_3, write_sth, feed_composer, composer_area, top_post_default, or other parallel aliases."
     }
   },
   "concepts": {
     "three_posts_one_body": {
       "display_name": "Three Posts, One Body",
-      "description": "Top Post, Post Composer, and Main Posts are the three canonical regions of the Jet Note home body. welcome_post is a state/content configuration inside top_post rather than a fourth region.",
       "members": [
         "top_post",
         "post_composer",
         "main_posts"
       ],
-      "top_post_welcome_state": "welcome_post"
     },
     "settings_module_model": {
       "display_name": "Settings Module Model",
@@ -264,7 +258,6 @@
       "display_name": "Three Posts, One Body Border Rule Language",
       "configuration_root": "config.json -> three_post_one_body",
       "state_paths": {
-        "top_post.welcome": "three_post_one_body.top_post.welcome.border_rule",
         "top_post.super_star": "three_post_one_body.top_post.super_star.border_rule",
         "post_composer": "three_post_one_body.post_composer.border_rule",
         "main_posts.non_star": "three_post_one_body.main_posts.non_star.border_rule",
@@ -294,7 +287,6 @@
       },
       "ownership_rule": "This border-rule language is the single canonical source for Three Posts, One Body border colors, including Star and Super Star states. Do not keep parallel outer_border_color or activation-transition border fields.",
       "activation_rule": "When a post enters star or super_star, restart that state border rule from sequence[0]. This preserves activation transitions expressed as change_count: 1 sequences.",
-      "naming_rule": "Use top_post.welcome, top_post.super_star, post_composer, main_posts.non_star, and main_posts.star. Do not reintroduce post_1/post_2/post_3 or separate Star/Super Star border-color fields."
     },
     "three_post_one_body_background_geometry": {
       "display_name": "Three Posts, One Body Set Background / Set Body Geometry",
@@ -320,7 +312,6 @@
         "top_post_box": {
           "selector": "#topPostCard.three-posts-one-body__box",
           "code_location": "app/home/home.html + app/home/posts.js",
-          "visual_location": "The actual Top Post box, including welcome_post or Super Star content.",
           "background_role": "Set Body"
         },
         "post_composer_layout": {
@@ -445,16 +436,12 @@
     },
     "top_post": {
       "display_name": "Top Post",
-      "english": "The first canonical region inside three_post_one_body. It may contain welcome_post or a Super Star post.",
       "not_the_same_as": [
-        "welcome_post",
         "main_status_bar",
         "page_action_bar"
       ]
     },
-    "welcome_post": {
       "display_name": "Welcome Post",
-      "english": "The welcome-state content inside Top Post. Its text appearance is configured at config.json -> three_post_one_body.welcome_post and its string is stored at language/english.json -> ui_strings.home.welcome_post_default.",
       "parent_region": "top_post"
     },
     "post_composer": {
@@ -488,8 +475,6 @@
     "welcome": {
       "display_name": "Welcome Top Post",
       "description": "The default Top Post state shown when no Super Star occupies Top Post.",
-      "configuration": "config.json -> three_post_one_body.top_post.welcome",
-      "selector": "#topPostCard.welcome-post"
     }
   },
   "state_and_sync_terms": {
@@ -549,7 +534,6 @@
       "description": "Do not place a guessed cutout/status-bar height in config.json. page_action_bar.height and main_status_bar.height describe component geometry; system_safe_area is runtime device geometry supplied by Android."
     },
     "three_post_one_body_config": {
-      "english": "config.json -> three_post_one_body owns vertical_move_px, font_size_px, welcome_post, and the top_post state, post_composer, and main_posts state border rules."
     },
     "three_post_one_body_background_config": {
       "english": "jet_note_type.jet_note_type_background.three_post_one_body contains set_background for exposed outer/gap space, set_body for the three real Post boxes (Top Post, Post Composer, Main Posts), and internal_controls for explicit controls inside those boxes. Do not restore separate wrapper background fields."
@@ -590,7 +574,6 @@
       "english": "main_status_bar.js alone reads config.json -> main_status_bar and applies its CSS variables. posts.js must not own or reinterpret main_status_bar geometry. Java owns system safe-area insets and native battery data, not the web component height."
     },
     "three_post_one_body_single_naming_source": {
-      "english": "Code must use welcome_post, top_post, post_composer, and main_posts as the canonical names. When old code/config uses top_post_default, write_sth, feed_composer, composer_area, postList, or similar aliases, migrate the old reference instead of adding compatibility aliases."
     },
     "three_post_one_body_border_rule_engine": {
       "english": "posts.js owns one timer per canonical Three Posts, One Body state border rule. Reapplying config clears the old timer first. pagehide clears remaining timers so duplicate loops cannot survive navigation."
@@ -656,7 +639,6 @@
     },
     "home": {
       "settings_accessibility_label": "Settings",
-      "welcome_post_default": "welcome to Jet Note"
     },
     "settings": {
       "page_title": "Settings",

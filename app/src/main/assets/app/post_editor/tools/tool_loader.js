@@ -65,7 +65,6 @@ const ToolLoader = (() => {
       toolbox,
       maximumVisibleTools,
       networkProbeTimeoutMs,
-      googleSearchIconRule: appConfig?.google_search_icon || null,
     });
     return cache;
   }

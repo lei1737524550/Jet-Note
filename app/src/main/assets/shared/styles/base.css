@@ -360,16 +360,6 @@ button:focus-visible {
 
 /* Simplified home: no profile identity or permanent feature tabs. */
 .home-actions{width:100%;padding:8px var(--content-horizontal-padding) 8px;}
-.top-post-card{width:100%;height:auto;padding:12px;background:var(--jet-note-type-three-post-set-body,#fff);}
-.top-post-layout{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:stretch;}
-.welcome-post .top-post-layout{grid-template-columns:minmax(0,1fr);}
-.welcome-post-text{grid-column:1;display:flex;align-items:center;justify-content:center;min-width:0;padding:10px 8px;text-align:center;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--welcome-post-text-color,#F06E80);font-size:var(--welcome-post-text-size,2em);line-height:1.35;}
-.top-post-content{grid-column:1;min-width:0;padding:2px 6px 2px 8px;align-self:start;}
-.top-post-content .text-content{margin-top:0;}
-.top-post-content .time{margin-top:var(--post-state-time-top-margin,10px);margin-bottom:var(--post-state-time-bottom-margin,3px);}
-.top-post-actions{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:44px;}
-.top-post-actions .more{position:static!important;width:44px;height:44px;min-width:44px;min-height:44px;margin:0;padding:10px;border:0;border-radius:10px;background:transparent;display:grid;place-items:center;color:#626a73;pointer-events:auto;z-index:auto;}
-.top-post-actions .more svg, .top-post-actions .more img{width:24px;height:24px;display:block;fill:currentColor;}
 .post-head-minimal{
   position:relative;
   z-index:5;
@@ -385,8 +375,7 @@ button:focus-visible {
 
 
 /* Three Posts, One Body border rules are state-aware and configured in config.json. */
-#topPostCard.welcome-post.common_border{border-color:var(--three-post-one-body-top-post-welcome-border-color,var(--common-border-color));}
-#topPostCard.top-post-super.common_border{border-color:var(--three-post-one-body-top-post-super-star-border-color,var(--common-border-color));}
+#topPostCard .post-surface[data-post-role="top"].common_border{border-color:var(--three-post-one-body-top-post-super-star-border-color,var(--common-border-color));}
 #postComposerMount .post-composer.common_border{border-color:var(--three-post-one-body-post-composer-border-color,var(--common-border-color));}
 #mainPosts article.post.post-state-not-star.common_border{border-color:var(--three-post-one-body-main-posts-non-star-border-color,var(--common-border-color));}
 #mainPosts article.post.post-state-star.common_border{border-color:var(--three-post-one-body-main-posts-star-border-color,var(--common-border-color));}
@@ -406,9 +395,8 @@ button:focus-visible {
 }
 
 /* Per-star-state visual settings supplied by config.json. */
-#mainPosts article.post > .time,
-#mainPosts article.post > .post-footer-row > .time,
-#topPostCard.top-post-super .top-post-content > .time{
+.post-surface[data-post-role="main"] > .post-footer-row > .time,
+.post-surface[data-post-role="top"] > .post-footer-row > .time{
   color:var(--post-state-time-color,var(--muted));
   margin-top:var(--post-state-time-top-margin,3px);
   margin-bottom:var(--post-state-time-bottom-margin,3px);
@@ -416,8 +404,6 @@ button:focus-visible {
 
 /* Super Star: keep a short post's timestamp at the lower-left of its content column.
    This remains normal flow: longer content grows the card and pushes the time down. */
-.top-post-super .top-post-content{display:flex;flex-direction:column;}
-.top-post-super .top-post-content > .time{margin-top:auto;padding-top:var(--post-state-time-top-margin,10px);margin-bottom:var(--post-state-time-bottom-margin,3px);}
 
 /* Home main_status_bar: one outer box only.
    The old four region wrappers and the Settings three-way sub-grid were removed.

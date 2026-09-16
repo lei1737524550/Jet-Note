@@ -103,24 +103,12 @@
    This keeps Edit Debug Post aligned with New/Edit Post geometry while giving
    all unavailable feature space back to the JSON editor. */
 .debug-configuration-editor-content-column{
-  --debug-configuration-editor-extra-height-from-omitted-controls:
-    calc(
-      var(--post-editor-attachment-row-height,48px) +
-      var(--post-editor-attachment-row-height,48px) +
-      var(--post-editor-tools-row-height,var(--post-editor-attachment-row-height,48px)) +
-      var(--post-editor-vertical-section-gap,12px) +
-      var(--post-editor-vertical-section-gap,12px)
-    );
+  --debug-configuration-editor-extra-height-from-omitted-controls:0px;
 }
 .debug-configuration-editor-text-region{
   position:relative;
   /* Primary source: config.json -> debug_configuration_editor.edit_debud_post_height.
      Fallback keeps the previous derived geometry for older config.json files. */
-  --debug-configuration-editor-derived-text-region-height:
-    calc(
-      var(--new-post-text-area-height,400px) +
-      var(--debug-configuration-editor-extra-height-from-omitted-controls)
-    );
   --debug-configuration-editor-effective-text-region-height:
     var(
       --debug-configuration-editor-text-area-height,
@@ -149,10 +137,7 @@
   color:var(--jet-note-type-body-foreground-color,#111);
   position:relative;
   z-index:2;
-  padding:var(--post-editor-text-padding-top,0px)
-          var(--post-editor-text-padding-right,0px)
-          var(--post-editor-text-padding-bottom,0px)
-          var(--post-editor-text-padding-left,0px);
+  padding:0;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:13px;
   line-height:1.5;
@@ -202,10 +187,7 @@
      Only the parent text-region clips the visible viewport. */
   overflow:visible;
   pointer-events:none;
-  padding:var(--post-editor-text-padding-top,0px)
-          var(--post-editor-text-padding-right,0px)
-          var(--post-editor-text-padding-bottom,0px)
-          var(--post-editor-text-padding-left,0px);
+  padding:0;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-size:13px;
   line-height:1.5;
@@ -282,4 +264,156 @@
   margin:0;
   padding:0;
   pointer-events:auto;
+}
+
+
+/* V26 — Debug editor bottom-space removal.
+   The JSON textarea owns the full visible edit region. Do not reserve a fake
+   keyboard/screen-sized tail or a Search-row padding tail beneath the document. */
+.debug-configuration-editor-text-region{
+  flex-basis:1px!important;
+  height:auto!important;
+  max-height:none!important;
+}
+.debug-configuration-json-textarea{
+  padding-bottom:0!important;
+  scroll-padding-bottom:0!important;
+}
+
+/* V35 — config-driven edge-to-edge Debug Post editor. */
+.debug-configuration-editor-body{
+  padding-bottom:var(--debug-editor-body-bottom-padding,0px)!important;
+}
+.debug-configuration-json-textarea{
+  padding-bottom:var(--debug-editor-text-bottom-padding,0px)!important;
+  scroll-padding-bottom:var(--debug-editor-text-bottom-padding,0px)!important;
+}
+
+/* V36 — Debug Editor owns its shell. No post-compose-* geometry dependency. */
+.debug-configuration-editor-screen{
+  position:fixed;
+  left:var(--viewport-offset-left,0px);
+  top:var(--viewport-offset-top,0px);
+  width:var(--viewport-width,100vw);
+  height:var(--viewport-height,100dvh);
+  z-index:20000;
+  display:none;
+  overflow:hidden;
+  flex-direction:column;
+  min-height:0;
+  background:var(--jet-note-type-edit-post-background,var(--page-background));
+  transform:none!important;
+}
+.debug-configuration-editor-screen.open{display:flex;}
+.debug-configuration-editor-title{min-width:0;}
+.debug-configuration-editor-save-button{color:var(--page-action-bar-primary-color);}
+.debug-configuration-editor-send-icon{
+  width:24px;
+  height:24px;
+  display:block;
+  background:currentColor;
+  -webkit-mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+  mask:url('../../shared/icons/send_svg_repo_com.svg') center / contain no-repeat;
+}
+.debug-configuration-editor-body{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+  margin-top:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  background:var(--jet-note-type-edit-post-background,var(--page-background));
+  padding:22px 20px var(--debug-editor-body-bottom-padding,0px);
+}
+.debug-configuration-editor-content-column{
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  flex:1 1 auto;
+  width:100%;
+  min-height:0;
+  gap:0;
+}
+.debug-configuration-editor-text-region{
+  --debug-configuration-editor-effective-text-region-height:var(--debug-editor-text-area-height,390px);
+}
+.debug-configuration-json-textarea,
+.debug-configuration-search-highlight-layer{
+  padding-top:0;
+  padding-right:0;
+  padding-left:0;
+}
+.debug-configuration-editor-screen .common_border{
+  border-color:var(--jet-note-type-edit-post-border-color,var(--common-border-color));
+}
+
+/* V36.1 — Search frame safe-edge offset.
+   Move only the Search row. Keep the row/vacated area transparent and leave
+   the JSON/editor geometry untouched. */
+.debug-editor-search-row{
+  bottom:calc(var(--safe-bottom,0px) + 10px);
+  background:transparent!important;
+}
+
+/* V36.2 — Debug Post editor only: stable shell + real top safe area.
+   Do not let live IME/visualViewport changes resize or vertically shift this
+   editor. The shared stable viewport is captured while the keyboard is hidden. */
+.debug-configuration-editor-screen{
+  left:var(--editor-stable-offset-left,0px);
+  top:var(--editor-stable-offset-top,0px);
+  width:var(--editor-stable-viewport-width,100vw);
+  height:var(--editor-stable-viewport-height,100dvh);
+}
+.debug-configuration-editor-header{
+  flex:0 0 calc(var(--safe-top,0px) + var(--page-action-bar-height));
+  height:calc(var(--safe-top,0px) + var(--page-action-bar-height));
+  padding-top:var(--safe-top,0px);
+  box-sizing:border-box;
+}
+/* Search geometry is identical with IME hidden/open. It no longer consumes a
+   keyboard-state selector or a keyboard-specific bottom offset. */
+.debug-editor-search-row{
+  bottom:calc(var(--safe-bottom,0px) + 10px);
+}
+
+/* V36.3 — Debug Post editor only.
+   The header divider moved from y=82px to y=149px after adopting the real
+   top safe area: +67px on the 691x1536 reference capture. Move only the two
+   edge action buttons by the same delta; do not touch editor/search geometry. */
+.debug-configuration-editor-cancel-button,
+.debug-configuration-editor-save-button{
+  transform:translateY(67px);
+}
+
+/* V36.5 — Debug Post Editor header geometry mirrors Settings.
+   Keep this local to Debug Post Editor: the shared page-action-bar owns title
+   and side-control geometry; the page only places that bar below safe-top. */
+.debug-configuration-editor-screen.open{
+  display:block;
+}
+.debug-configuration-editor-header{
+  position:absolute;
+  left:0;
+  top:var(--safe-top,0px);
+  width:100%;
+  height:var(--page-action-bar-height);
+  min-height:var(--page-action-bar-height);
+  flex:0 0 var(--page-action-bar-height);
+  padding-top:0;
+  box-sizing:border-box;
+}
+.debug-configuration-editor-body{
+  position:absolute;
+  left:0;
+  right:0;
+  top:calc(var(--safe-top,0px) + var(--page-action-bar-height));
+  bottom:0;
+  margin-top:0;
+}
+.debug-configuration-editor-cancel-button,
+.debug-configuration-editor-save-button{
+  transform:none;
 }

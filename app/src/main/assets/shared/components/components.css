@@ -186,7 +186,7 @@
 /* Published single-photo mode mirrors the single-video edge-to-edge geometry.
    Only this one-photo presentation escapes the Post's horizontal content
    padding; the Post itself, editor previews, and 1xN strips are unchanged. */
-#mainPosts article.post > .post-media-grid.one.post-published-single-photo {
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
   width: calc(100% + var(--published-post-horizontal-padding, 12px) + var(--published-post-horizontal-padding, 12px) - var(--published-single-media-spacing-left, 3px) - var(--published-single-media-spacing-right, 3px));
   margin-left: calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-left, 3px));
   margin-right: calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-right, 3px));
@@ -195,7 +195,7 @@
   border-radius: 1px;
 }
 
-#mainPosts article.post > .post-media-grid.one.post-published-single-photo > img {
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
   border-radius: 1px;
 }
 
@@ -748,7 +748,7 @@
 
 /* Main Post footer: keep the timestamp in its normal lower-left flow.
    Video controls stay inside their own unified media component. */
-#mainPosts article.post > .post-footer-row {
+.published-post-surface > .post-footer-row {
   display:flex;
   align-items:center;
   justify-content:flex-start;
@@ -756,7 +756,7 @@
   min-width:0;
 }
 
-#mainPosts article.post > .post-footer-row > .time {
+.published-post-surface > .post-footer-row > .time {
   flex:0 0 auto;
 }
 
@@ -800,12 +800,12 @@
    A tall single photo must never take over the feed. The cap is driven by
    config.json -> published_post_media_max_height_px (default: 234px), matching
    the current New Post text-region height. Natural aspect ratio is preserved. */
-#mainPosts article.post > .post-media-grid.one.post-published-single-photo {
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
   max-height: var(--published-post-media-max-height, 234px);
   overflow: hidden;
 }
 
-#mainPosts article.post > .post-media-grid.one.post-published-single-photo > img {
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
   width: 100%;
   height: auto;
   max-height: var(--published-post-media-max-height, 234px);
@@ -837,4 +837,23 @@
 #postActionPanel.post-action-panel .post-action-icon,
 .delete-confirm-backdrop.post-menu-confirm .post-action-menu-icon {
   pointer-events: none;
+}
+
+/* v17 Unified Post media geometry ------------------------------------------------
+   Top is a role of the same Post surface, so published single-photo geometry and
+   the configured height cap must not depend on #mainPosts.  This intentionally
+   covers both role=main and role=top (including .top-post-content wrappers). */
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  max-height: var(--published-post-media-max-height, 234px) !important;
+  overflow: hidden !important;
+}
+
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-height: var(--published-post-media-max-height, 234px) !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  aspect-ratio: auto !important;
 }

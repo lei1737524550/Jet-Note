@@ -98,10 +98,16 @@ function clearArchiveProgress(delay=0){
   else box.hidden=true;
 }
 async function exportArchive(){
+  return exportArchiveMode(false);
+}
+async function exportArchiveWithConfig(){
+  return exportArchiveMode(true);
+}
+async function exportArchiveMode(includeConfigFolder){
   if (!isWorkspaceWritable()) return;
   if(!entriesReady||entriesBusy)return;
   if(window.JetNoteNative?.exportJetNote){
-    await exportNativeArchive();
+    await exportNativeArchive(includeConfigFolder);
     return;
   }
   entriesBusy=true;
@@ -112,10 +118,12 @@ async function exportArchive(){
   try{
     const snapshot=await EntryStore.read();
     let config=null;
-    try {
-      const response=await fetch('config.json',{cache:'no-store'});
-      if(response.ok)config=await response.json();
-    } catch (_) {}
+    if(includeConfigFolder){
+      try {
+        const response=await fetch('config.json',{cache:'no-store'});
+        if(response.ok)config=await response.json();
+      } catch (_) {}
+    }
     throwIfArchiveFallbackCancelled();
     const bytes=await ArchiveCodec.exportSnapshot({
       ...snapshot,config
@@ -168,9 +176,19 @@ async function selectArchive(event){
     setArchiveOperationState('', '', false);
   }
 }
+function selectImportMode(mode){
+  if(!['add','merge','replace'].includes(mode))return;
+  const input=document.getElementById('importMode');
+  if(input)input.value=mode;
+  document.querySelectorAll('#importModeChoices [data-import-mode]').forEach(button=>{
+    const selected=button.dataset.importMode===mode;
+    button.classList.toggle('selected',selected);
+    button.setAttribute('aria-checked',selected?'true':'false');
+  });
+}
 function showImportPreview(){
   document.getElementById('importSummary').textContent=t('posts')+': '+pendingArchive.posts.length+' · '+t('attachments')+': '+pendingArchive.media.length;
-  document.getElementById('importMode').value='merge';
+  selectImportMode('merge');
   document.getElementById('importPreview').classList.add('open');
   archiveStatus(t('verified'));
 }
@@ -221,6 +239,25 @@ async function importSnapshot(incoming, mode) {
     }
 
     const result = structuredClone(local);
+
+    // Add means clone-and-append, not de-duplicate. Every imported Post gets a
+    // fresh local identity while preserving its content and timestamps. This
+    // makes exporting N Posts and importing the same archive with Add produce
+    // N additional Posts. Attachment IDs are intentionally preserved so the
+    // clone can safely reference the same immutable media record.
+    if (mode === 'add') {
+      for (const original of imported) {
+        const copy = structuredClone(original);
+        copy.id = next++;
+        copy.uuid = entryUuid();
+        delete copy.legacyId;
+        used.add(copy.id);
+        result.push(copy);
+        stats.added++;
+      }
+      return result;
+    }
+
     const index = new Map(result.map((entry, i) => [entry.uuid, i]));
 
     for (const original of imported) {
@@ -358,7 +395,7 @@ function chooseArchive(){
     JetNoteNative.importJetNote('merge');
   }else document.getElementById('archivePicker').click();
 }
-async function exportNativeArchive(){
+async function exportNativeArchive(includeConfigFolder=false){
   entriesBusy=true;
   archiveFallbackCancellationRequested=false;
   setArchiveOperationState('export','prepare',true);
@@ -366,12 +403,20 @@ async function exportNativeArchive(){
   setArchiveProgress({message:'Preparing export data…',percent:0});
   try{
     const state=await EntryStore.read(),payload={
-      appVersion:'4.0',posts:[],config:null
+      appVersion:'4.0',posts:[]
     };
-    try {
-      const configText=window.JetNoteNative?.getRuntimeConfigJson?.();
-      if(configText)payload.config=JSON.parse(configText);
-    } catch (_) { payload.config=null; }
+    if(includeConfigFolder){
+      const configFolder={};
+      try {
+        const sectionNames=JSON.parse(window.JetNoteNative?.listRuntimeConfigSectionFilesJson?.()||'[]');
+        for(const sectionName of sectionNames){
+          const text=window.JetNoteNative?.getRuntimeConfigSectionOverridesJson?.(sectionName)
+            ?? window.JetNoteNative?.getRuntimeConfigSectionJson?.(sectionName);
+          if(text)configFolder[sectionName]=JSON.parse(text);
+        }
+      } catch (_) {}
+      if(Object.keys(configFolder).length)payload.configFolder=configFolder;
+    }
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
     setArchiveOperationState('export','select',true);
@@ -425,9 +470,15 @@ window.JetNoteArchive={
       setArchiveOperationState('import','database',true);
       const importedConfig=pendingArchive?.config||null;
       const stats=await importSnapshot(pendingArchive,pendingArchive.selectedMode);
-      if(importedConfig){
+      if(importedConfig?.__jetnoteConfigFolder){
+        for(const [sectionName, sectionValue] of Object.entries(importedConfig.__jetnoteConfigFolder)){
+          const saved=window.JetNoteNative?.setRuntimeConfigSectionJson?.(sectionName,JSON.stringify(sectionValue));
+          if(saved===false)throw Error('Unable to restore config/'+sectionName+' from backup.');
+        }
+      }else if(importedConfig){
+        // Legacy .jnote archives used one data/config.json snapshot.
         const saved=window.JetNoteNative?.setRuntimeConfigJson?.(JSON.stringify(importedConfig));
-        if(saved===false)throw Error('Unable to restore config.json from backup.');
+        if(saved===false)throw Error('Unable to restore legacy config.json from backup.');
       }
       setArchiveOperationState('import','finalize',true,true);
       JetNoteNative.finalizeImport(token);

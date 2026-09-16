@@ -287,6 +287,7 @@ final class JetNoteArchiveController {
             if (posts == null) throw new JSONException("posts missing");
             JSONObject profile = root.optJSONObject("profile");
             JSONObject config = root.optJSONObject("config");
+            JSONObject configFolder = root.optJSONObject("configFolder");
 
             LinkedHashMap<String, JSONObject> attachments = collectAttachments(posts);
             JSONObject checksums = new JSONObject();
@@ -319,6 +320,16 @@ final class JetNoteArchiveController {
                 putCheckedText(zip, "data/posts.json", posts.toString(2), checksums);
                 if (profile != null) putCheckedText(zip, "data/profile.json", profile.toString(2), checksums);
                 if (config != null) putCheckedText(zip, "data/config.json", config.toString(2), checksums);
+                if (configFolder != null) {
+                    java.util.Iterator<String> sectionNames = configFolder.keys();
+                    while (sectionNames.hasNext()) {
+                        String sectionName = sectionNames.next();
+                        if (!isSafeConfigSectionName(sectionName)) throw new IOException("Invalid config section: " + sectionName);
+                        JSONObject section = configFolder.optJSONObject(sectionName);
+                        if (section == null) throw new IOException("Invalid config section JSON: " + sectionName);
+                        putCheckedText(zip, "config/" + sectionName, section.toString(2), checksums);
+                    }
+                }
 
                 for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
                     throwIfExportCancelled();
@@ -493,16 +504,39 @@ final class JetNoteArchiveController {
                 throw new IOException("Invalid profile content path");
             }
             if (hasProfile) requireMetadataFile(profileFile);
-            boolean hasConfig = content.has("config");
-            if (hasConfig && !"data/config.json".equals(content.optString("config"))) {
+            // Configuration is optional. Older/intermediate exporters may leave a
+            // stale manifest.content.config entry even when data/config.json was not
+            // written. Importing note data must never fail only because configuration
+            // is absent; use it only when the file is actually present.
+            boolean configDeclared = content.has("config");
+            if (configDeclared && !"data/config.json".equals(content.optString("config"))) {
                 throw new IOException("Invalid config content path");
             }
-            if (hasConfig) requireMetadataFile(configFile);
+            boolean hasConfig = configDeclared && configFile.isFile();
 
             String postsJson = readUtf8Limited(postsFile);
             String profileJson = hasProfile ? readUtf8Limited(profileFile) : null;
             String configJson = hasConfig ? readUtf8Limited(configFile) : null;
             if (configJson != null) new JSONObject(configJson);
+            File configDir = new File(stageDir, "config");
+            if (configDir.isDirectory()) {
+                JSONObject folder = new JSONObject();
+                File[] sectionFiles = configDir.listFiles();
+                if (sectionFiles != null) {
+                    java.util.Arrays.sort(sectionFiles, (a, b) -> a.getName().compareTo(b.getName()));
+                    for (File sectionFile : sectionFiles) {
+                        if (!sectionFile.isFile() || !isSafeConfigSectionName(sectionFile.getName())) {
+                            throw new IOException("Invalid config folder entry");
+                        }
+                        folder.put(sectionFile.getName(), new JSONObject(readUtf8Limited(sectionFile)));
+                    }
+                }
+                if (folder.length() > 0) {
+                    JSONObject wrapper = new JSONObject();
+                    wrapper.put("__jetnoteConfigFolder", folder);
+                    configJson = wrapper.toString();
+                }
+            }
             if (profileJson != null) validateProfileJson(profileJson);
             JSONArray posts = new JSONArray(postsJson);
             JSONObject checksums = new JSONObject(readUtf8Limited(checksumsFile));
@@ -534,6 +568,9 @@ final class JetNoteArchiveController {
                 String path=keys.next();validateArchiveEntryName(path);
                 if("checksums.json".equals(path))throw new IOException("Invalid self checksum");
                 File checked=fileInside(stageDir,path);
+                // data/config.json is optional by design. A stale checksum entry from
+                // an intermediate exporter must not block restoration of note data.
+                if ("data/config.json".equals(path) && !checked.isFile()) continue;
                 if(!checked.isFile()||!checksums.getString(path).equalsIgnoreCase(sha256ImportFile(checked)))throw new IOException("Checksum mismatch: "+path);
             }
             // A hashes JSON as well as media; legacy variants only hash media. Verify all
@@ -833,6 +870,17 @@ final class JetNoteArchiveController {
         JSONObject profile = root.optJSONObject("profile");
         if (profile != null) validateProfileJson(profile.toString());
         if (root.has("config") && root.optJSONObject("config") == null) throw new IOException("Invalid config");
+        if (root.has("configFolder")) {
+            JSONObject folder = root.optJSONObject("configFolder");
+            if (folder == null) throw new IOException("Invalid config folder");
+            java.util.Iterator<String> names = folder.keys();
+            while (names.hasNext()) {
+                String name = names.next();
+                if (!isSafeConfigSectionName(name) || folder.optJSONObject(name) == null) {
+                    throw new IOException("Invalid config section: " + name);
+                }
+            }
+        }
         collectAttachments(posts);
     }
 
@@ -1014,11 +1062,22 @@ final class JetNoteArchiveController {
         if ("manifest.json".equals(name) || "checksums.json".equals(name)
                 || "data/posts.json".equals(name) || "data/profile.json".equals(name)
                 || "data/config.json".equals(name)) return;
+        if (name != null && name.startsWith("config/") && isSafeConfigSectionName(name.substring("config/".length()))) return;
         validateMediaPath(name);
     }
 
     private static boolean isAllowedDirectory(String name) {
-        return "data/".equals(name) || "media/".equals(name);
+        return "data/".equals(name) || "media/".equals(name) || "config/".equals(name);
+    }
+
+    private static boolean isSafeConfigSectionName(String name) {
+        return name != null
+                && name.endsWith(".json")
+                && name.length() > 5
+                && !name.contains("/")
+                && !name.contains("\\")
+                && !name.contains("..")
+                && name.matches("[A-Za-z0-9_.-]+\\.json");
     }
 
     private static void validateMediaPath(String path) throws IOException {
