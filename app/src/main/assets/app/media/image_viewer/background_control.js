@@ -28,13 +28,32 @@
     const imageActive = !!image?.classList.contains('active');
     if (button) button.classList.toggle('is-hidden', !imageActive || colors.length < 2);
     if (!viewer || !imageActive || !colors.length) return;
-    viewer.style.background = colors[normalizeIndex()];
+    const background = colors[normalizeIndex()];
+    viewer.style.background = background;
+
+    // Keep both upper-right controls visible throughout the background cycle.
+    // Do not use mix-blend-mode:difference: on a mid-gray background (#808080),
+    // white difference-blends to nearly the same gray and appears to vanish.
+    const probe = document.createElement('span');
+    probe.style.color = String(background);
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+    const resolved = getComputedStyle(probe).color;
+    probe.remove();
+    const match = resolved.match(/rgba?\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)/i);
+    let controlColor = '#ffffff';
+    if (match) {
+      const r = Number(match[1]), g = Number(match[2]), b = Number(match[3]);
+      const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      controlColor = luminance >= 180 ? '#000000' : '#ffffff';
+    }
+    viewer.style.setProperty('--image-viewer-control-color', controlColor);
   }
 
   function reset() {
     const viewer = document.getElementById('imageViewer');
     const button = document.getElementById('imageViewerBackgroundSwitch');
-    if (viewer) viewer.style.removeProperty('background');
+    if (viewer) { viewer.style.removeProperty('background'); viewer.style.removeProperty('--image-viewer-control-color'); }
     if (button) button.classList.add('is-hidden');
   }
 

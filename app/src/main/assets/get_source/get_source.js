@@ -127,7 +127,7 @@
 
   const configuredTypeForExtension = ext => {
     if (!ext) return '';
-    const owners = ['text', 'audio', 'image', 'video'].filter(id => {
+    const owners = ['audio', 'image', 'video'].filter(id => {
       const extensions = config[id] && Array.isArray(config[id].extensions) ? config[id].extensions : [];
       return extensions.some(value => String(value).toLowerCase() === ext);
     });
@@ -209,8 +209,8 @@
     }
   };
 
-  const viewerLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_image_video_viewer_z_axis_height ?? config.layers.get_source_image_video_viewer_z_index)) || 100000);
-  const panelLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_panel_z_axis_height ?? config.layers.get_source_panel_z_index)) || 90000);
+  const viewerLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_image_video_viewer_z_axis_height ?? config.layers.get_source_image_video_viewer_z_index)) || 2147483647);
+  const panelLayer = () => Math.max(1, Number(config.layers && (config.layers.get_source_panel_z_axis_height ?? config.layers.get_source_panel_z_index)) || 2147483646);
 
   const promoteViewer = () => {
     const viewer = document.getElementById('imageViewer');
@@ -266,13 +266,13 @@
 
     const panel = document.createElement('div');
     panel.id = 'jet-note-source-results';
-    panel.style.cssText = 'position:fixed;top:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 56px);left:10px;z-index:' + panelLayer() + ';background:' + getSourceBodyColor() + ';color:' + (colors.text || '#202124') + ';padding:18px;overflow:auto;font:16px sans-serif;border:1px solid ' + (colors.border || '#bfc1c4') + ';border-radius:14px;box-sizing:border-box;box-shadow:0 8px 28px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent;';
+    panel.style.cssText = 'position:fixed!important;top:10px!important;right:10px!important;bottom:calc(env(safe-area-inset-bottom,0px) + 56px)!important;left:10px!important;z-index:' + panelLayer() + '!important;isolation:isolate!important;transform:translateZ(0)!important;contain:layout paint style;pointer-events:auto!important;background:' + getSourceBodyColor() + ';color:' + (colors.text || '#202124') + ';padding:18px;overflow:auto;font:16px sans-serif;border:1px solid ' + (colors.border || '#bfc1c4') + ';border-radius:14px;box-sizing:border-box;box-shadow:0 8px 28px rgba(0,0,0,.18);-webkit-tap-highlight-color:transparent;';
 
     const toolbar = document.createElement('div');
     toolbar.style.cssText = 'display:block;position:sticky;top:-18px;z-index:2;background:' + getSourceBodyColor() + ';padding:12px 0 14px;border-bottom:1px solid ' + (colors.border || '#c8cbd0') + ';';
 
     const tabs = document.createElement('div');
-    tabs.style.cssText = 'display:grid;grid-template-columns:repeat(' + (window.JET_NOTE_BROWSER_MODE === true ? '5' : '4') + ',minmax(0,1fr));gap:6px;';
+    tabs.style.cssText = 'display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;';
     toolbar.appendChild(tabs);
     panel.appendChild(toolbar);
 
@@ -282,7 +282,9 @@
     const list = document.createElement('div');
     panel.appendChild(list);
 
-    const renderType = id => {
+    let renderGeneration = 0;
+    const renderType = async id => {
+      const generation = ++renderGeneration;
       const type = types.get(id);
       if (!type) return;
       stopAudioPreview(panel);
@@ -292,7 +294,21 @@
       [...tabs.children].filter(button => button !== active).forEach(button => { button.style.background = getSourceBodyColor(); button.style.borderColor = colors.border || '#c8cbd0'; });
 
       list.replaceChildren();
-      const rows = sortedFor(type);
+      let rows = sortedFor(type);
+      if (typeof type.validate === 'function') {
+        const validationCopy = id === 'image'
+          ? ds('validatingImage', 'Checking decodable images…')
+          : id === 'audio'
+            ? ds('validatingAudio', 'Checking playable audio…')
+            : ds('validatingVideo', 'Checking playable videos…');
+        hint.textContent = validationCopy;
+        const candidatesToValidate = rows.filter(row => row.matched);
+        const checked = await Promise.all(candidatesToValidate.map(async row => {
+          try { return await type.validate(row.entry.url) ? row : null; } catch (_) { return null; }
+        }));
+        if (generation !== renderGeneration) return;
+        rows = checked.filter(Boolean);
+      }
       const matchedCount = rows.filter(row => row.matched).length;
       hint.textContent = ds('foundCandidates', '')
         .replace('{count}', String(rows.length))
@@ -312,45 +328,38 @@
       }
     };
 
-    ['text', 'audio', 'image', 'video'].forEach(id => {
+    ['image', 'audio', 'video'].forEach(id => {
       const type = types.get(id);
       if (!type) return;
       const button = iconButton(window.JET_NOTE_SOURCE_ICONS && window.JET_NOTE_SOURCE_ICONS[id], type.label);
       button.dataset.type = id;
       button.style.width = '100%';
-      button.onclick = () => renderType(id);
+      button.onclick = () => { void renderType(id); };
       tabs.appendChild(button);
     });
 
-    if (window.JET_NOTE_BROWSER_MODE === true) {
-      const refresh = iconButton(window.JET_NOTE_SOURCE_ICONS && window.JET_NOTE_SOURCE_ICONS.refresh, ds('getSourceRefresh', 'Refresh'));
-      refresh.dataset.action = 'refresh';
-      refresh.style.width = '100%';
-      refresh.onclick = () => {
-      stopAudioPreview(panel);
-      panel.remove();
-
-      window.location.href = 'jetnote-source-state://inactive';
-
-  // Reload after native has consumed the state notification.
-      setTimeout(() => {
-      window.location.reload();
-        }, 0);
-      };
-      tabs.appendChild(refresh);
-    }
-
+    const shield = document.createElement('div');
+    shield.id = 'jet-note-source-layer-shield';
+    shield.setAttribute('aria-hidden', 'true');
+    shield.style.cssText = 'position:fixed!important;inset:0!important;z-index:' + Math.max(1, panelLayer() - 1) + '!important;background:transparent!important;pointer-events:auto!important;isolation:isolate!important;transform:translateZ(0)!important;';
+    shield.addEventListener('touchmove', event => event.preventDefault(), {passive:false});
+    const oldShield = document.getElementById('jet-note-source-layer-shield');
+    if (oldShield) oldShield.remove();
+    document.body.appendChild(shield);
     document.body.appendChild(panel);
+    panel.style.setProperty('z-index', String(panelLayer()), 'important');
     promoteViewer();
-    renderType('audio');
+    void renderType('image');
   };
 
   const hideResults = () => {
     const panel = document.getElementById('jet-note-source-results');
     if (panel) { stopAudioPreview(panel); panel.remove(); }
+    const shield = document.getElementById('jet-note-source-layer-shield');
+    if (shield) shield.remove();
   };
 
   restore();
   installObserver();
-  window.JetNoteGetSource = {config, candidates, registerType, extensionOf, addCandidate, showResults, hideResults, normalize, ds, promoteViewer, browserMode: window.JET_NOTE_BROWSER_MODE === true, canAddToPost: () => window.JET_NOTE_BROWSER_MODE !== true};
+  window.JetNoteGetSource = {config, candidates, registerType, extensionOf, addCandidate, showResults, hideResults, normalize, ds, promoteViewer, canAddToPost: () => true};
 })();

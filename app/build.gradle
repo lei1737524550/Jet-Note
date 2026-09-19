@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'com.ingeniousidea.space'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.ingeniousidea.space"
         minSdk 23
         targetSdk 34
-        versionCode 171
-        versionName "8.0"
+        versionCode 176
+        versionName "8.0.6"
     }
 
     buildTypes {
@@ -25,4 +25,10 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+
+
+
+dependencies {
 }

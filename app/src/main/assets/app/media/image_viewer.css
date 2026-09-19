@@ -36,9 +36,8 @@
 .image-viewer img.zoomed,
 .image-viewer video.zoomed { cursor:grab; }
 
-/* The original Post viewer used a white glyph plus difference blending so the
-   close mark automatically inverts against whatever is behind it. Both viewer
-   controls deliberately share that exact rule. */
+/* Viewer controls use an explicit contrast color. Difference blending is disabled
+   because #808080 can make white controls visually disappear. */
 .image-viewer-control {
   position:fixed;
   top:18px;
@@ -49,9 +48,10 @@
   border:0;
   border-radius:0;
   background:transparent!important;
-  color:#fff;
+  color:var(--image-viewer-control-color,#fff);
   cursor:pointer;
-  mix-blend-mode:difference;
+  mix-blend-mode:normal!important;
+  isolation:isolate;
   -webkit-tap-highlight-color:transparent!important;
   outline:none!important;
   box-shadow:none!important;
@@ -95,3 +95,15 @@
   pointer-events:none;
 }
 .image-viewer-background-switch.is-hidden { display:none!important; }
+
+/* Hard override: actual viewer buttons do not carry .image-viewer-control. */
+.image-viewer .image-viewer-close,
+.image-viewer .image-viewer-background-switch {
+  mix-blend-mode:normal!important;
+  color:var(--image-viewer-control-color,#fff)!important;
+  opacity:1!important;
+  visibility:visible!important;
+}
+.image-viewer .image-viewer-close::before,
+.image-viewer .image-viewer-close::after { background:var(--image-viewer-control-color,#fff)!important; }
+.image-viewer .image-viewer-background-switch svg { stroke:var(--image-viewer-control-color,#fff)!important; }

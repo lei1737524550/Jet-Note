@@ -202,6 +202,9 @@ button:focus-visible {
 .main-posts {
   width:100%;
   padding:0 var(--content-horizontal-padding);
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
   background:transparent;
   position:relative;
   z-index:var(--z-axis-height-content, 0);
@@ -359,7 +362,7 @@ button:focus-visible {
 }
 
 /* Simplified home: no profile identity or permanent feature tabs. */
-.home-actions{width:100%;padding:8px var(--content-horizontal-padding) 8px;}
+.home-actions{width:100%;padding:8px var(--content-horizontal-padding) 0;}
 .post-head-minimal{
   position:relative;
   z-index:5;

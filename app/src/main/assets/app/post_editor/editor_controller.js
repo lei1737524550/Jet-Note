@@ -307,7 +307,16 @@ const EditorController = (() => {
 
     state = State.SAVING;
 
+    // Publishing is a terminal draft transaction. syncFromView() schedules a
+    // delayed snapshot; if that timer is allowed to run after clearDraft(), it
+    // can resurrect the just-published draft (including its image/video media)
+    // and the next composer session restores those attachments. Cancel the
+    // pending timer and drain any already-started snapshot write before commit.
+    clearTimeout(snapshotTimer);
+    snapshotTimer = null;
+
     try {
+      await writeChain.catch(() => {});
       await commit(clone(validation.draft));
       await EntryStore.clearDraft();
       DraftStore.clear();

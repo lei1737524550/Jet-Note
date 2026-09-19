@@ -489,9 +489,9 @@ function renderPostSurface(post, role = POST_SURFACE_ROLE.MAIN) {
       <div class="post post-surface post-role-composer post-composer three-posts-one-body__box common_border"
            data-post-role="composer">
         <button class="post-composer-main" type="button" data-editor-open="create" data-i18n="share">${escapeHTML(t('share'))}</button>
-        <button class="post-composer-media-button" onclick="openPostComposerWithVideoPicker()" aria-label="${escapeHTML(t('addVideo'))}"><img src="shared/icons/video.svg" alt=""></button>
         <button class="post-composer-media-button" onclick="openPostComposerWithImagePicker()" aria-label="${escapeHTML(t('addImage'))}"><img src="shared/icons/image.svg" alt=""></button>
         <button class="post-composer-media-button post-composer-audio-button" onclick="openPostComposerWithAudioPicker()" aria-label="${escapeHTML(t('addAudio'))}"><img src="shared/icons/audio.svg" alt=""></button>
+        <button class="post-composer-media-button" onclick="openPostComposerWithVideoPicker()" aria-label="${escapeHTML(t('addVideo'))}"><img src="shared/icons/video.svg" alt=""></button>
       </div>`;
   }
 
@@ -722,7 +722,12 @@ function renderPosts(options = {}) {
   // the inverse transform is installed. Normal renders still refresh it.
   if (options.preserveComposer !== true) composerMount.innerHTML = composerHTML;
   list.innerHTML = debugPostHTML + postsHTML;
+  // A reorder rebuilds video DOM before async thumbnail hydration. Reapply the
+  // FIRST media box synchronously, in the same task as innerHTML, so there is
+  // never a paint where the replacement Video Post has zero media height.
+  try { window.__jetApplyPostMovementVideoGeometry?.(list); } catch (_) {}
   renderTopPost();
+  try { window.__jetApplyPostMovementVideoGeometry?.(document); } catch (_) {}
   reconcileAllPostHighlights();
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
@@ -1498,10 +1503,13 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
 
   const prepared = [];
   for (const item of currentItems) {
-    // Topology owns participation. If IDs still correspond one-by-one when read
-    // from the bottom, the entire matched suffix is fixed even if transient DOM
-    // measurement noise reports a geometric delta.
-    if (fixedBottomUp.ids.has(String(item.id))) continue;
+    // Post Movement is identity/topology owned, not geometry owned. Compare the
+    // finite before/after sequence from the bottom upward. Every matched identity
+    // is the fixed suffix and MUST NOT receive FLIP even if a temporary layout
+    // measurement differs while A/B are being rebuilt. Example ABC -> BAC: C is
+    // fixed; only A and B participate. This prevents C from being transformed by
+    // both the DOM reflow and FLIP, which made it jitter during Super Star moves.
+    if (fixedBottomUp.ids?.has(String(item.id))) continue;
     const first = snapshot.rects.get(item.id);
     if (!first) continue;
     const last = item.card.getBoundingClientRect();
@@ -1541,7 +1549,9 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
   // FLIP it exactly like every other moving body so the destination layout cannot
   // appear to open a hole instantaneously before the Posts arrive.
   const composer = document.getElementById('postComposerMount');
-  if (composer && snapshot.composerRect && !fixedBottomUp.ids.has('__post_composer__')) {
+  if (composer && snapshot.composerRect && !fixedBottomUp.ids?.has('__post_composer__')) {
+    // The composer follows the same finite-sequence rule. If it belongs to the
+    // fixed bottom-up suffix, it is not admitted into FLIP by geometry alone.
     const first = snapshot.composerRect;
     const last = composer.getBoundingClientRect();
     const dx = first.left - last.left;
@@ -1757,6 +1767,12 @@ async function commitStarStateChange(previous, postMovementActionName, activePos
     // Android's TextureView is outside WebView composition. Freeze it BEFORE the
     // DOM rebuild; otherwise a Video Post can visibly lag/jump while its HTML body FLIPs.
     try { window.__jetBeginPostMovementVideoFreeze?.(); } catch (_) {}
+    // Commit the favorite/star paint and the frozen media geometry before the
+    // destructive DOM reorder. Two frame boundaries are intentional on Android
+    // WebView: frame 1 commits the lock; frame 2 starts movement from that stable
+    // visual state instead of racing TextureView/poster teardown.
+    await nextAnimationFrame();
+    await nextAnimationFrame();
     try {
       // Rebuild only when the list really reorders. Post Movement never reads,
       // stores or writes the user's camera position.
@@ -2111,6 +2127,24 @@ function addToolAudioToPost(meta) {
 
 window.addToolAudioToPost = addToolAudioToPost;
 
+function addToolVisualToPost(meta) {
+  const composer = document.getElementById('postComposeScreen');
+  if (!composer?.classList.contains('open')) return 'composer-not-open';
+  if (!meta || !['image','video'].includes(meta.type) || !meta.id || !meta.path) return 'invalid-media';
+  if (draftAttachments.post.some(item => String(item.id) === String(meta.id))) return 'duplicate';
+  const policy = window.JetNotePostAttachmentPolicy;
+  if (policy?.conflict(meta.type, postDraftImages, draftAttachments.post)) return 'conflict';
+  if ((policy?.remaining(meta.type, postDraftImages, draftAttachments.post) ?? 0) <= 0) return 'limit';
+  draftAttachments.post.push(meta);
+  draftMedia.post.set(meta.id, meta);
+  if (meta.type === 'image') postDraftImages.push(NativeMedia.url(meta));
+  renderPostVisualMediaPreview();
+  renderAudioDraft('post');
+  syncPostEditorDraft();
+  return 'added';
+}
+window.addToolVisualToPost = addToolVisualToPost;
+
 function attachmentsForPostDraft(draft) {
   const imageSources = new Set(draft.images || []);
   return (draft.attachments || []).filter(item => item.type !== 'image' || imageSources.has(NativeMedia.url(item)));
@@ -2172,6 +2206,13 @@ async function publishTextPost() {
       else if (result.code === 'save-failed') alert(result.error?.message || t('storageFull'));
       return;
     }
+    // Clear every composer-owned media container immediately after a successful
+    // publish/save. Do not wait for the home transition callback: a new editor
+    // session can otherwise observe the previous session's in-memory media.
+    postDraftImages = [];
+    initAudioDraft('post', null);
+    renderPostImagePreview();
+    renderPostVideoPreview();
     closePostComposer();
     if (!commitResult.wasEditing) document.getElementById('mainPosts')?.scrollTo({ top: 0 });
   } finally {

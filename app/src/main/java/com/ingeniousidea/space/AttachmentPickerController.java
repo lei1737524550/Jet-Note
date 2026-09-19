@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
+import android.provider.MediaStore;
 import android.webkit.WebView;
 
 import org.json.JSONArray;
@@ -49,25 +51,38 @@ final class AttachmentPickerController {
         this.requestedType = normalizeType(type);
         this.multiple = multiple;
 
-        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-        intent.addCategory(Intent.CATEGORY_OPENABLE);
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
-
+        Intent intent;
         if ("image".equals(this.requestedType)) {
-            // Deliberately do not advertise an image-only MIME filter here. On
-            // Android/HyperOS an ACTION_OPEN_DOCUMENT request with image/* may be
-            // presented as the photo/gallery surface even though the action is SAF.
-            // */* keeps this on the directory/file browser surface. AttachmentStore
-            // validates the selected URI as an image afterwards, including .svg.
-            intent.setType("*/*");
-        } else if ("audio".equals(this.requestedType)) {
-            intent.setType("*/*");
-            intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"audio/*","application/octet-stream"});
-        } else if ("video".equals(this.requestedType)) {
-            intent.setType("video/*");
+            // Images use Android's system photo picker/gallery rather than the SAF
+            // document/file browser. Android 13+ gets the privacy-preserving system
+            // Photo Picker; older releases fall back to the platform image gallery.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent = new Intent(MediaStore.ACTION_PICK_IMAGES);
+                intent.setType("image/*");
+                if (multiple) {
+                    intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    intent.putExtra(MediaStore.EXTRA_PICK_IMAGES_MAX,
+                            MediaStore.getPickImagesMaxLimit());
+                }
+            } else {
+                intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                intent.setType("image/*");
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
+            }
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         } else {
-            intent.setType("*/*");
+            intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, multiple);
+            if ("audio".equals(this.requestedType)) {
+                intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"audio/*","application/octet-stream"});
+            } else if ("video".equals(this.requestedType)) {
+                intent.setType("video/*");
+            } else {
+                intent.setType("*/*");
+            }
         }
 
         try {

@@ -65,8 +65,7 @@ async function openConfiguredTool(tool, options = {}) {
   // as_a_browser is a startup-routing property only. A toolbox opened from
   // Post Editor remains an ordinary tool page unless the caller explicitly
   // identifies the startup route.
-  const browserMode = options?.browserMode === true;
-  if (!browserMode && options?.skipEditorSuspend !== true) {
+  if (options?.skipEditorSuspend !== true) {
     await EditorController.suspend(tool.id);
   }
   // Tool activation must not steal editor focus or dismiss/raise the keyboard.
@@ -90,29 +89,23 @@ async function openConfiguredTool(tool, options = {}) {
   const borderColor =
     (await window.JetNoteType?.toolBorderColor?.(tool.id)) || '#bfc1c4';
 
-  if (window.JetNoteNative?.openToolWithFallbackMode && tool.fallbackUrl) {
-    JetNoteNative.openToolWithFallbackMode(
-      tool.url,
-      tool.fallbackUrl,
-      title,
-      fallbackTitle,
-      'en',
-      background,
-      borderColor,
-      currentToolsConfig?.networkProbeTimeoutMs || 3500,
-      browserMode
-    );
+  // Browser tool: use the device browser through Android Custom Tabs.
+  // This keeps Google navigation out of Android System WebView while leaving
+  // the internal WebView available for Jet Note's DOM/resource tools.
+  if (tool.id === 'toolbox_3' && window.JetNoteNative?.openBrowserTab) {
+    JetNoteNative.openBrowserTab(tool.url);
     return;
   }
 
-  // Compatibility path for older native hosts. Browser Mode still opens the
-  // same tool core, but title switching needs the newer bridge above.
   if (window.JetNoteNative?.openToolWithFallback && tool.fallbackUrl) {
+    // Editor toolbox tools use the ordinary ToolPageController. This is intentionally
+    // independent from the removed Settings "Browser Mode" feature.
     JetNoteNative.openToolWithFallback(
       tool.url,
       tool.fallbackUrl,
       title,
-      'en',
+      tool.fallbackTitle || 'Baidu',
+      (window.JetNoteNative?.getUiLanguageCode?.() || document.documentElement.lang || 'en'),
       background,
       borderColor,
       currentToolsConfig?.networkProbeTimeoutMs || 3500
@@ -120,8 +113,9 @@ async function openConfiguredTool(tool, options = {}) {
     return;
   }
 
+
   if (window.JetNoteNative?.openTool) {
-    JetNoteNative.openTool(tool.url, title, 'en', background, borderColor);
+    JetNoteNative.openTool(tool.url, title, (window.JetNoteNative?.getUiLanguageCode?.() || document.documentElement.lang || 'en'), background, borderColor);
     return;
   }
 
@@ -219,7 +213,6 @@ async function openToolboxToolById(toolId, options = {}) {
   if (!currentToolsConfig) currentToolsConfig = await ToolLoader.load();
   const child = currentToolsConfig?.toolbox?.children?.find?.(tool => tool && tool.id === toolId);
   if (!child || child.enabled === false) throw new Error(`Toolbox child is unavailable: ${toolId}`);
-  if (options?.browserMode === true) return openConfiguredTool(child, options);
   return ToolActions.run(child);
 }
 

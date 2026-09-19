@@ -91,6 +91,10 @@ final class ToolPageController {
     private String fallbackPageUrl;
     private String fallbackPageTitle;
     private boolean fallbackAttempted;
+    private boolean fallbackNeedsHistoryReset;
+    private boolean initialConnectionPending;
+    private String initialPrimaryUrl;
+    private String initialFallbackUrl;
     private boolean homeRevealInProgress;
     private TextView toolbarTitle;
     private static final String HOME_PRELOAD_URL = "https://appassets.androidplatform.net/assets/app/home/home.html?startupBrowserPreload=1";
@@ -138,6 +142,10 @@ final class ToolPageController {
             fallbackPageUrl = null;
             fallbackPageTitle = null;
             fallbackAttempted = false;
+            fallbackNeedsHistoryReset = false;
+            initialConnectionPending = false;
+            initialPrimaryUrl = null;
+            initialFallbackUrl = null;
             openOnUiThread();
         });
     }
@@ -182,6 +190,11 @@ final class ToolPageController {
             fallbackPageUrl = (fallbackUrl != null && fallbackUrl.startsWith("https://")) ? fallbackUrl : null;
             fallbackPageTitle = fallbackTitle == null || fallbackTitle.trim().isEmpty() ? primaryTitle : fallbackTitle.trim();
             fallbackAttempted = false;
+            fallbackNeedsHistoryReset = false;
+            initialConnectionPending = true;
+            initialPrimaryUrl = primaryUrl;
+            initialFallbackUrl = fallbackPageUrl;
+            pageTitle = "Browser";
             openOnUiThread();
         });
     }
@@ -270,6 +283,12 @@ final class ToolPageController {
     }
 
     void handleBack() {
+        // System Back behaves like a normal browser while the toolbox WebView
+        // still has navigation history. Only leave the toolbox at its root page.
+        if (toolWebView != null && toolWebView.canGoBack()) {
+            toolWebView.goBack();
+            return;
+        }
         close();
     }
 
@@ -432,10 +451,10 @@ final class ToolPageController {
 
         ImageButton back = createBackButton();
         back.setContentDescription(UiLanguage.text(activity, "commonBack"));
-        back.setOnClickListener(v -> close());
+        back.setOnClickListener(v -> handleBack());
         TextView title = new TextView(activity);
         toolbarTitle = title;
-        title.setText(pageTitle);
+        title.setText("Browser");
         title.setTextColor(pageActionBarSpec.titleColor);
         title.setTextSize(pageActionBarSpec.titleSize);
         title.setGravity(Gravity.CENTER);
@@ -650,7 +669,6 @@ final class ToolPageController {
     private String buildGetSourceModulesScript() throws java.io.IOException {
         StringBuilder script = new StringBuilder();
         script.append(readAssetText("get_source/get_source.js")).append('\n');
-        script.append(readAssetText("get_source/get_text.js")).append('\n');
         script.append(readAssetText("get_source/get_audio.js")).append('\n');
         script.append(readAssetText("get_source/get_image.js")).append('\n');
         script.append(readAssetText("get_source/get_video.js")).append('\n');
@@ -685,11 +703,13 @@ final class ToolPageController {
             sourceStrings.put("nonMatching", UiLanguage.text(activity, "getSourceNonMatching"));
             sourceStrings.put("noResources", UiLanguage.text(activity, "getSourceNoResources"));
             sourceStrings.put("noMatchingResources", UiLanguage.text(activity, "getSourceNoMatchingResources"));
-            sourceStrings.put("getSourceTypeText", UiLanguage.text(activity, "getSourceTypeText"));
             sourceStrings.put("getSourceTypeAudio", UiLanguage.text(activity, "getSourceTypeAudio"));
             sourceStrings.put("getSourceTypeImage", UiLanguage.text(activity, "getSourceTypeImage"));
             sourceStrings.put("getSourceTypeVideo", UiLanguage.text(activity, "getSourceTypeVideo"));
             sourceStrings.put("getSourceRefresh", UiLanguage.text(activity, "getSourceRefresh", "Refresh"));
+            sourceStrings.put("validatingImage", UiLanguage.text(activity, "getSourceValidatingImage", "Checking decodable images…"));
+            sourceStrings.put("validatingAudio", UiLanguage.text(activity, "getSourceValidatingAudio", "Checking playable audio…"));
+            sourceStrings.put("validatingVideo", UiLanguage.text(activity, "getSourceValidatingVideo", "Checking playable videos…"));
 
             JSONObject viewerStrings = new JSONObject();
             viewerStrings.put("switchBackground", UiLanguage.text(activity, "imageViewerSwitchBackground"));
@@ -698,7 +718,6 @@ final class ToolPageController {
             JSONObject viewerConfig = new JSONObject(RuntimeConfigStore.readEffective(activity));
 
             JSONObject iconPaths = new JSONObject();
-            iconPaths.put("text", readAssetText("shared/icons/sentences.svg"));
             iconPaths.put("audio", readAssetText("shared/icons/audio.svg"));
             iconPaths.put("image", readAssetText("shared/icons/image.svg"));
             iconPaths.put("video", readAssetText("shared/icons/video.svg"));
@@ -710,7 +729,7 @@ final class ToolPageController {
             String viewerCloseControlJs = readAssetText("app/media/image_viewer/close_control.js");
             String viewerJs = readAssetText("app/media/image_viewer.js");
             String languageCatalogJs = readAssetText("shared/core/language_catalog.js");
-            String languageJson = readAssetText(UiLanguage.assetPath(activity));
+            String languageJson = UiLanguage.json(activity);
             String modules = buildGetSourceModulesScript();
 
             String script = "window.JET_NOTE_GET_SOURCE_SHOW_RESULTS=true;\n"
@@ -796,12 +815,36 @@ final class ToolPageController {
         toolWebView.evaluateJavascript(script, null);
     }
 
-    private boolean tryFallback(WebView webView) {
-        if (fallbackAttempted || fallbackPageUrl == null || fallbackPageUrl.isEmpty()) return false;
+    private boolean sameNavigationTarget(String a, String b) {
+        if (a == null || b == null) return false;
+        try {
+            Uri ua = Uri.parse(a);
+            Uri ub = Uri.parse(b);
+            String ha = ua.getHost();
+            String hb = ub.getHost();
+            if (ha == null || hb == null || !ha.equalsIgnoreCase(hb)) return false;
+            String pa = ua.getPath() == null ? "/" : ua.getPath();
+            String pb = ub.getPath() == null ? "/" : ub.getPath();
+            return pa.equals(pb) || "/".equals(pa) || "/".equals(pb);
+        } catch (Exception ignored) { return a.equals(b); }
+    }
+
+    private boolean isInitialTarget(String url) {
+        if (!initialConnectionPending || url == null) return false;
+        String expected = fallbackAttempted ? initialFallbackUrl : initialPrimaryUrl;
+        return sameNavigationTarget(url, expected);
+    }
+
+    private boolean tryFallback(WebView webView, String failingUrl) {
+        // Fallback is a one-shot startup decision only. Normal searches/navigation
+        // must never re-enter this state machine.
+        if (!initialConnectionPending || fallbackAttempted || fallbackPageUrl == null || fallbackPageUrl.isEmpty()) return false;
+        if (!isInitialTarget(failingUrl)) return false;
         fallbackAttempted = true;
+        fallbackNeedsHistoryReset = true;
         pageUrl = fallbackPageUrl;
-        pageTitle = fallbackPageTitle == null || fallbackPageTitle.isEmpty() ? pageTitle : fallbackPageTitle;
-        if (toolbarTitle != null) toolbarTitle.setText(pageTitle);
+        pageTitle = "Browser";
+        if (toolbarTitle != null) toolbarTitle.setText("Browser");
         showLoadingState();
         webView.stopLoading();
         webView.loadUrl(pageUrl);
@@ -827,6 +870,17 @@ final class ToolPageController {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        // Keep Android System WebView's real default User-Agent and Client Hints.
+        // Do not override browser identity: Chromium owns the complete request stack.
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setLoadsImagesAutomatically(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
+        settings.setSupportMultipleWindows(false);
+        android.webkit.CookieManager cookieManager = android.webkit.CookieManager.getInstance();
+        cookieManager.setAcceptCookie(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cookieManager.setAcceptThirdPartyCookies(view, true);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             settings.setForceDark(WebSettings.FORCE_DARK_OFF);
         }
@@ -847,41 +901,72 @@ final class ToolPageController {
 
             @Override
             public void onPageStarted(WebView webView, String url, android.graphics.Bitmap favicon) {
-                showLoadingState();
+                if (initialConnectionPending && isInitialTarget(url)) showLoadingState();
             }
 
             @Override
             public void onPageFinished(WebView webView, String url) {
+                if (fallbackNeedsHistoryReset && fallbackPageUrl != null && url != null && url.startsWith(fallbackPageUrl)) {
+                    // The failed primary page is not a meaningful browser-history entry.
+                    // Make the fallback landing page the toolbox root; navigation after it
+                    // still builds ordinary WebView history for the system Back key.
+                    webView.clearHistory();
+                    fallbackNeedsHistoryReset = false;
+                }
+                if (initialConnectionPending && isInitialTarget(url)) {
+                    initialConnectionPending = false;
+                    initialPrimaryUrl = null;
+                    initialFallbackUrl = null;
+                }
+                pageTitle = "Browser";
+                if (toolbarTitle != null) toolbarTitle.setText("Browser");
                 injectToolBackground();
                 showLoadedPage();
                 injectSourceObserver();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().flush();
+                }
             }
 
             @Override
             public void onReceivedError(WebView webView, WebResourceRequest request, android.webkit.WebResourceError error) {
                 if (request != null && request.isForMainFrame()) {
                     int code = Build.VERSION.SDK_INT >= 23 ? error.getErrorCode() : -1;
-                    if (!tryFallback(webView)) failCurrentPage("ERROR CODE: " + code);
+                    String failingUrl = request.getUrl() == null ? null : request.getUrl().toString();
+                    if (code == -1 && !isInitialTarget(failingUrl)) return; // cancelled/redirected navigation
+                    if (!tryFallback(webView, failingUrl)) {
+                        if (!initialConnectionPending || isInitialTarget(failingUrl)) failCurrentPage("ERROR CODE: " + code);
+                    }
                 }
             }
 
             @SuppressWarnings("deprecation")
             @Override
             public void onReceivedError(WebView webView, int errorCode, String description, String failingUrl) {
-                if (!tryFallback(webView)) failCurrentPage("ERROR CODE: " + errorCode);
+                if (errorCode == -1 && !isInitialTarget(failingUrl)) return;
+                if (!tryFallback(webView, failingUrl)) {
+                    if (!initialConnectionPending || isInitialTarget(failingUrl)) failCurrentPage("ERROR CODE: " + errorCode);
+                }
             }
 
             @Override
             public void onReceivedHttpError(WebView webView, WebResourceRequest request, android.webkit.WebResourceResponse response) {
                 if (request != null && request.isForMainFrame()) {
-                    if (!tryFallback(webView)) failCurrentPage("HTTP ERROR: " + response.getStatusCode());
+                    String failingUrl = request.getUrl() == null ? null : request.getUrl().toString();
+                    int status = response == null ? -1 : response.getStatusCode();
+                    if (!tryFallback(webView, failingUrl)) {
+                        if (!initialConnectionPending || isInitialTarget(failingUrl)) failCurrentPage("HTTP ERROR: " + status);
+                    }
                 }
             }
 
             @Override
             public void onReceivedSslError(WebView webView, SslErrorHandler handler, SslError error) {
                 handler.cancel();
-                if (!tryFallback(webView)) failCurrentPage("SSL ERROR: " + error.getPrimaryError());
+                String failingUrl = error == null || error.getUrl() == null ? null : error.getUrl();
+                if (!tryFallback(webView, failingUrl)) {
+                    if (!initialConnectionPending || isInitialTarget(failingUrl)) failCurrentPage("SSL ERROR: " + error.getPrimaryError());
+                }
             }
 
             @Override
@@ -891,7 +976,10 @@ final class ToolPageController {
                 if (handleSaveScheme(uri)) return true;
                 if (handleAddScheme(uri)) return true;
                 if(mimeFromUrl(uri.toString()).startsWith("audio/")){addAudioSourceToPost(uri.toString(),null,null,mimeFromUrl(uri.toString()));return true;}
-                return !"https".equalsIgnoreCase(uri.getScheme());
+                String scheme = uri.getScheme();
+                // Ordinary http(s) navigation belongs to WebView itself. Returning
+                // false is especially important for Google form/search navigation.
+                return !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme));
             }
 
             @SuppressWarnings("deprecation")
@@ -902,7 +990,10 @@ final class ToolPageController {
                 if (handleSaveScheme(uri)) return true;
                 if (handleAddScheme(uri)) return true;
                 if(mimeFromUrl(uri.toString()).startsWith("audio/")){addAudioSourceToPost(uri.toString(),null,null,mimeFromUrl(uri.toString()));return true;}
-                return !"https".equalsIgnoreCase(uri.getScheme());
+                String scheme = uri.getScheme();
+                // Ordinary http(s) navigation belongs to WebView itself. Returning
+                // false is especially important for Google form/search navigation.
+                return !("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme));
             }
         });
 
@@ -934,17 +1025,44 @@ final class ToolPageController {
 
     private boolean handleAddScheme(Uri uri) {
         if (uri == null || !ADD_SCHEME.equalsIgnoreCase(uri.getScheme())) return false;
-        // Browser Mode is deliberately read-only with respect to the New Post
-        // attachment flow. Consume the scheme so it cannot escape the WebView,
-        // but do not create/import an attachment.
-        if (browserMode) return true;
+        String mediaType = uri.getHost();
+        if (mediaType == null) mediaType = "audio";
+        mediaType = mediaType.toLowerCase(Locale.ROOT);
         String raw = uri.getQueryParameter("url");
         if (raw == null || raw.isEmpty()) {
-            showToolStatus(UiLanguage.text(activity, "toolNoUsableAudioUrl"), false);
+            showToolStatus("No usable media URL", false);
             return true;
         }
-        addAudioSourceToPost(raw, null, null, mimeFromUrl(raw));
+        if ("audio".equals(mediaType)) addAudioSourceToPost(raw, null, null, mimeFromUrl(raw));
+        else if ("image".equals(mediaType) || "video".equals(mediaType)) addVisualSourceToPost(raw, mediaType);
         return true;
+    }
+
+    private void addVisualSourceToPost(String url, String mediaType) {
+        if (url == null || !url.startsWith("https://")) { showToolStatus("Unsupported media source URL", false); return; }
+        final String ua = toolWebView == null ? null : toolWebView.getSettings().getUserAgentString();
+        final String cookie = CookieManager.getInstance().getCookie(url);
+        final String referer = toolWebView == null ? null : toolWebView.getUrl();
+        showToolStatus("Adding " + mediaType + " to post…", true);
+        audioImportExecutor.execute(() -> {
+            HttpURLConnection c = null;
+            try {
+                c = (HttpURLConnection)new URL(url).openConnection(); c.setInstanceFollowRedirects(true); c.setConnectTimeout(15000); c.setReadTimeout(30000);
+                c.setRequestProperty("Accept", mediaType + "/*,*/*;q=0.8");
+                if (ua != null) c.setRequestProperty("User-Agent", ua); if (cookie != null) c.setRequestProperty("Cookie", cookie); if (referer != null) c.setRequestProperty("Referer", referer);
+                int code=c.getResponseCode(); if(code<200||code>=300) throw new java.io.IOException("HTTP "+code);
+                String mime=c.getContentType(); if(mime!=null && mime.contains(";")) mime=mime.substring(0,mime.indexOf(';')).trim();
+                if(mime==null || !mime.toLowerCase(Locale.ROOT).startsWith(mediaType+"/")) throw new java.io.IOException("Selected resource is not recognized as "+mediaType);
+                String name=safeDownloadName(URLUtil.guessFileName(c.getURL().toString(),c.getHeaderField("Content-Disposition"),mime));
+                JSONObject meta; try(InputStream input=new BufferedInputStream(c.getInputStream())) { meta=attachmentStore.importFromStream(input,mime,name,mediaType,128L*1024L*1024L); }
+                final JSONObject m=meta; final String n=name;
+                activity.runOnUiThread(() -> mainWebView.evaluateJavascript("(window.addToolVisualToPost ? window.addToolVisualToPost("+m.toString()+") : 'missing-handler')", result -> {
+                    if ("\"added\"".equals(result) || "\"duplicate\"".equals(result)) showToolStatus(mediaType+" added to post: "+n,true);
+                    else { String path=m.optString("path",""); if(!path.isEmpty()) attachmentStore.deleteArchivePath(path); showToolStatus("Unable to add "+mediaType+" to post",false); }
+                }));
+            } catch(Exception e) { showToolStatus("Unable to add "+mediaType+" to post: "+(e.getMessage()==null?"download failed":e.getMessage()),false); }
+            finally { if(c!=null)c.disconnect(); }
+        });
     }
 
     private void rememberPossibleAudioUrl(String rawUrl) {

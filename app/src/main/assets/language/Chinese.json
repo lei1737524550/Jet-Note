@@ -69,11 +69,6 @@
   "collapsePostText": "收起正文",
   "moreActions": "更多操作",
   "videoPosition": "视频播放位置",
-  "enableBrowser": "启用浏览器",
-  "browserEnabled": "浏览器已启用",
-  "enableResourceFilter": "启用资源过滤器",
-  "resourceFilterEnabled": "资源过滤器已启用",
-  "resourceFilterAccessibilityLabel": "获取来源文件扩展名过滤器",
   "ui_strings": {
     "common": {
       "back": "返回",
@@ -89,7 +84,6 @@
       "page_title": "设置",
       "backup_title": "备份",
       "export_jnote": "导出 .jnote",
-      "export_jnote_with_config_folder": "导出 .jnote（包含 config 文件夹）",
       "import_jnote": "导入 .jnote",
       "preparing": "正在准备…",
       "color_view_title": "颜色视图",
@@ -99,9 +93,6 @@
       "stop_accessibility_label": "停止当前导入或导出",
       "date_time_viewer_title": "日期视图",
       "save_json": "保存 JSON",
-      "browser_title": "浏览器",
-      "relaunch": "重新启动",
-      "relaunch_accessibility_label": "重新加载配置并重启 Jet Note",
       "cancel_debug": "取消调试",
       "language_title": "语言",
       "switch_language_target": "Switch to English"
@@ -253,7 +244,6 @@
   "fileTaskExportMimeType": "application/vnd.jnote+zip",
   "fileTaskExportFileNamePattern": "JetNote_{date}.jnote",
   "fileTaskExportDatePattern": "yyyy-MM-dd_HH-mm-ss",
-  "getSourceTypeText": "文本",
   "getSourceTypeAudio": "音频",
   "getSourceTypeImage": "图片",
   "getSourceTypeVideo": "视频",
@@ -325,5 +315,8 @@
   "getSourceRefresh": "刷新",
   "debugEditorSearchPlaceholder": "搜索",
   "debugEditorSearchAccessibilityLabel": "搜索调试说说",
-  "debugEditorSearchAction": "搜索"
+  "debugEditorSearchAction": "搜索",
+  "getSourceValidatingVideo": "正在检查可播放的视频…",
+  "getSourceValidatingImage": "正在检查可解码的图片…",
+  "getSourceValidatingAudio": "正在检查可播放的音频…"
 }

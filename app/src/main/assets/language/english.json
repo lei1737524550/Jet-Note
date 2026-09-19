@@ -69,11 +69,6 @@
   "collapsePostText": "Collapse text",
   "moreActions": "More actions",
   "videoPosition": "Video position",
-  "enableBrowser": "Enable Browser",
-  "browserEnabled": "Browser Enabled",
-  "enableResourceFilter": "Enable Resource Filter",
-  "resourceFilterEnabled": "Resource Filter Enabled",
-  "resourceFilterAccessibilityLabel": "Get Source file extension filter",
   "ui_strings": {
     "common": {
       "back": "Back",
@@ -89,7 +84,6 @@
       "page_title": "Settings",
       "backup_title": "Backup",
       "export_jnote": "Export .jnote",
-      "export_jnote_with_config_folder": "Export .jnote (with config folder)",
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
       "color_view_title": "Color View",
@@ -99,9 +93,6 @@
       "stop_accessibility_label": "Stop the current import or export",
       "date_time_viewer_title": "Date View",
       "save_json": "Save JSON",
-      "browser_title": "Browser",
-      "relaunch": "Relaunch",
-      "relaunch_accessibility_label": "Reload configuration and restart Jet Note",
       "cancel_debug": "Cancel Debug",
       "language_title": "Language",
       "switch_language_target": "切换到中文"
@@ -253,7 +244,6 @@
   "fileTaskExportMimeType": "application/vnd.jnote+zip",
   "fileTaskExportFileNamePattern": "JetNote_{date}.jnote",
   "fileTaskExportDatePattern": "yyyy-MM-dd_HH-mm-ss",
-  "getSourceTypeText": "Text",
   "getSourceTypeAudio": "Audio",
   "getSourceTypeImage": "Image",
   "getSourceTypeVideo": "Video",
@@ -325,5 +315,8 @@
   "getSourceRefresh": "Refresh",
   "debugEditorSearchPlaceholder": "Search",
   "debugEditorSearchAccessibilityLabel": "Search debug post",
-  "debugEditorSearchAction": "Search"
+  "debugEditorSearchAction": "Search",
+  "getSourceValidatingVideo": "Checking playable videos…",
+  "getSourceValidatingImage": "Checking decodable images…",
+  "getSourceValidatingAudio": "Checking playable audio…"
 }

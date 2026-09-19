@@ -3,7 +3,10 @@ package com.ingeniousidea.space;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
+
 import android.os.BatteryManager;
+import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import android.view.HapticFeedbackConstants;
@@ -26,7 +29,6 @@ final class NativeBridge {
     private final WebView webView;
     private int videoHapticGuardGeneration = 0;
     private final ToolPageController toolPages;
-    private final BrowserModeController browserPages;
     private final MediaWriteController mediaWriter;
     private final Runnable ready;
     private final AttachmentPickerController picker;
@@ -40,14 +42,13 @@ final class NativeBridge {
             Activity activity,
             WebView webView,
             ToolPageController toolPages,
-            BrowserModeController browserPages,
             AttachmentPickerController picker,
             AttachmentStore store,
             JetNoteArchiveController archive, MediaWriteController mediaWriter, NativeVideoPlayer videoPlayer, Runnable ready
     ) {
         this.activity = activity;
         this.webView = webView;
-        this.toolPages = toolPages;this.browserPages = browserPages;this.mediaWriter=mediaWriter;this.ready=ready;
+        this.toolPages = toolPages;this.mediaWriter=mediaWriter;this.ready=ready;
         this.picker = picker;
         this.store = store;
         this.archive = archive;
@@ -109,15 +110,6 @@ final class NativeBridge {
 
     @JavascriptInterface public boolean setRuntimeConfigSectionJson(String section, String json) {
         return RuntimeConfigStore.saveRuntimeSection(activity, section, json);
-    }
-
-    /** Persist Browser Mode natively so MainActivity can route before Home is loaded. */
-    @JavascriptInterface public void setBrowserModeEnabled(boolean enabled) {
-        BrowserModeStore.setEnabled(activity, enabled);
-    }
-
-    @JavascriptInterface public boolean isBrowserModeEnabled() {
-        return BrowserModeStore.isEnabled(activity);
     }
 
     /** Editable Debug Post copy of the bundled README. */
@@ -337,13 +329,6 @@ final class NativeBridge {
         });
     }
 
-    /** Sync Browser res-Filter into the reusable Tool WebView host. */
-    @JavascriptInterface
-    public void setGetSourceExtensionFilterJson(String json) {
-        toolPages.setGetSourceExtensionFilterJson(json);
-        browserPages.setGetSourceExtensionFilterJson(json);
-    }
-
     /** Enable IME rich-image commits only while the Post Composer textarea is focused. */
     @JavascriptInterface
     public void setPostComposerImagePasteTargetActive(boolean active) {
@@ -411,6 +396,28 @@ final class NativeBridge {
 
 
     @JavascriptInterface
+    public void openBrowserTab(String url) {
+        if (url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+        activity.runOnUiThread(() -> {
+            try {
+                // Launch the browser Custom Tabs protocol directly so Jet Note does not
+                // need the androidx.browser dependency (important for offline/Termux builds).
+                Intent tabs = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                Bundle customTabExtras = new Bundle();
+                customTabExtras.putBinder("android.support.customtabs.extra.SESSION", null);
+                customTabExtras.putBoolean("android.support.customtabs.extra.TITLE_VISIBILITY", true);
+                tabs.putExtras(customTabExtras);
+                tabs.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
+                activity.startActivity(tabs);
+            } catch (Exception ignored) {
+                try {
+                    activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                } catch (Exception ignoredAgain) {}
+            }
+        });
+    }
+
+    @JavascriptInterface
     public void openTool(String url, String title, String language, String backgroundColor, String borderColor) {
         if (url == null || !url.startsWith("https://")) return;
         String safeTitle = title == null || title.trim().isEmpty() ? "Tool" : title.trim();
@@ -423,6 +430,7 @@ final class NativeBridge {
             String primaryUrl,
             String fallbackUrl,
             String title,
+            String fallbackTitle,
             String language,
             String backgroundColor,
             String borderColor,
@@ -439,58 +447,16 @@ final class NativeBridge {
                 primaryUrl,
                 fallbackUrl,
                 safeTitle,
-                safeLanguage,
-                backgroundColor,
-                borderColor,
-                timeoutMs
-        );
-    }
-
-
-    /**
-     * Shared toolbox-page core with explicit primary/fallback titles and a
-     * Browser Mode flag. Browser Mode bypasses New Post integration while
-     * retaining the same ToolPageController, fallback and Get Source stack.
-     */
-    @JavascriptInterface
-    public void openToolWithFallbackMode(
-            String primaryUrl,
-            String fallbackUrl,
-            String primaryTitle,
-            String fallbackTitle,
-            String language,
-            String backgroundColor,
-            String borderColor,
-            int timeoutMs,
-            boolean browserMode
-    ) {
-        if (primaryUrl == null || !primaryUrl.startsWith("https://")) return;
-        if (fallbackUrl == null || !fallbackUrl.startsWith("https://")) {
-            String safeTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
-            String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-            if (browserMode) browserPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, true);
-            else toolPages.open(primaryUrl, safeTitle, safeLanguage, backgroundColor, borderColor, false);
-            return;
-        }
-        String safePrimaryTitle = primaryTitle == null || primaryTitle.trim().isEmpty() ? "Tool" : primaryTitle.trim();
-        String safeFallbackTitle = fallbackTitle == null || fallbackTitle.trim().isEmpty() ? safePrimaryTitle : fallbackTitle.trim();
-        String safeLanguage = language == null || language.trim().isEmpty() ? "en" : language.trim();
-        if (browserMode) browserPages.openWithFallback(
-                primaryUrl,
-                fallbackUrl,
-                safePrimaryTitle,
-                safeFallbackTitle,
+                fallbackTitle == null || fallbackTitle.trim().isEmpty() ? safeTitle : fallbackTitle.trim(),
                 safeLanguage,
                 backgroundColor,
                 borderColor,
                 timeoutMs,
-                true
-        );
-        else toolPages.openWithFallback(
-                primaryUrl, fallbackUrl, safePrimaryTitle, safeFallbackTitle, safeLanguage,
-                backgroundColor, borderColor, timeoutMs, false
+                false
         );
     }
+
+
 
     @JavascriptInterface
     public void pickAttachments(String requestId, String type, boolean multiple) {

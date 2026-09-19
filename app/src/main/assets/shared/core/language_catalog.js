@@ -103,6 +103,37 @@
     return languagePromise;
   }
 
+  async function loadForLanguage(languageCode) {
+    const code = String(languageCode || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    const candidates = code === 'zh'
+      ? ['language/chinese.json', 'language/Chinese.json']
+      : ['language/english.json', 'language/English.json'];
+
+    // Prefer the bundled WebView asset. This deliberately does not depend on the
+    // native catalog cache, so changing language cannot leave the page with {}.
+    let lastError = null;
+    for (const url of candidates) {
+      try {
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Language file unavailable: ${url} (${response.status})`);
+        const catalog = await response.json();
+        if (!isLanguageCatalog(catalog)) throw new Error(`Invalid language catalog: ${url}`);
+        languagePromise = Promise.resolve(setData(catalog));
+        return catalog;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    // Native is only a final fallback.
+    const nativeCatalog = readNativeCatalog();
+    if (nativeCatalog) {
+      languagePromise = Promise.resolve(setData(nativeCatalog));
+      return nativeCatalog;
+    }
+    throw lastError || new Error(`Unable to load UI language: ${code}`);
+  }
+
   function value(path, fallback = '') {
     const found = readPath(languageData || window.JET_NOTE_LANGUAGE_DATA || {}, path);
     return found === undefined || found === null ? fallback : found;
@@ -160,6 +191,7 @@
     apply,
     readPath,
     interpolate,
-    setData
+    setData,
+    loadForLanguage
   });
 })();

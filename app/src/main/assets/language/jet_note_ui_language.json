@@ -686,7 +686,6 @@
       "page_title": "Settings",
       "backup_title": "Backup",
       "export_jnote": "Export .jnote",
-      "export_jnote_with_config_folder": "Export .jnote (with config folder)",
       "import_jnote": "Import .jnote",
       "preparing": "Preparing…",
       "color_view_title": "Color View",

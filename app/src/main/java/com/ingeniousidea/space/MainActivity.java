@@ -45,7 +45,6 @@ public class MainActivity extends Activity {
     private static final String APP_HOST = "appassets.androidplatform.net";
     private static final String LEGACY_HOST = "jetnote.local";
     private static final String HOME_PAGE = "https://" + APP_HOST + "/assets/app/home/home.html";
-    private static final String BROWSER_BOOT_PAGE = "https://" + APP_HOST + "/assets/app/browser/browser_boot.html";
 
     private FrameLayout root;
     private RichContentWebView webView;
@@ -54,7 +53,6 @@ public class MainActivity extends Activity {
     private AttachmentStore attachmentStore;
     private JetNoteArchiveController archiveController;
     private ToolPageController toolPageController;
-    private BrowserModeController browserModeController;
     private EdgeToEdgeController edgeToEdge;
     private Uri pendingLaunchImport;
     private boolean frontendIsReady;
@@ -262,7 +260,6 @@ public class MainActivity extends Activity {
         edgeToEdge = new EdgeToEdgeController(this, webView);
         edgeToEdge.install();
         toolPageController = new ToolPageController(this, root, webView, attachmentStore);
-        browserModeController = new BrowserModeController(this, root, webView, attachmentStore);
         attachmentPicker = new AttachmentPickerController(this, webView, attachmentStore);
         archiveController = new JetNoteArchiveController(this, webView, attachmentStore);
         nativeVideoPlayer = new NativeVideoPlayer(this, root, webView, attachmentStore);
@@ -291,7 +288,7 @@ public class MainActivity extends Activity {
         }
 
         webView.addJavascriptInterface(
-                new NativeBridge(this, webView, toolPageController, browserModeController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
+                new NativeBridge(this, webView, toolPageController, attachmentPicker, attachmentStore, archiveController,mediaWriter,nativeVideoPlayer,()->runOnUiThread(()->{
                     frontendIsReady=true;
                     maybeFinishNativeStartupSplash();
                     if(edgeToEdge!=null)edgeToEdge.synchronizeInsets();
@@ -373,7 +370,7 @@ public class MainActivity extends Activity {
 
         // Browser Mode is a startup route, not a Home overlay. When enabled,
         // never load home.html, render Posts, or initialize Home media/listeners.
-        webView.loadUrl(BrowserModeStore.isEnabled(this) ? BROWSER_BOOT_PAGE : HOME_PAGE);
+        webView.loadUrl(HOME_PAGE);
     }
 
     /**
@@ -765,10 +762,6 @@ public class MainActivity extends Activity {
             nativeVideoPlayer.close();
             return;
         }
-        if (browserModeController != null && browserModeController.isOpen()) {
-            browserModeController.handleBack();
-            return;
-        }
         if (toolPageController != null && toolPageController.isOpen()) {
             toolPageController.handleBack();
             return;
@@ -790,7 +783,6 @@ public class MainActivity extends Activity {
     @Override protected void onPause(){
         if(nativeVideoPlayer!=null)nativeVideoPlayer.onHostPause();
         if(toolPageController!=null)toolPageController.pause();
-        if(browserModeController!=null)browserModeController.pause();
         if(webView!=null)webView.onPause();
         super.onPause();
     }
@@ -807,7 +799,6 @@ public class MainActivity extends Activity {
                     "window.dispatchEvent(new Event('jetnote:app-resume'));", null));
         }
         if (toolPageController != null) toolPageController.resume();
-        if (browserModeController != null) browserModeController.resume();
         if (nativeVideoPlayer != null) nativeVideoPlayer.onHostResume();
     }
 
@@ -829,7 +820,6 @@ public class MainActivity extends Activity {
         if (nativeVideoPlayer != null) nativeVideoPlayer.close();
         if(mediaWriter!=null)mediaWriter.destroy();
         if (toolPageController != null) toolPageController.destroy();
-        if (browserModeController != null) browserModeController.destroy();
         if (attachmentPicker != null) attachmentPicker.destroy();
         if (archiveController != null) archiveController.destroy();
         if (imagePicker != null) imagePicker.destroy();

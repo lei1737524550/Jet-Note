@@ -287,7 +287,6 @@ final class JetNoteArchiveController {
             if (posts == null) throw new JSONException("posts missing");
             JSONObject profile = root.optJSONObject("profile");
             JSONObject config = root.optJSONObject("config");
-            JSONObject configFolder = root.optJSONObject("configFolder");
 
             LinkedHashMap<String, JSONObject> attachments = collectAttachments(posts);
             JSONObject checksums = new JSONObject();
@@ -320,16 +319,6 @@ final class JetNoteArchiveController {
                 putCheckedText(zip, "data/posts.json", posts.toString(2), checksums);
                 if (profile != null) putCheckedText(zip, "data/profile.json", profile.toString(2), checksums);
                 if (config != null) putCheckedText(zip, "data/config.json", config.toString(2), checksums);
-                if (configFolder != null) {
-                    java.util.Iterator<String> sectionNames = configFolder.keys();
-                    while (sectionNames.hasNext()) {
-                        String sectionName = sectionNames.next();
-                        if (!isSafeConfigSectionName(sectionName)) throw new IOException("Invalid config section: " + sectionName);
-                        JSONObject section = configFolder.optJSONObject(sectionName);
-                        if (section == null) throw new IOException("Invalid config section JSON: " + sectionName);
-                        putCheckedText(zip, "config/" + sectionName, section.toString(2), checksums);
-                    }
-                }
 
                 for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
                     throwIfExportCancelled();
@@ -870,17 +859,6 @@ final class JetNoteArchiveController {
         JSONObject profile = root.optJSONObject("profile");
         if (profile != null) validateProfileJson(profile.toString());
         if (root.has("config") && root.optJSONObject("config") == null) throw new IOException("Invalid config");
-        if (root.has("configFolder")) {
-            JSONObject folder = root.optJSONObject("configFolder");
-            if (folder == null) throw new IOException("Invalid config folder");
-            java.util.Iterator<String> names = folder.keys();
-            while (names.hasNext()) {
-                String name = names.next();
-                if (!isSafeConfigSectionName(name) || folder.optJSONObject(name) == null) {
-                    throw new IOException("Invalid config section: " + name);
-                }
-            }
-        }
         collectAttachments(posts);
     }
 

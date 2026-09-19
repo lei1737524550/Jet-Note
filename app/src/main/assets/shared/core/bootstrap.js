@@ -5,7 +5,6 @@
   }
   renderPosts();applyLanguage();
   window.JetNoteStartupBrowserEntry?.markReady?.();
-  requestAnimationFrame(() => { void window.BrowserSettingsFeature?.maybeAutoOpen?.(); });
   // Signal only after the successful render path. Two animation frames make the
   // diagnostic mean 'the rendered UI reached a paint opportunity', not merely
   // 'data initialization finished'. Native splash timing does not wait for this.

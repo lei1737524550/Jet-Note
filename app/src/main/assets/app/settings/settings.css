@@ -992,37 +992,6 @@
 
 
 
-/* Browser --------------------------------------------------------------- */
-#enableBrowserButton.debug-enabled,
-#enableResourceFilterButton.debug-enabled,
-.browser-extension-button.debug-enabled {
-  background:#dff5e5;
-  border-color:#34A853;
-  box-shadow:inset 0 0 0 1px rgba(52,168,83,.18);
-}
-.browser-resource-filter { padding:0 12px 12px; }
-.browser-resource-filter[hidden] { display:none !important; }
-.browser-resource-filter-grid {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-}
-.browser-extension-button {
-  min-width:52px;
-  height:38px;
-  padding:0 12px;
-  background:inherit;
-  color:var(--jet-note-type-body-foreground-color,#111111);
-  font:inherit;
-  font-size:13px;
-  font-weight:600;
-  line-height:1;
-  text-align:center;
-  appearance:none;
-  -webkit-appearance:none;
-}
-.browser-extension-button:active { background:rgba(0,0,0,.055); }
-
 /* Keep Date/Time Viewer contents inside the card even when a user enters a
    very long pattern. The preview has a visual width ceiling; the complete
    value is still available through Copy. The editable pattern stays inside
@@ -1159,11 +1128,10 @@
   background-color:var(--settings-set-body-background)!important;
 }
 
-/* Backup actions: three equal-width buttons. Keep the existing vertical size;
-   only divide the X axis so the config-inclusive export can sit in the middle. */
+/* Backup actions: export and import share the available width equally. */
 .backup-option-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 .backup-option-grid .settings-choice {
   min-height: 74px;

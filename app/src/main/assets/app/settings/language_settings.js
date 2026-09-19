@@ -25,39 +25,23 @@
   }
 
   async function applySelectedLanguage(target) {
-    // Native is the source of truth. Persist first, then immediately fetch the
-    // catalog selected by that same native state. This avoids Activity/WebView
-    // recreation races and avoids retaining language_catalog.js's old promise.
     const native = window.JetNoteNative;
-    if (!native?.setUiLanguageCode || !native?.getUiLanguageJson) {
-      throw new Error('JetNoteNative language bridge unavailable');
+
+    // Persist the preference when the bridge is available, but load the actual
+    // catalog from the WebView assets. Native returning an empty JSON object must
+    // never blank the UI.
+    if (native?.setUiLanguageCode) {
+      const saved = native.setUiLanguageCode(target);
+      if (saved === false) throw new Error(`Unable to persist UI language: ${target}`);
     }
-
-    const saved = native.setUiLanguageCode(target);
-    if (saved === false) throw new Error(`Unable to persist UI language: ${target}`);
-
-    const confirmed = normalizeLanguage(native.getUiLanguageCode?.());
-    if (confirmed && confirmed !== target) {
-      throw new Error(`UI language persistence mismatch: requested=${target}, actual=${confirmed}`);
-    }
-
-    const raw = native.getUiLanguageJson();
-    if (typeof raw !== 'string' || !raw.trim()) throw new Error('Native UI language catalog is empty');
-    const catalog = JSON.parse(raw);
-    if (!catalog || typeof catalog !== 'object' || !catalog.ui_strings) {
-      throw new Error('Native UI language catalog is invalid');
-    }
-
     try { window.localStorage.setItem(STORAGE_KEY, target); } catch (_) { }
-    window.JetNoteLanguage.setData(catalog);
+
+    await window.JetNoteLanguage.loadForLanguage(target);
     document.documentElement.lang = target === 'zh' ? 'zh-CN' : 'en';
     await window.JetNoteLanguage.apply(document);
 
-    // Re-render controls whose text is produced by JS rather than language
-    // attributes. These functions are safe to call when their modules exist.
     try { window.DebugConfigurationFeature?.refreshSettings?.(); } catch (_) { }
-    try { window.BrowserSettingsFeature?.refreshSettings?.(); } catch (_) { }
-    try { window.JetBottomStringBottomBar?.renderBar?.(document.querySelector('#settingsScreen .buttom-string-buttom-bar'), 'settings_page'); } catch (_) { }
+    try { await window.JetBottomStringBottomBar?.renderAll?.(); } catch (_) { }
   }
 
   async function switchLanguage() {

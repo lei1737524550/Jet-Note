@@ -9,10 +9,9 @@
     <div class="settings-body">
       
       <!-- Settings modules: stable code identity is setting_N; visible/developer name is metadata. -->
-      <div class="settings-card setting-box color-view-card common_border" id="colorViewCard" hidden data-debug-setting-card="true" data-setting-id="setting_1" data-setting-name="Color View">
+      <div class="settings-card setting-box color-view-card common_border" id="colorViewCard" data-setting-id="setting_1" data-setting-name="Color View">
         <div class="color-view-title-row">
           <div class="settings-row-title" data-ui-string="settings.color_view_title"></div>
-          <button class="color-view-cancel-debug-button common_border" id="colorViewCancelDebugButton" type="button" data-ui-string="settings.cancel_debug"></button>
         </div>
         <div class="color-view-tool common_border">
           <div class="color-view-preview-column">
@@ -56,84 +55,19 @@
           <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
         </div>
       </div>
-      <div class="settings-card setting-box date-time-viewer-card common_border" id="dateTimeViewerCard" hidden data-debug-setting-card="true" data-setting-id="setting_2" data-setting-name="Date View">
-        <div class="date-time-viewer-title-row">
-          <div class="settings-row-title" data-ui-string="settings.date_time_viewer_title"></div>
-          <div class="date-time-viewer-title-actions">
-            <button class="date-time-viewer-set-button common_border" id="dateTimeViewerSetButton" type="button" data-ui-string="date_time_viewer.set"></button>
-            <button class="date-time-viewer-reset-button common_border" id="dateTimeViewerResetButton" type="button" data-ui-string="date_time_viewer.reset"></button>
-          </div>
-        </div>
-        <div class="date-time-viewer-tool common_border">
-          <div class="date-time-viewer-value-row">
-            <div class="date-time-viewer-preview-block common_border">
-              <div class="date-time-viewer-preview-value" id="dateTimeViewerPreview" aria-live="polite"></div>
-            </div>
-            <button class="date-time-viewer-copy-button common_border" id="dateTimeViewerPreviewCopyButton" type="button" data-ui-string="date_time_viewer.copy" aria-label="" data-ui-aria-label="date_time_viewer.copy_preview_accessibility_label"></button>
-          </div>
-
-          <div class="date-time-viewer-value-row">
-            <input class="date-time-viewer-pattern-input common_border" id="dateTimePatternInput" type="text" autocomplete="off" spellcheck="false" inputmode="text" value="yyyy/MM/dd-HH-mm" aria-label="" data-ui-aria-label="date_time_viewer.pattern_accessibility_label">
-            <button class="date-time-viewer-copy-button common_border" id="dateTimeViewerPatternCopyButton" type="button" data-ui-string="date_time_viewer.copy" aria-label="" data-ui-aria-label="date_time_viewer.copy_pattern_accessibility_label"></button>
-          </div>
-
-          <div class="date-time-viewer-expand-row">
-            <button class="date-time-viewer-expand-button common_border" id="dateTimeViewerExpandButton" type="button" aria-expanded="false" aria-controls="dateTimeViewerLettersPanel" data-ui-string="date_time_viewer.expand_letters"></button>
-          </div>
-
-          <div class="date-time-viewer-letters-panel" id="dateTimeViewerLettersPanel" aria-hidden="true" inert>
-            <div class="date-time-viewer-letters-inner">
-              <div class="date-time-viewer-token-grid" id="dateTimeViewerTokenGrid"></div>
-              <div class="date-time-viewer-explain-row">
-                <button class="date-time-viewer-explain-button common_border" id="dateTimeViewerExplainButton" type="button" aria-expanded="false" aria-controls="dateTimeViewerExplanation" data-ui-string="date_time_viewer.explain"></button>
-              </div>
-              <div class="date-time-viewer-explanation" id="dateTimeViewerExplanation" aria-hidden="true" inert>
-                <div class="date-time-viewer-explanation-inner">
-                  <div class="date-time-viewer-explanation-surface common_border" id="dateTimeViewerExplanationContent"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="settings-card setting-box backup-card common_border" id="backupSettingsCard" data-setting-id="setting_3" data-setting-name="Backup">
+      <div class="settings-card setting-box backup-card common_border" id="backupSettingsCard" data-setting-id="setting_2" data-setting-name="Backup">
         <div class="backup-title-row">
           <div class="settings-row-title" data-ui-string="settings.backup_title"></div>
           <button class="backup-stop-button common_border" id="archiveStopButton" type="button" disabled onclick="cancelArchiveOperation()" data-ui-string="settings.stop" aria-label="" data-ui-aria-label="settings.stop_accessibility_label"></button>
         </div>
         <div class="settings-option-grid backup-option-grid">
           <button class="settings-choice settings-action-choice common_border" onclick="exportArchive()"><span class="settings-choice-main" data-ui-string="settings.export_jnote"></span></button>
-          <button class="settings-choice settings-action-choice common_border" onclick="exportArchiveWithConfig()"><span class="settings-choice-main" data-ui-string="settings.export_jnote_with_config_folder">Export .jnote (with config folder)</span></button>
           <button class="settings-choice settings-action-choice common_border" onclick="chooseArchive()"><span class="settings-choice-main" data-ui-string="settings.import_jnote"></span></button>
         </div>
         <p id="archiveStatus" role="status"></p>
         <div id="archiveProgress" class="archive-progress common_border" hidden aria-live="polite"><div class="archive-progress-head"><span id="archiveProgressLabel" data-ui-string="settings.preparing"></span><span id="archiveProgressPercent">0%</span></div><div class="archive-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="archiveProgressFill" class="archive-progress-fill"></div></div><div class="archive-progress-bottom"><div id="archiveProgressBytes" class="archive-progress-bytes"></div></div></div>
       </div>
-      <div class="settings-card setting-box browser-settings-card common_border" id="browserSettingsCard" data-setting-id="setting_4" data-setting-name="Browser">
-        <div class="backup-title-row browser-title-row">
-          <div class="settings-row-title" data-ui-string="settings.browser_title">Browser</div>
-          <button class="backup-stop-button browser-relaunch-button common_border" id="browserRelaunchButton" type="button" data-ui-string="settings.relaunch" aria-label="" data-ui-aria-label="settings.relaunch_accessibility_label">Relaunch</button>
-        </div>
-        <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" id="enableBrowserButton" type="button"><span class="settings-choice-main" data-language-text="enableBrowser"></span></button>
-          <button class="settings-choice settings-action-choice common_border" id="enableResourceFilterButton" type="button"><span class="settings-choice-main" data-language-text="enableResourceFilter"></span></button>
-        </div>
-        <div class="browser-resource-filter" id="browserResourceFilter" hidden>
-          <div class="browser-resource-filter-grid" id="browserResourceFilterGrid" aria-label="" data-language-aria-label="resourceFilterAccessibilityLabel"></div>
-        </div>
-      </div>
-
-
-      <div class="settings-card setting-box debug-settings-card common_border" id="debugSettingsCard" data-setting-id="setting_5" data-setting-name="Debug">
-        <div class="settings-row-title" data-ui-string="settings.debug_title"></div>
-        <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" id="enableDebugButton" type="button"><span class="settings-choice-main" data-ui-string="settings.enable_debug"></span></button>
-          <button class="settings-choice settings-action-choice common_border" id="saveConfigJsonButton" type="button" onclick="DebugConfigurationFeature.saveJsonToDownloads()"><span class="settings-choice-main" data-ui-string="settings.save_json"></span></button>
-        </div>
-        <p id="debugSettingsStatus" role="status"></p>
-      </div>
-
-      <div class="settings-card setting-box language-settings-card common_border" id="languageSettingsCard" data-setting-id="setting_6" data-setting-name="Language">
+      <div class="settings-card setting-box language-settings-card common_border" id="languageSettingsCard" data-setting-id="setting_3" data-setting-name="Language">
         <div class="settings-row-title" data-ui-string="settings.language_title"></div>
         <div class="settings-option-grid">
           <button class="settings-choice settings-action-choice common_border" id="switchLanguageButton" type="button">

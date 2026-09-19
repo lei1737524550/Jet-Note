@@ -48,8 +48,8 @@ function playSettingsEnterAnimation(screen, durationMs) {
 
 function enforceSettingsModulePriority() {
     const body=document.querySelector('.settings-body'); if(!body)return;
-    const color=document.getElementById('colorViewCard'), date=document.getElementById('dateTimeViewerCard');
-    if(date) body.prepend(date); if(color) body.prepend(color);
+    const color=document.getElementById('colorViewCard');
+    if(color) body.prepend(color);
 }
 
 function rebuildSettingsModuleRegistry(settingsOrder = {}) {
@@ -118,10 +118,7 @@ async function openSettings() {
     applyLanguage();
     refreshAppearanceSettings?.();
     initializeColorViewTool?.();
-    initializeDateTimeViewer?.();
     window.DebugConfigurationFeature?.refreshSettings?.();
-    window.BrowserSettingsFeature?.bind?.();
-    window.BrowserSettingsFeature?.refreshSettings?.();
     window.LanguageSettingsFeature?.bind?.();
 }
 

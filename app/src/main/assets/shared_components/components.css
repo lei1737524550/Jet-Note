@@ -258,7 +258,7 @@
   background: transparent;
   color: transparent;
   cursor: pointer;
-  mix-blend-mode: difference;
+  mix-blend-mode: normal !important;
 }
 .image-viewer-close::before {
   content: "";
@@ -268,7 +268,7 @@
   width: 34px;
   height: 4px;
   border-radius: 2px;
-  background: #fff;
+  background: var(--image-viewer-control-color,#fff) !important;
   transform-origin: center;
 }
 .image-viewer-close::after {
@@ -279,7 +279,7 @@
   width: 34px;
   height: 4px;
   border-radius: 2px;
-  background: #fff;
+  background: var(--image-viewer-control-color,#fff) !important;
   transform-origin: center;
 }
 .image-viewer-close::before {
@@ -303,7 +303,7 @@
   background: transparent;
   color: transparent;
   cursor: pointer;
-  mix-blend-mode: difference;
+  mix-blend-mode: normal !important;
   -webkit-tap-highlight-color: transparent;
   outline: none;
   box-shadow: none;
@@ -317,7 +317,7 @@
   height: 34px;
   margin: 9px;
   fill: none;
-  stroke: #fff;
+  stroke: var(--image-viewer-control-color,#fff) !important;
   stroke-width: 2.8;
   stroke-linecap: round;
   stroke-linejoin: round;

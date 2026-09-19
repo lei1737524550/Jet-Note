@@ -98,16 +98,10 @@ function clearArchiveProgress(delay=0){
   else box.hidden=true;
 }
 async function exportArchive(){
-  return exportArchiveMode(false);
-}
-async function exportArchiveWithConfig(){
-  return exportArchiveMode(true);
-}
-async function exportArchiveMode(includeConfigFolder){
   if (!isWorkspaceWritable()) return;
   if(!entriesReady||entriesBusy)return;
   if(window.JetNoteNative?.exportJetNote){
-    await exportNativeArchive(includeConfigFolder);
+    await exportNativeArchive();
     return;
   }
   entriesBusy=true;
@@ -117,17 +111,8 @@ async function exportArchiveMode(includeConfigFolder){
   setArchiveProgress({message:'Preparing export…',percent:0});
   try{
     const snapshot=await EntryStore.read();
-    let config=null;
-    if(includeConfigFolder){
-      try {
-        const response=await fetch('config.json',{cache:'no-store'});
-        if(response.ok)config=await response.json();
-      } catch (_) {}
-    }
     throwIfArchiveFallbackCancelled();
-    const bytes=await ArchiveCodec.exportSnapshot({
-      ...snapshot,config
-    });
+    const bytes=await ArchiveCodec.exportSnapshot(snapshot);
     throwIfArchiveFallbackCancelled();
     const name='JetNote_'+new Date().toISOString().replace(/[:.]/g,'-')+'.jnote',blob=new Blob([bytes],{
       type:'application/vnd.jnote+zip'
@@ -395,7 +380,7 @@ function chooseArchive(){
     JetNoteNative.importJetNote('merge');
   }else document.getElementById('archivePicker').click();
 }
-async function exportNativeArchive(includeConfigFolder=false){
+async function exportNativeArchive(){
   entriesBusy=true;
   archiveFallbackCancellationRequested=false;
   setArchiveOperationState('export','prepare',true);
@@ -405,18 +390,6 @@ async function exportNativeArchive(includeConfigFolder=false){
     const state=await EntryStore.read(),payload={
       appVersion:'4.0',posts:[]
     };
-    if(includeConfigFolder){
-      const configFolder={};
-      try {
-        const sectionNames=JSON.parse(window.JetNoteNative?.listRuntimeConfigSectionFilesJson?.()||'[]');
-        for(const sectionName of sectionNames){
-          const text=window.JetNoteNative?.getRuntimeConfigSectionOverridesJson?.(sectionName)
-            ?? window.JetNoteNative?.getRuntimeConfigSectionJson?.(sectionName);
-          if(text)configFolder[sectionName]=JSON.parse(text);
-        }
-      } catch (_) {}
-      if(Object.keys(configFolder).length)payload.configFolder=configFolder;
-    }
     for(const item of state.posts||[])payload.posts.push(await ArchiveMapping.toCanonical(item,meta=>NativeMedia.ensure(meta),source=>NativeMedia.image(source)));
     JetNoteNative.exportJetNote(JSON.stringify(payload));
     setArchiveOperationState('export','select',true);

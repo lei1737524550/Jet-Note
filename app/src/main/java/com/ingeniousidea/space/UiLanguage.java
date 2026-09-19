@@ -24,13 +24,23 @@ public final class UiLanguage {
             if (cached != null) return cached;
             JSONObject loaded = new JSONObject();
             if (context != null) {
-                try (InputStream input = context.getAssets().open(assetPath(context));
-                     ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-                    byte[] buffer = new byte[4096];
-                    int read;
-                    while ((read = input.read(buffer)) != -1) out.write(buffer, 0, read);
-                    loaded = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
-                } catch (Exception ignored) { }
+                String code = languageCode(context);
+                String[] candidates = "zh".equals(code)
+                        ? new String[]{"language/chinese.json", "language/Chinese.json"}
+                        : new String[]{"language/english.json", "language/English.json"};
+                for (String path : candidates) {
+                    try (InputStream input = context.getAssets().open(path);
+                         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+                        byte[] buffer = new byte[4096];
+                        int read;
+                        while ((read = input.read(buffer)) != -1) out.write(buffer, 0, read);
+                        JSONObject candidate = new JSONObject(new String(out.toByteArray(), StandardCharsets.UTF_8));
+                        if (candidate.optJSONObject("ui_strings") != null) {
+                            loaded = candidate;
+                            break;
+                        }
+                    } catch (Exception ignored) { }
+                }
             }
             cached = loaded;
             return loaded;

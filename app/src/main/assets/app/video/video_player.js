@@ -55,6 +55,56 @@ window.JetNoteVideoOverlay = Object.freeze({
 // During a Post transaction the WebView poster/proxy is the single visual owner.
 let postMovementVideoFreezeDepth = 0;
 let postMovementDetachedNativeVideoId = null;
+// Preserve the real media box across renderPosts(). Published video height is
+// normally supplied by the poster image; a freshly rebuilt <img> has no
+// intrinsic height until its thumbnail is resolved, which can collapse the
+// whole Post for one WebView frame. Keep the FIRST box authoritative until the
+// replacement poster is ready.
+let postMovementFrozenVideoGeometry = new Map();
+
+function capturePostMovementVideoGeometry() {
+  const frozen = new Map();
+  document.querySelectorAll('.published-post-surface .native-video-card[data-media-id]').forEach(item => {
+    const rect = item.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      frozen.set(String(item.dataset.mediaId), { width: rect.width, height: rect.height });
+      item.style.setProperty('height', `${rect.height}px`, 'important');
+      item.style.setProperty('min-height', `${rect.height}px`, 'important');
+      item.style.setProperty('max-height', `${rect.height}px`, 'important');
+    }
+  });
+  return frozen;
+}
+
+window.__jetApplyPostMovementVideoGeometry = function(root = document) {
+  if (postMovementVideoFreezeDepth <= 0 || !postMovementFrozenVideoGeometry.size) return;
+  postMovementFrozenVideoGeometry.forEach((geometry, id) => {
+    const item = root.querySelector?.(`.native-video-card[data-media-id="${CSS.escape(id)}"]`);
+    if (!item) return;
+    item.style.setProperty('height', `${geometry.height}px`, 'important');
+    item.style.setProperty('min-height', `${geometry.height}px`, 'important');
+    item.style.setProperty('max-height', `${geometry.height}px`, 'important');
+  });
+};
+
+function releasePostMovementVideoGeometry() {
+  postMovementFrozenVideoGeometry.forEach((geometry, id) => {
+    const item = document.querySelector(`.native-video-card[data-media-id="${CSS.escape(id)}"]`);
+    if (!item) return;
+    const release = () => {
+      item.style.removeProperty('height');
+      item.style.removeProperty('min-height');
+      item.style.removeProperty('max-height');
+    };
+    const poster = item.querySelector('.video-poster');
+    // Never recreate the original one-frame collapse while releasing the lock.
+    // If the thumbnail is still decoding, keep the box until it can own height.
+    if (poster?.complete && poster.naturalWidth > 0) release();
+    else if (poster) poster.addEventListener('load', release, { once: true });
+    else release();
+  });
+  postMovementFrozenVideoGeometry.clear();
+}
 window.__jetBeginPostMovementVideoFreeze = function() {
   postMovementVideoFreezeDepth += 1;
   if (postMovementVideoFreezeDepth !== 1) return;
@@ -62,6 +112,7 @@ window.__jetBeginPostMovementVideoFreeze = function() {
   // The Android player remains alive, but its TextureView is completely hidden
   // and detached from DOM geometry until LAST has settled.
   postMovementDetachedNativeVideoId = activeNativeVideoItem?.dataset?.mediaId || null;
+  postMovementFrozenVideoGeometry = capturePostMovementVideoGeometry();
   document.documentElement.classList.add('jet-post-movement-video-freeze');
   nativeVideoOverlayAllowed = false;
   if (nativeVideoRectFrame) {
@@ -81,11 +132,26 @@ window.__jetEndPostMovementVideoFreeze = function() {
     activeNativeVideoItem = document.querySelector(`.native-video-card[data-media-id="${CSS.escape(id)}"]`);
   }
   postMovementDetachedNativeVideoId = null;
-  document.documentElement.classList.remove('jet-post-movement-video-freeze');
-  syncNativeVideoOverlayVisibility();
-  if (activeNativeVideoItem?.isConnected && nativeVideoOverlayAllowed) {
-    requestAnimationFrame(() => requestAnimationFrame(() => sendNativeVideoRect()));
+
+  // IMPORTANT: the Android TextureView still remembers its FIRST (pre-move) rect.
+  // Do not make it visible before replacing that stale geometry, otherwise the
+  // first native frame after a Star/Favorite reorder flashes at the old position.
+  // updateVideoRect is sent while the overlay is still disabled; only after the
+  // FINAL rect is installed do we release the native surface.
+  if (activeNativeVideoItem?.isConnected && window.JetNoteNative?.updateVideoRect) {
+    try {
+      const item = activeNativeVideoItem;
+      const r = nativeVideoRect(item);
+      window.JetNoteNative.updateVideoRect(item.dataset.mediaId, r.left, r.top, r.width, r.height, r.dpr);
+    } catch (_) {}
   }
+
+  document.documentElement.classList.remove('jet-post-movement-video-freeze');
+  releasePostMovementVideoGeometry();
+  syncNativeVideoOverlayVisibility();
+  // A following frame may refine sub-pixel/layout settling, but visibility no
+  // longer races ahead of the FINAL native rect.
+  if (activeNativeVideoItem?.isConnected && nativeVideoOverlayAllowed) scheduleNativeVideoRect();
 };
 
 const nativeVideoVisibilityObserver = new MutationObserver(() => syncNativeVideoOverlayVisibility());

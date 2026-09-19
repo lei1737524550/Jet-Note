@@ -144,6 +144,29 @@ button:active {
   transform-origin: 0 0;
 }
 
+/* Home vertical rhythm -----------------------------------------------------
+   External spacing has exactly one owner per boundary. Surface components
+   (.post and composer) never contribute margins. The outer Three-Post body
+   owns Top -> MainWorld spacing; MainWorld owns Composer -> Main spacing;
+   MainPosts owns Post -> Post spacing. This prevents Super Star from stacking
+   a Post margin with home-actions padding (the former 12px vs 6px mismatch). */
+.three-posts-one-body {
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+}
+.post-main-layout-world {
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+}
+.three-posts-one-body .home-actions,
+.three-posts-one-body .post-composer-wrap,
+.three-posts-one-body .post-surface {
+  margin-top:0;
+  margin-bottom:0;
+}
+
 /* Unified Post architecture -------------------------------------------------
    Top/Main/Composer are roles of the same Post surface. Role selectors below
    may add behavior/layout, but .post-surface owns the common surface identity. */
