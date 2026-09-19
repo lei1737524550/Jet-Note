@@ -35,6 +35,9 @@ Save detected media individually, or quickly download all captured resources of 
 
 ### Multimedia Notes
 
+
+[To download it](https://github.com/lei1737524550/Jet-Note/releases/download/Jet_Note_V8.0/Jet.Note.v8.0.6.Beta.apk)
+
 Mix **text, images, audio, and video** in the same note instead of treating them only as separate attachments.
 
 ### Portable `.jnote` Backups
