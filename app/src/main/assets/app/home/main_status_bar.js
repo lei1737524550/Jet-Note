@@ -18,7 +18,7 @@
     _main_status_bar_settings_button_hit_area_size: 44,
     _main_status_bar_settings_icon_size: 26,
     _main_status_bar_settings_button_horizontal_offset_px: 8,
-    _main_status_bar_datetime_format_pattern: 'yyyy/MM/dd-HH-mm',
+    _main_status_bar_datetime_format_pattern: 'HH:mm',
     _main_status_bar_time_region_right_padding: 6,
     _main_status_bar_time_text_horizontal_offset_px: 0
   });
@@ -63,11 +63,8 @@
     };
     const root = document.documentElement;
     const effectiveConfig = effectiveConfigOverride || null;
-    const configuredStatusPattern = normalizeDateTimeFormatPattern(
-      config._main_status_bar_datetime_format_pattern ?? config._main_status_bar_time_format
-    );
-    mainStatusBarDateTimeFormatPattern = window.JetNoteDateTimeFormat?.customPattern?.(effectiveConfig)
-      || configuredStatusPattern;
+    // The Home clock is intentionally fixed to a concise 24-hour HH:mm display.
+    mainStatusBarDateTimeFormatPattern = DEFAULT_MAIN_STATUS_BAR_CONFIG._main_status_bar_datetime_format_pattern;
 
     const barHeight = boundedNumber(config.main_status_bar_height, DEFAULT_MAIN_STATUS_BAR_CONFIG.main_status_bar_height, 0, 500);
     const verticalMove = boundedNumber(config.main_status_bar_vertical_move, DEFAULT_MAIN_STATUS_BAR_CONFIG.main_status_bar_vertical_move, -500, 500);
@@ -250,12 +247,9 @@
   });
 
   window.addEventListener('jetnote:date-time-pattern-changed', event => {
-    // Use the event payload immediately. Avoid a NativeBridge + JSON parse round
-    // trip on the hot path; a subsequent page/visibility refresh still reloads
-    // the authoritative effective config.
-    const eventPattern = normalizeDateTimeFormatPattern(event?.detail?.pattern);
-    if (eventPattern) mainStatusBarDateTimeFormatPattern = eventPattern;
-    else loadMainStatusBarGeometry();
+    // Date-view formatting remains configurable, but the Home status clock is
+    // deliberately stable and always uses HH:mm.
+    mainStatusBarDateTimeFormatPattern = DEFAULT_MAIN_STATUS_BAR_CONFIG._main_status_bar_datetime_format_pattern;
     restartMainStatusBarClock();
   });
 })();

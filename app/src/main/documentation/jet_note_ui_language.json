@@ -260,10 +260,10 @@
     },
     "ui_language_single_source": {
       "display_name": "UI Language Single Source",
-      "description": "All user-visible English wording is stored in assets/language/english.json. WebView code reads it through shared/core/language_catalog.js and native Android code reads it through UiLanguage.java. Compatibility language facades may delegate to these shared readers but must not create another independent language cache.",
+      "description": "All user-visible English wording is stored in assets/language/English.json. WebView code reads it through shared/core/language_catalog.js and native Android code reads it through UiLanguage.java. Compatibility language facades may delegate to these shared readers but must not create another independent language cache.",
       "web_reader": "assets/shared/core/language_catalog.js",
       "native_reader": "java/com/ingeniousidea/space/UiLanguage.java",
-      "language_file": "assets/language/english.json",
+      "language_file": "assets/language/English.json",
       "non_language_configuration": "Geometry, colors, behavior values, limits, asset paths and URLs remain in config.json rather than the language file."
     },
     "shared_image_viewer_modules": {
@@ -475,7 +475,7 @@
     },
     "welcome_post": {
       "display_name": "Welcome Post",
-      "english": "The welcome-state content inside Top Post. Its text appearance is configured at config.json -> three_post_one_body.welcome_post and its string is stored at language/english.json -> ui_strings.home.welcome_post_default.",
+      "english": "The welcome-state content inside Top Post. Its text appearance is configured at config.json -> three_post_one_body.welcome_post and its string is stored at language/English.json -> ui_strings.home.welcome_post_default.",
       "parent_region": "top_post"
     },
     "post_composer": {
@@ -698,7 +698,7 @@
       "page_title": "Tools"
     },
     "color_view": {
-      "preview_sample_1": "Configured sample text from language/english.json.",
+      "preview_sample_1": "Configured sample text from language/English.json.",
       "preview_sample_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       "set_background": "Set Background",
       "format_hex": "HEX",
@@ -729,7 +729,7 @@
     }
   },
   "ui_string_storage_rule": {
-    "english": "User-visible wording belongs in assets/language/english.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
+    "english": "User-visible wording belongs in assets/language/English.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
   },
   "interaction_rules": {
     "color_view_radix_selector": {

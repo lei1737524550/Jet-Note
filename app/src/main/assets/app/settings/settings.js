@@ -122,6 +122,7 @@ async function openSettings() {
     window.DebugConfigurationFeature?.refreshSettings?.();
     window.BrowserSettingsFeature?.bind?.();
     window.BrowserSettingsFeature?.refreshSettings?.();
+    window.LanguageSettingsFeature?.bind?.();
 }
 
 function closeSettings() {

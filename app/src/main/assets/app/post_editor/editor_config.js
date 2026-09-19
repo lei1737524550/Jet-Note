@@ -10,6 +10,7 @@
   const VIEWPORT_HEIGHT_RATIO_RANGE = { min: 0.1, max: 0.8 };
   const TEXT_AREA_PADDING_RANGE = { min: 0, max: 120 };
   const ATTACHMENT_ROW_HEIGHT_RANGE = { min: 32, max: 120 };
+  const KEYBOARD_ANIMATION_DURATION_RANGE = { min: 0, max: 1000 };
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -90,6 +91,7 @@
       setCssPixels('--post-editor-text-padding-bottom', layout.text_area_padding_bottom, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-text-padding-left', layout.text_area_padding_left, TEXT_AREA_PADDING_RANGE);
       setCssPixels('--post-editor-attachment-row-height', layout.attachment_row_height, ATTACHMENT_ROW_HEIGHT_RANGE);
+      setCssPixels('--post-editor-keyboard-lift-duration', layout.keyboard_lift_animation_duration_ms, KEYBOARD_ANIMATION_DURATION_RANGE);
     } catch (error) {
       console.warn('[EditorConfig] unable to load config.json', error);
     }

@@ -3,19 +3,11 @@
     "top_post": {
       "super_star": {
         "border_rule": {
-          "change_count": -1,
+          "change_count": 0,
           "sequence": [
             {
-              "color": "#EE1313",
-              "duration_ms": 450
-            },
-            {
-              "color": "#EEFF00",
-              "duration_ms": 450
-            },
-            {
-              "color": "#F50CEB",
-              "duration_ms": 450
+              "color": "#bfc1c4",
+              "duration_ms": 1000
             }
           ]
         }
@@ -23,31 +15,11 @@
     },
     "post_composer": {
       "border_rule": {
-        "change_count": -1,
+        "change_count": 0,
         "sequence": [
           {
-            "color": "#FF043F",
-            "duration_ms": 200
-          },
-          {
-            "color": "#ED880C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#D3ED0C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#47ED0C",
-            "duration_ms": 200
-          },
-          {
-            "color": "#0CEDA4",
-            "duration_ms": 200
-          },
-          {
-            "color": "#1A0CED",
-            "duration_ms": 200
+            "color": "#00dddd",
+            "duration_ms": 1000
           }
         ]
       }
@@ -88,19 +60,11 @@
       },
       "star": {
         "border_rule": {
-          "change_count": -1,
+          "change_count": 0,
           "sequence": [
             {
-              "color": "#000000",
-              "duration_ms": 200
-            },
-            {
               "color": "#bfc1c4",
-              "duration_ms": 200
-            },
-            {
-              "color": "#bfc1c4",
-              "duration_ms": 200
+              "duration_ms": 1000
             }
           ]
         }

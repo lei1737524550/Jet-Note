@@ -210,7 +210,7 @@ button:focus-visible {
 }
 .post-composer-wrap {
   width:100%;
-  margin:0 0 8px;
+  margin:0 0 var(--post-surface-vertical-gap,6px);
   padding:0 var(--content-horizontal-padding);
   background:transparent;
 }
@@ -249,7 +249,7 @@ button:focus-visible {
   position:relative;
   z-index:var(--z-axis-height-content, 0);
   width:100%;
-  margin:0 0 6px;
+  margin:0 0 var(--post-surface-vertical-gap,6px);
   padding:12px var(--published-post-horizontal-padding) 14px;
   background:var(--jet-note-type-three-post-set-body,#fff);
 }
@@ -359,17 +359,29 @@ button:focus-visible {
 }
 
 /* Simplified home: no profile identity or permanent feature tabs. */
-.home-actions{width:100%;padding:8px var(--content-horizontal-padding) 8px;}
+.home-actions{width:100%;padding:8px var(--content-horizontal-padding) var(--post-surface-vertical-gap,6px);}
 .post-head-minimal{
   position:relative;
   z-index:5;
-  float:right;
-  width:40px;
-  min-height:34px;
-  padding-right:0;
+  display:flex;
+  float:none;
+  width:100%;
+  min-height:28px;
+  padding:0;
+  align-items:center;
+  justify-content:space-between;
+}
+.post-head-actions{
+  display:flex;
+  min-width:0;
+  align-items:center;
+  justify-content:flex-end;
+  gap:2px;
 }
 .post-head-minimal .more{
+  position:relative;
   z-index:6;
+  top:0!important;
   pointer-events:auto;
 }
 
@@ -395,8 +407,8 @@ button:focus-visible {
 }
 
 /* Per-star-state visual settings supplied by config.json. */
-.post-surface[data-post-role="main"] > .post-footer-row > .time,
-.post-surface[data-post-role="top"] > .post-footer-row > .time{
+.post-surface[data-post-role="main"] > .post-head > .time,
+.post-surface[data-post-role="top"] > .post-head > .time{
   color:var(--post-state-time-color,var(--muted));
   margin-top:var(--post-state-time-top-margin,3px);
   margin-bottom:var(--post-state-time-bottom-margin,3px);

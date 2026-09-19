@@ -112,8 +112,8 @@
       this.refreshSettings();
     },
     refreshSettings(){
-      styleToggle(document.getElementById('enableBrowserButton'), this.browserEnabled(), 'Browser Enabled', 'Enable Browser');
-      styleToggle(document.getElementById('enableResourceFilterButton'), this.resourceFilterEnabled(), 'res-Filter Enabled', 'Enable res-Filter');
+      styleToggle(document.getElementById('enableBrowserButton'), this.browserEnabled(), t('browserEnabled'), t('enableBrowser'));
+      styleToggle(document.getElementById('enableResourceFilterButton'), this.resourceFilterEnabled(), t('resourceFilterEnabled'), t('enableResourceFilter'));
       void renderExtensionButtons();
     },
     syncNativeFilter,

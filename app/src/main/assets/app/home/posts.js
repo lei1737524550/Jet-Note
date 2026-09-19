@@ -5,18 +5,19 @@ const DEFAULT_POSTS = [];
 let posts = loadPosts();
 let editingPostId = null;
 let postDraftImages = [];
+const expandedPostIds = new Set();
+const COLLAPSED_POST_LINE_LIMIT = 8;
+const POST_FADE_CHARACTER_LIMIT = 6;
 
 const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
   vertical_move_px: -32,
+  surface_vertical_gap_px: 6,
   font_size_px: 17,
   top_post: Object.freeze({
     super_star: Object.freeze({
       border_rule: Object.freeze({
-        change_count: 1,
-        sequence: Object.freeze([
-          {color: '#34A853', duration_ms: 2250},
-          {color: '#ff0073', duration_ms: 0}
-        ])
+        change_count: 0,
+        sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
       }),
       time_stamp_color: '999da2',
       time_stamp_top_margin: 10,
@@ -26,7 +27,7 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
   post_composer: Object.freeze({
     border_rule: Object.freeze({
       change_count: 0,
-      sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
+      sequence: Object.freeze([{color: '#00dddd', duration_ms: 1000}])
     })
   }),
   main_posts: Object.freeze({
@@ -66,11 +67,8 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
     }),
     star: Object.freeze({
       border_rule: Object.freeze({
-        change_count: 1,
-        sequence: Object.freeze([
-          {color: '#34A853', duration_ms: 2250},
-          {color: '#d3cc06', duration_ms: 0}
-        ])
+        change_count: 0,
+        sequence: Object.freeze([{color: '#bfc1c4', duration_ms: 1000}])
       }),
       time_stamp_color: '999da2',
       time_stamp_top_margin: 3,
@@ -302,7 +300,7 @@ function cancelAllPostHighlightRuns() {
 function postHighlightCardFor(post) {
   const state = getPostStarState(post);
   const id = String(post.id).replace(/["']/g, '\\$&');
-  if (state === 'super_star') return document.querySelector(`#topPostCard[data-post-id="${id}"]`);
+  if (state === 'super_star') return document.querySelector(`#topPostCard[data-post-id="${id}"] .post-surface[data-post-role="top"]`);
   if (state === 'star') return document.querySelector(`#mainPosts .post-surface[data-post-id="${id}"]`);
   return null;
 }
@@ -427,6 +425,10 @@ function applyThreePostOneBodyConfig() {
     '--three-post-one-body-vertical-move',
     `${configVerticalPixelOffset(threePostOneBodyConfig.vertical_move_px, THREE_POST_ONE_BODY_DEFAULT_CONFIG.vertical_move_px)}px`
   );
+  root.style.setProperty(
+    '--post-surface-vertical-gap',
+    `${configVerticalPixelOffset(threePostOneBodyConfig.surface_vertical_gap_px, THREE_POST_ONE_BODY_DEFAULT_CONFIG.surface_vertical_gap_px)}px`
+  );
 
   applyThreePostOneBodyBorderRule(
     'top_post.super_star',
@@ -455,8 +457,24 @@ window.addEventListener('pagehide', () => {
   for (const name of [...threePostOneBodyBorderTimers.keys()]) stopThreePostOneBodyBorderRule(name);
 });
 
-function renderPublishedPostFooter(post) {
-  return `<div class="post-footer-row"><div class="time">${escapeHTML(formatPostTimestamp(post))}</div></div>`;
+function postExpandIcon(expanded) {
+  const file = expanded ? 'collapse_toward_center.svg' : 'expand_broad_v.svg';
+  return `<img src="shared/icons/${file}" alt="" aria-hidden="true">`;
+}
+
+function renderPublishedPostHeader(post, postId) {
+  const expanded = expandedPostIds.has(String(post.id));
+  return `<div class="post-head post-head-minimal">
+    <div class="time">${escapeHTML(formatPostTimestamp(post))}</div>
+    <div class="post-head-actions">
+      <button class="post-text-toggle" type="button" data-post-id="${postId}"
+              onclick="togglePublishedPostText(this.dataset.postId)"
+              aria-label="${escapeHTML(t(expanded ? 'collapsePostText' : 'expandPostText'))}" aria-expanded="${expanded}" hidden>
+        ${postExpandIcon(expanded)}
+      </button>
+      ${isWorkspaceWritable() ? `<button class="more" data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)" aria-label="${escapeHTML(t('moreActions'))}">${moreMenuIcon()}</button>` : ''}
+    </div>
+  </div>`;
 }
 
 // ── Unified Post Surface ───────────────────────────────────────────────────
@@ -471,9 +489,9 @@ function renderPostSurface(post, role = POST_SURFACE_ROLE.MAIN) {
       <div class="post post-surface post-role-composer post-composer three-posts-one-body__box common_border"
            data-post-role="composer">
         <button class="post-composer-main" type="button" data-editor-open="create" data-i18n="share">${escapeHTML(t('share'))}</button>
-        <button class="post-composer-media-button" onclick="openPostComposerWithVideoPicker()" aria-label="add video"><img src="shared/icons/video.svg" alt=""></button>
-        <button class="post-composer-media-button" onclick="openPostComposerWithImagePicker()" aria-label="add image"><img src="shared/icons/image.svg" alt=""></button>
-        <button class="post-composer-media-button post-composer-audio-button" onclick="openPostComposerWithAudioPicker()" aria-label="add audio"><img src="shared/icons/audio.svg" alt=""></button>
+        <button class="post-composer-media-button" onclick="openPostComposerWithVideoPicker()" aria-label="${escapeHTML(t('addVideo'))}"><img src="shared/icons/video.svg" alt=""></button>
+        <button class="post-composer-media-button" onclick="openPostComposerWithImagePicker()" aria-label="${escapeHTML(t('addImage'))}"><img src="shared/icons/image.svg" alt=""></button>
+        <button class="post-composer-media-button post-composer-audio-button" onclick="openPostComposerWithAudioPicker()" aria-label="${escapeHTML(t('addAudio'))}"><img src="shared/icons/audio.svg" alt=""></button>
       </div>`;
   }
 
@@ -483,7 +501,7 @@ function renderPostSurface(post, role = POST_SURFACE_ROLE.MAIN) {
   const images = Array.isArray(post.images) ? post.images : [];
   const attachments = renderAttachments(post.attachments);
   const media = renderPublishedVisualMediaHTML(images, post.attachments);
-  const text = `<div class="text-content">${escapeHTML(post.text || '')}</div>`;
+  const text = `<div class="post-text-drawer"><div class="text-content">${escapeHTML(post.text || '')}</div></div>`;
   const clear = '<div class="post-content-clear" aria-hidden="true"></div>';
   const roleClass = role === POST_SURFACE_ROLE.TOP ? 'post-role-top' : 'post-role-main';
   const stateClass = state === 'star' ? 'star' : 'not-star';
@@ -494,11 +512,149 @@ function renderPostSurface(post, role = POST_SURFACE_ROLE.MAIN) {
   return `
     <article class="post post-surface published-post-surface ${roleClass} post-state-${stateClass} three-posts-one-body__box common_border"
              data-post-role="${role}" data-post-id="${postId}" style="${postVisualStyle(role === POST_SURFACE_ROLE.TOP ? 'super_star' : state)}">
-      <div class="post-head post-head-minimal">
-        ${isWorkspaceWritable() ? `<button class="more" data-post-id="${postId}" onclick="openPostActionPanel(event, this.dataset.postId)" aria-label="More">${moreMenuIcon()}</button>` : ''}
-      </div>
-      ${attachments}${text}${clear}${media}${renderPublishedPostFooter(post)}
+      ${renderPublishedPostHeader(post, postId)}
+      ${attachments}${text}${clear}${media}
     </article>`;
+}
+
+function postTextVisualLines(element) {
+  const textNode = element?.firstChild;
+  if (!textNode || textNode.nodeType !== Node.TEXT_NODE || !textNode.data) return [];
+  const lines = [];
+  let offset = 0;
+  for (const character of Array.from(textNode.data)) {
+    const nextOffset = offset + character.length;
+    const range = document.createRange();
+    range.setStart(textNode, offset);
+    range.setEnd(textNode, nextOffset);
+    const rect = range.getClientRects()[0];
+    if (rect && rect.height > 0) {
+      let line = lines[lines.length - 1];
+      if (!line || Math.abs(line.top - rect.top) > 2) {
+        line = {top: rect.top, start: offset, end: nextOffset};
+        lines.push(line);
+      } else {
+        line.end = nextOffset;
+      }
+    }
+    offset = nextOffset;
+  }
+  return lines;
+}
+
+function applyCollapsedPostText(element) {
+  const fullText = element.dataset.fullText ?? element.textContent ?? '';
+  element.textContent = fullText;
+  const lines = postTextVisualLines(element);
+  const article = element.closest('.published-post-surface');
+  const button = article?.querySelector('.post-text-toggle');
+  const postId = String(article?.dataset.postId || '');
+  const overLimit = lines.length > COLLAPSED_POST_LINE_LIMIT;
+  if (button) button.hidden = !overLimit;
+  if (!overLimit || expandedPostIds.has(postId)) return;
+
+  const lastLine = lines[COLLAPSED_POST_LINE_LIMIT - 1];
+  const visibleText = fullText.slice(0, lastLine.end).replace(/[\r\n]+$/u, '');
+  const characters = Array.from(visibleText);
+  const lineCharacters = Array.from(fullText.slice(lastLine.start, lastLine.end));
+  const availableFadeCount = lineCharacters.filter(character => !/[\r\n]/u.test(character)).length;
+  const fadeCount = Math.min(POST_FADE_CHARACTER_LIMIT, availableFadeCount);
+  const fadeStart = Math.max(0, characters.length - fadeCount);
+  const fragment = document.createDocumentFragment();
+  fragment.append(document.createTextNode(characters.slice(0, fadeStart).join('')));
+  characters.slice(fadeStart).forEach((character, index, faded) => {
+    const span = document.createElement('span');
+    const channel = Math.round(255 * (index + 1) / faded.length);
+    span.className = 'post-text-fade-character';
+    span.style.color = `rgb(${channel}, ${channel}, ${channel})`;
+    span.textContent = character;
+    fragment.append(span);
+  });
+  element.replaceChildren(fragment);
+}
+
+let postTextHydrationGeneration = 0;
+function hydratePublishedPostText(root = document, synchronous = false) {
+  const generation = ++postTextHydrationGeneration;
+  root.querySelectorAll('.published-post-surface .text-content').forEach(element => {
+    element.dataset.fullText = element.textContent || '';
+  });
+  const apply = () => {
+    if (generation !== postTextHydrationGeneration) return;
+    root.querySelectorAll('.published-post-surface .text-content').forEach(applyCollapsedPostText);
+  };
+  if (synchronous) { apply(); return; }
+  if (document.fonts?.ready) document.fonts.ready.then(() => requestAnimationFrame(apply));
+  else requestAnimationFrame(apply);
+}
+
+function postTextDrawerDurationMs() {
+  const configured = Number(window.__jetRuntimeConfig?.date_time_viewer_fold_animation?.letters_duration_ms);
+  return Math.max(0, Number.isFinite(configured) ? configured : 300);
+}
+
+function waitForPostTextDrawer(drawer, duration) {
+  if (duration <= 0) return Promise.resolve();
+  return new Promise(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      drawer.removeEventListener('transitionend', onEnd);
+      clearTimeout(timer);
+      resolve();
+    };
+    const onEnd = event => {
+      if (event.target === drawer && event.propertyName === 'height') finish();
+    };
+    drawer.addEventListener('transitionend', onEnd);
+    const timer = setTimeout(finish, duration + 100);
+  });
+}
+
+async function togglePublishedPostText(postId) {
+  const key = String(postId);
+  const article = [...document.querySelectorAll('.published-post-surface')]
+    .find(card => String(card.dataset.postId) === key);
+  const drawer = article?.querySelector('.post-text-drawer');
+  const text = drawer?.querySelector('.text-content');
+  const button = article?.querySelector('.post-text-toggle');
+  if (!drawer || !text || !button || drawer.dataset.animating === 'true') return;
+
+  drawer.dataset.animating = 'true';
+  const opening = !expandedPostIds.has(key);
+  const duration = postTextDrawerDurationMs();
+  const startHeight = drawer.getBoundingClientRect().height;
+  const fullText = text.dataset.fullText ?? text.textContent ?? '';
+  drawer.style.transition = 'none';
+  drawer.style.height = `${startHeight}px`;
+  drawer.style.overflow = 'hidden';
+
+  if (opening) {
+    expandedPostIds.add(key);
+    text.textContent = fullText;
+  } else {
+    expandedPostIds.delete(key);
+  }
+  button.setAttribute('aria-expanded', String(opening));
+  button.setAttribute('aria-label', t(opening ? 'collapsePostText' : 'expandPostText'));
+  button.innerHTML = postExpandIcon(opening);
+
+  // Measure the destination only after restoring the complete text. Collapse uses
+  // exactly eight editor-compatible line boxes; expansion uses the full scroll height.
+  const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 26.35;
+  const targetHeight = opening ? text.scrollHeight : lineHeight * COLLAPSED_POST_LINE_LIMIT;
+  void drawer.offsetHeight;
+  drawer.style.transition = `height ${duration}ms cubic-bezier(.22,.72,.22,1)`;
+  requestAnimationFrame(() => { drawer.style.height = `${targetHeight}px`; });
+  await waitForPostTextDrawer(drawer, duration);
+
+  if (!opening) applyCollapsedPostText(text);
+  drawer.style.transition = '';
+  drawer.style.height = '';
+  drawer.style.overflow = '';
+  drawer.dataset.animating = 'false';
+  window.JetNoteScrollbar?.refresh?.();
 }
 function renderTopPost() {
   const card = document.getElementById('topPostCard');
@@ -571,6 +727,7 @@ function renderPosts(options = {}) {
   hydrateAttachments(list);
   hydrateVideoAttachments(list);
   bindPublishedInlineImageZoom?.(list);
+  hydratePublishedPostText(document, options.stabilizePostText === true);
   if (options.scheduleFit !== false) requestAnimationFrame(fit);
 }
 
@@ -897,13 +1054,13 @@ function renderPostVisualMediaPreview() {
           <button class="compose-image-remove adaptive-complement-remove" type="button"
                   onclick="event.stopPropagation(); removePostDraftVideo('${id}')" aria-label="${escapeHTML(t('remove'))}">×</button>
         </div>
-        <div class="video-progress-track" role="slider" tabindex="0" aria-label="video position" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0"><div class="video-progress-fill"></div></div>
+        <div class="video-progress-track" role="slider" tabindex="0" aria-label="${escapeHTML(t('videoPosition'))}" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0"><div class="video-progress-fill"></div></div>
         <div class="video-inline-time">0:00/0:00</div>
       </div>`;
     }
     const key = entry.item ? `'${escapeHTML(entry.item.id)}'` : String(entry.index);
     return `<div class="compose-image-item common_border"><img src="${escapeHTML(entry.src)}" alt="" onclick="openImageViewer(this.src)">
-      <button class="compose-image-remove adaptive-complement-remove" onclick="event.stopPropagation(); removePostDraftImage(${key})" aria-label="remove">×</button></div>`;
+      <button class="compose-image-remove adaptive-complement-remove" onclick="event.stopPropagation(); removePostDraftImage(${key})" aria-label="${escapeHTML(t('remove'))}">×</button></div>`;
   }).join('') + (visualItems.length > 3 ? '<div class="compose-media-more-indicator" aria-hidden="true"><img src="shared/icons/more_vertical.svg" alt=""></div>' : '');
 
   hydrateVideoAttachments(box, draftMedia.post);
@@ -965,8 +1122,8 @@ function holdHorizontalEllipsisMenuAfterPostMovement(postId) {
   cancelPostHorizontalEllipsisDismissTimer();
   const token = postHorizontalEllipsisDismissToken;
   const delay = postInteractionDelay('post_horizontal_ellipsis_menu_dismiss_delay_ms', 1000);
-  // This function is called only AFTER animatePostMovement(), fit() and the visual
-  // settle barrier have all completed.  First paint the menu at its final Post
+  // This function is called only after Post movement and the visual settle
+  // barrier have completed. First paint the menu at its final Post
   // relative coordinate, then start the configured dismiss clock.  A small RAF follower
   // remains active during the hold so a late WebView compositor frame
   // cannot detach the menu from the Post.
@@ -1100,8 +1257,8 @@ function syncPostActionPanelToPost(postId) {
 }
 
 async function waitForPostMovementVisualSettle(postId) {
-  // "Movement ended" means not merely transitionend: fit() or compositor settling
-  // can still change the screen-space position on following frames.
+  // "Movement ended" means not merely transitionend: compositor settling can
+  // still change the screen-space position on following frames.
   // Require three consecutive stable painted frames before starting the 300 ms hold.
   let stableFrames = 0;
   let previous = null;
@@ -1111,7 +1268,9 @@ async function waitForPostMovementVisualSettle(postId) {
     const id = postId == null ? null : String(postId);
     const card = id == null ? null : collectPostMovementCards().find(item => item.id === id)?.card;
     const rect = card?.getBoundingClientRect();
-    const current = rect ? [rect.left, rect.top, rect.right, rect.bottom, window.scrollY] : [window.scrollY];
+    // Camera movement belongs to the user and is deliberately excluded from the
+    // Post visual-settle test. Scrolling during PLAY must not trigger correction.
+    const current = rect ? [rect.left, rect.top, rect.right, rect.bottom] : [];
     const stable = previous && current.length === previous.length && current.every((v, i) => Math.abs(v - previous[i]) < 0.5);
     stableFrames = stable ? stableFrames + 1 : 0;
     previous = current;
@@ -1157,8 +1316,6 @@ function collectPostMovementCards() {
 }
 
 function capturePostMovementSnapshot(activePostId = null, captureCrossSurfaceGroup = false, crossSurfaceIds = null) {
-  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-  const captureScrollY = window.scrollY;
   const rects = new Map();
   const indexes = new Map();
   const surfaces = new Map();
@@ -1214,25 +1371,31 @@ function capturePostMovementSnapshot(activePostId = null, captureCrossSurfaceGro
       clone.removeAttribute('id');
       clone.setAttribute('aria-hidden', 'true');
       clone.dataset.flipProxyFor = item.id;
-      // TEST v22: no explicit stacking during movement. The computed-style freeze above
-      // may have copied z-index from the source, so clear it before the proxy flies.
-      clone.style.removeProperty('z-index');
+      // Cross-surface paint proxies live above every real Post. The acted-on Post
+      // owns the highest movement layer for the complete transaction.
+      clone.style.zIndex = String(item.id) === String(activePostActionId) ? '2001' : '2000';
+      const originDocumentLeft = first.left + window.scrollX;
+      const originDocumentTop = first.top + window.scrollY;
       Object.assign(clone.style, {
-        position: 'fixed', left: `${first.left}px`, top: `${first.top}px`,
+        position: 'absolute', left: `${originDocumentLeft}px`, top: `${originDocumentTop}px`,
         width: `${first.width}px`, height: `${first.height}px`, margin: '0',
         boxSizing: 'border-box', pointerEvents: 'none', transformOrigin: '0 0',
         transform: 'translate3d(0,0,0)', transition: 'none', willChange: 'transform'
       });
       document.body.appendChild(clone);
       clone.getBoundingClientRect();
-      crossSurfaceProxies.set(item.id, {id: item.id, clone, first, fromSurface: item.surface});
+      crossSurfaceProxies.set(item.id, {
+        id: item.id,
+        clone,
+        originDocumentLeft,
+        originDocumentTop,
+        fromSurface: item.surface
+      });
     }
   }
 
   const composer = document.getElementById('postComposerMount');
   const composerRect = composer?.getBoundingClientRect?.() || null;
-  const topLayout = document.getElementById('topPostCard')?.parentElement;
-  const topLayoutRect = topLayout?.getBoundingClientRect?.() || null;
 
   // Logical finite sequence used only for block partitioning. Geometry remains
   // authoritative for movement: an item may keep the same sequence index and
@@ -1244,23 +1407,32 @@ function capturePostMovementSnapshot(activePostId = null, captureCrossSurfaceGro
   if (composer) topologySequence.push('__post_composer__');
   topologySequence.push(...mainItems.map(item => String(item.id)));
 
-  return {rects, indexes, surfaces, viewportHeight, scrollX: window.scrollX, scrollY: captureScrollY, crossSurfaceProxies, composerRect, topLayoutRect, topologySequence};
+  return {rects, indexes, surfaces, crossSurfaceProxies, composerRect, topologySequence};
 }
 
 function resolvePostMovementTiming(actionName, movements, activePostId = null, fallback = 900) {
   const config = threePostOneBodyConfig.main_posts?.interaction_timing?.post_reflow_animation || {};
   const choice = String(config.speed_or_duration || 'duration').trim().toLowerCase();
-  const maximumDistance = movements.reduce((maximum, item) => Math.max(maximum, Number(item.distance) || 0), 0);
+  const distances = movements.map(item => Number(item.distance) || 0).filter(distance => distance > 0);
+  const minimumDistance = distances.length ? Math.min(...distances) : 0;
+  const activeMovement = activePostId == null
+    ? null
+    : movements.find(item => String(item.postId) === String(activePostId));
+  const activeDistance = Number(activeMovement?.distance) || 0;
+  // Star, Cancel Star, Super Star and Cancel Super Star all bind configured
+  // V_small to the Post the user acted on. If that Post has no measurable
+  // displacement, fall back to the minimum effective displacement.
+  const actedPostTimingAction = actionName === 'star' || actionName === 'cancel_star'
+    || actionName === 'super_star' || actionName === 'cancel_super_star';
+  const referenceDistance = actedPostTimingAction && activeDistance > 0 ? activeDistance : minimumDistance;
 
   let commonDurationMs = 0;
   if (choice === 'speed') {
     const configuredReferenceSpeed = Number(config[actionName]?.speed_px_per_second);
-    if (Number.isFinite(configuredReferenceSpeed) && configuredReferenceSpeed > 0 && maximumDistance > 0) {
-      // Jet Note maximum-distance shared-duration model:
-      // D_max = max(D_i), T = D_max / V_ref, T_i = T, V_i = D_i / T.
-      // The configured speed belongs only to the farthest-moving Post in this
-      // transaction. Every shorter movement derives its speed from the shared T.
-      commonDurationMs = (maximumDistance / configuredReferenceSpeed) * 1000;
+    if (Number.isFinite(configuredReferenceSpeed) && configuredReferenceSpeed > 0 && referenceDistance > 0) {
+      // T=D_ref/V_small. Every participant shares T and derives V_i=D_i/T,
+      // so all Posts still start and finish the movement together.
+      commonDurationMs = (referenceDistance / configuredReferenceSpeed) * 1000;
     }
   } else {
     const configuredDuration = Number(config[actionName]?.duration_ms);
@@ -1292,9 +1464,17 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
     const target = currentById.get(id);
     if (target && proxy.fromSurface !== target.surface) {
       const last = target.card.getBoundingClientRect();
+      const destinationDocumentLeft = last.left + window.scrollX;
+      const destinationDocumentTop = last.top + window.scrollY;
       const oldVisibility = target.card.style.visibility;
       target.card.style.visibility = 'hidden';
-      crossSurface.set(id, {proxy, target, last, oldVisibility});
+      crossSurface.set(id, {
+        proxy,
+        target,
+        destinationDocumentLeft,
+        destinationDocumentTop,
+        oldVisibility
+      });
     } else if (proxy.clone?.isConnected) {
       proxy.clone.remove();
     }
@@ -1312,9 +1492,16 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
   const blockMembership = window.JetNoteOrderPreservedBlocks?.membership?.(
     snapshot.topologySequence || [], afterTopologySequence
   ) || new Map();
+  const fixedBottomUp = window.JetNoteOrderPreservedBlocks?.fixedBottomUpSuffix?.(
+    snapshot.topologySequence || [], afterTopologySequence
+  ) || {ids:new Set()};
 
   const prepared = [];
   for (const item of currentItems) {
+    // Topology owns participation. If IDs still correspond one-by-one when read
+    // from the bottom, the entire matched suffix is fixed even if transient DOM
+    // measurement noise reports a geometric delta.
+    if (fixedBottomUp.ids.has(String(item.id))) continue;
     const first = snapshot.rects.get(item.id);
     if (!first) continue;
     const last = item.card.getBoundingClientRect();
@@ -1323,9 +1510,8 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
     const changedSurface = beforeSurface !== item.surface;
     const changedSlot = item.surface === 'main' && Number.isInteger(beforeIndex) && beforeIndex !== item.index;
 
-    // Geometry, not ordinal slot, decides whether this Body moves. A Post may be
-    // 4 -> 4 in the finite sequence and still be displaced by Superstar/Composer
-    // reflow. The old changedSlot gate caused exactly that Body to flash to LAST.
+    // Inside the topology-approved changing prefix, geometry decides the exact
+    // FLIP displacement. Geometry never re-admits an ID from the fixed suffix.
     const dx = first.left - last.left;
     const dy = first.top - last.top;
     const distance = Math.hypot(dx, dy);
@@ -1336,6 +1522,7 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
     const previousTransition = card.style.transition;
     const previousTransform = card.style.transform;
     const previousWillChange = card.style.willChange;
+    const previousZIndex = card.style.zIndex;
 
     // Cross-surface real nodes are hidden, but receive the same FLIP geometry so menu
     // anchoring and transaction timing remain coherent. Main residual Posts are visible.
@@ -1343,9 +1530,10 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
     card.style.willChange = 'transform';
     card.style.transition = 'none';
     card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+    if (String(item.id) === activeId) card.style.zIndex = '2001';
     prepared.push({postId:item.id, card, dx, dy, distance, changedSurface, changedSlot,
       preservedBlock: blockMembership.get(String(item.id)) ?? null,
-      previousPosition, previousTransition, previousTransform, previousWillChange});
+      previousPosition, previousTransition, previousTransform, previousWillChange, previousZIndex});
   }
 
   // The Composer is part of the visible Post Movement even though it is not a
@@ -1353,7 +1541,7 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
   // FLIP it exactly like every other moving body so the destination layout cannot
   // appear to open a hole instantaneously before the Posts arrive.
   const composer = document.getElementById('postComposerMount');
-  if (composer && snapshot.composerRect) {
+  if (composer && snapshot.composerRect && !fixedBottomUp.ids.has('__post_composer__')) {
     const first = snapshot.composerRect;
     const last = composer.getBoundingClientRect();
     const dx = first.left - last.left;
@@ -1364,6 +1552,7 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
       const previousTransition = composer.style.transition;
       const previousTransform = composer.style.transform;
       const previousWillChange = composer.style.willChange;
+      const previousZIndex = composer.style.zIndex;
       composer.style.position = 'relative';
       composer.style.willChange = 'transform';
       composer.style.transition = 'none';
@@ -1372,7 +1561,7 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
         postId: '__post_composer__', card: composer, dx, dy, distance,
         changedSurface: false, isLayoutBody: true,
         preservedBlock: blockMembership.get('__post_composer__') ?? null,
-        previousPosition, previousTransition, previousTransform, previousWillChange
+        previousPosition, previousTransition, previousTransform, previousWillChange, previousZIndex
       });
     }
   }
@@ -1405,9 +1594,9 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
   await nextAnimationFrame();
   setPostMovementTransactionPhase('play');
 
-  // UI Language contract: the maximum-distance shared-duration model uses linear
-  // timing.  The farthest body owns V_ref; every shorter body shares T and therefore
-  // moves at its derived constant speed V_i = D_i / T.
+  // UI Language contract: Star/Cancel Star/Super Star/Cancel Super Star all
+  // apply V_small to the acted-on Post. Every body shares T and therefore keeps
+  // its derived constant speed V_i = D_i / T.
   const easing = 'linear';
   const waits = [];
 
@@ -1416,14 +1605,13 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
   for (const [id, group] of crossSurface) {
     const timing = timedPrepared.find(x => x.postId === id);
     if (!timing) continue;
-    const {clone, first} = group.proxy;
-    const last = group.last;
+    const {clone, originDocumentLeft, originDocumentTop} = group.proxy;
     // Translation-only shared-element FLIP. Keep the FIRST geometry frozen for the
     // entire flight: Superstar movement must not zoom/stretch while crossing surfaces.
     // The real LAST node stays hidden until cleanup, so the proxy is the sole visual
     // owner during movement. Its fixed width/height were captured in FIRST.
-    const tx = last.left - first.left;
-    const ty = last.top - first.top;
+    const tx = group.destinationDocumentLeft - originDocumentLeft;
+    const ty = group.destinationDocumentTop - originDocumentTop;
     waits.push(new Promise(resolve => {
       let done = false;
       const finish = () => { if (done) return; done = true; clone.removeEventListener('transitionend', onEnd); clearTimeout(timer); resolve(); };
@@ -1444,6 +1632,7 @@ async function animatePostMovement(snapshot, actionName, activePostId = null, fa
         if (done) return; done = true; card.removeEventListener('transitionend', onEnd); clearTimeout(timer);
         card.style.transition = item.previousTransition; card.style.transform = item.previousTransform;
         card.style.willChange = item.previousWillChange; card.style.position = item.previousPosition;
+        card.style.zIndex = item.previousZIndex;
         resolve();
       };
       const onEnd = e => { if (e.target === card && e.propertyName === 'transform') finish(); };
@@ -1557,7 +1746,7 @@ async function commitStarStateChange(previous, postMovementActionName, activePos
     // No viewport correction: a Post state change must never move the page scroll position.
   } else {
     // Disable Chromium scroll anchoring BEFORE rebuilding the list. Otherwise WebView
-    // may silently change window.scrollY between FIRST and LAST when nodes move above
+    // may silently shift the viewport between FIRST and LAST when nodes move above
     // the viewport. That viewport movement can be painted before FLIP applies its inverse.
     const html = document.documentElement;
     const body = document.body;
@@ -1569,20 +1758,16 @@ async function commitStarStateChange(previous, postMovementActionName, activePos
     // DOM rebuild; otherwise a Video Post can visibly lag/jump while its HTML body FLIPs.
     try { window.__jetBeginPostMovementVideoFreeze?.(); } catch (_) {}
     try {
-      // Rebuild only when the list really reorders. fit() remains outside FLIP so
-      // layout cannot change underneath a moving Post and leak an intermediate frame.
+      // Rebuild only when the list really reorders. Post Movement never reads,
+      // stores or writes the user's camera position.
       setPostMovementTransactionPhase('last-write');
-      renderPosts({scheduleFit: false, preserveComposer: true});
+      renderPosts({scheduleFit: false, preserveComposer: true, stabilizePostText: true});
       // This read intentionally forces the real LAST layout synchronously.  There
       // must be no await/rAF/timer between LAST write and animatePostMovement(),
       // whose synchronous prefix immediately writes every INVERT transform.
       setPostMovementTransactionPhase('last-read');
-      const composerAfterRender = document.getElementById('postComposerMount')?.getBoundingClientRect?.();
-      const topLayoutAfterRender = document.getElementById('topPostCard')?.parentElement;
-      const topLayoutAfterRect = topLayoutAfterRender?.getBoundingClientRect?.();
       await animatePostMovement(snapshot, postMovementActionName, activePostId, 900);
       await nextAnimationFrame();
-      fit();
       await waitForPostMovementVisualSettle(activePostId);
     } finally {
       try { window.__jetEndPostMovementVideoFreeze?.(); } catch (_) {}
@@ -1681,8 +1866,7 @@ async function toggleSuperStarActivePost() {
   }
   if (!saved) return;
 
-  // Deliberately keep the viewport exactly where the user left it. Super Star
-  // completion must not call returnToStandardHome(), scrollTo(), or camera correction.
+  // Super Star completion has no camera ownership; the user's live position remains.
 }
 
 function openPostActionPanel(event, postId) {
@@ -1892,7 +2076,7 @@ function formatPostTimestamp(post) {
     && date.getMonth() === now.getMonth()
     && date.getDate() === now.getDate();
 
-  if (isToday) return `${hh}:${mm} Today`;
+  if (isToday) return `${hh}:${mm} ${t('today')}`;
   if (date.getFullYear() === now.getFullYear()) return `${hh}:${mm} ${month}/${day}`;
   return `${hh}:${mm} ${date.getFullYear()}/${month}/${day}`;
 }

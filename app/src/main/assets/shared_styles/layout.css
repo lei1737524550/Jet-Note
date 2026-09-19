@@ -1,0 +1,33 @@
+/* Shared visual tokens apply to both timeline and journal at actual CSS size. */
+.text-content{ font-size:var(--three-post-one-body-font-size,var(--body-size)); line-height:var(--body-leading); letter-spacing:.1px; }
+.more{ position:absolute; top:0; right:0; width:44px; height:44px; padding:10px; display:flex; align-items:center; justify-content:center; border:0; border-radius:10px; background:transparent; font-size:0; line-height:1; letter-spacing:0; }
+.more svg, .more img{ display:block; width:24px; height:24px; fill:currentColor; }
+/* Every full-screen route reserves its own safe content area. */
+.settings-screen,.crop-screen { height:var(--viewport-height,100dvh); padding-left:var(--safe-left); padding-right:var(--safe-right); }
+.post-compose-screen {
+  height:var(--viewport-height,100dvh);
+  padding:var(--safe-top) var(--safe-right) var(--content-bottom,var(--safe-bottom)) var(--safe-left);
+}
+.settings-header { top:var(--safe-top); }
+.post-compose-header { top:0; }
+.settings-body { top:calc(var(--safe-top) + var(--page-action-bar-height)); bottom:var(--content-bottom,var(--safe-bottom)); padding-top:24px; }
+.settings-screen::before,.post-compose-screen::before { content:''; position:absolute; top:0; left:0; right:0; height:var(--safe-top); background:var(--page-background); }
+#postComposerText{ font-size:var(--new-post-font-size,var(--body-size)); line-height:var(--body-leading); }
+.image-viewer-close { top:calc(var(--safe-top) + 8px); }
+.image-viewer-background-switch { top:calc(var(--safe-top) + 8px); }
+/* Canvas coordinates are independent of CSS display size. */
+.crop-screen { position:fixed; inset:0; width:100%; z-index:40000; padding-top:var(--safe-top); padding-bottom:var(--content-bottom,var(--safe-bottom)); }
+.crop-screen.open { display:flex; flex-direction:column; }
+.crop-header { position:relative; flex:0 0 56px; height:56px; font-size:18px; }
+.crop-back { top:0; height:56px; width:50px; }
+.crop-body { position:relative; top:auto; bottom:auto; flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; overflow:hidden; padding:8px 14px; }
+#cropCanvas { position:relative; width:auto; height:auto; max-width:100%; max-height:calc(100% - 90px); aspect-ratio:631/690; object-fit:contain; touch-action:none; }
+.crop-hint { position:static; flex-shrink:0; font-size:13px; margin:12px 0; }
+.zoom-row { position:static; flex-shrink:0; width:min(85%,400px); height:30px; }
+.crop-footer { position:relative; bottom:auto; flex:0 0 64px; height:64px; }
+.crop-cancel,.crop-done { font-size:17px; height:44px; top:10px; }
+.crop-done { width:84px; }
+@media(max-width:350px) { .name {font-size:18px;} .avatar {width:56px;height:56px;} .profile {gap:8px;} }
+.crop-body { width:100%; height:auto; left:auto; }
+#cropCanvas { left:auto; top:auto; }
+.crop-footer { top:auto; width:100%; }

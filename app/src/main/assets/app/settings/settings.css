@@ -101,6 +101,13 @@
   padding: 0 12px 12px;
 }
 
+.language-settings-card .settings-choice {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  border-width: 5px !important;
+  border-color: #00dddd !important;
+}
+
 .settings-choice {
   position: relative;
   width: 100%;

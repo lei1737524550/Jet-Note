@@ -710,7 +710,7 @@ final class ToolPageController {
             String viewerCloseControlJs = readAssetText("app/media/image_viewer/close_control.js");
             String viewerJs = readAssetText("app/media/image_viewer.js");
             String languageCatalogJs = readAssetText("shared/core/language_catalog.js");
-            String languageJson = readAssetText("language/english.json");
+            String languageJson = readAssetText(UiLanguage.assetPath(activity));
             String modules = buildGetSourceModulesScript();
 
             String script = "window.JET_NOTE_GET_SOURCE_SHOW_RESULTS=true;\n"

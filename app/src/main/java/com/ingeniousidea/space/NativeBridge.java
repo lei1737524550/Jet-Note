@@ -64,6 +64,33 @@ final class NativeBridge {
         return RuntimeConfigStore.readEffective(activity);
     }
 
+    @JavascriptInterface public String getUiLanguageCode() {
+        return UiLanguage.languageCode(activity);
+    }
+
+    @JavascriptInterface public boolean setUiLanguageCode(String languageCode) {
+        return UiLanguage.setLanguageCode(activity, languageCode);
+    }
+
+    @JavascriptInterface public String getUiLanguageJson() {
+        return UiLanguage.json(activity);
+    }
+
+    /**
+     * Compatibility entry point retained for older bundled pages. Language is
+     * persisted synchronously; the current WebView applies the new catalog in
+     * place, so recreating the Activity here would race/destroy the JS caller.
+     */
+    @JavascriptInterface public boolean setUiLanguageAndRelaunch(String languageCode) {
+        return UiLanguage.setLanguageCode(activity, languageCode);
+    }
+
+    /** Compatibility bridge for older bundled pages. */
+    @JavascriptInterface public boolean switchUiLanguageAndRelaunch() {
+        String target = "zh".equals(UiLanguage.languageCode(activity)) ? "en" : "zh";
+        return setUiLanguageAndRelaunch(target);
+    }
+
     @JavascriptInterface public boolean setRuntimeConfigJson(String json) {
         return RuntimeConfigStore.saveRuntime(activity, json);
     }

@@ -126,6 +126,8 @@ button:active {
 .three-posts-one-body .post-composer.common_border {
   overflow: hidden;
   isolation: isolate;
+  border-width:3px;
+  border-color:#00dddd;
 }
 
 /* FLIP surface transparency: playback time is text/control chrome, not a Body paint owner. */
@@ -165,4 +167,61 @@ button:active {
 .published-post-surface[data-post-role="main"],
 .published-post-surface[data-post-role="top"] {
   --published-post-horizontal-padding: 12px;
+  font-size:var(--three-post-one-body-font-size,17px);
+  line-height:1.55;
 }
+
+.published-post-surface > .post-text-drawer > .text-content {
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  word-break:break-all;
+  letter-spacing:normal;
+}
+
+.published-post-surface > .post-text-drawer {
+  min-height:0;
+  overflow:visible;
+  will-change:height;
+}
+
+.published-post-surface .post-text-toggle {
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  min-width:28px;
+  padding:4px;
+  border:0;
+  background:transparent!important;
+  color:inherit;
+}
+.published-post-surface .post-text-toggle[hidden] { display:none; }
+.published-post-surface .post-text-toggle img {
+  display:block;
+  width:20px;
+  height:20px;
+}
+.published-post-surface .post-head-minimal .more {
+  display:grid!important;
+  place-items:center;
+  width:32px!important;
+  height:32px!important;
+  padding:6px!important;
+  position:relative;
+}
+.published-post-surface .post-head-actions {
+  gap:8px;
+}
+.published-post-surface .post-head-minimal .more::before {
+  content:"";
+  position:absolute;
+  inset:-3.2px;
+}
+.published-post-surface .post-head-minimal .more img,
+.published-post-surface .post-head-minimal .more svg {
+  display:block;
+  width:19px!important;
+  height:19px!important;
+  transform:translateY(-2px);
+}
+.post-text-fade-character { transition:color .12s linear; }

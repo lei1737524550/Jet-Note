@@ -6,10 +6,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Locale;
 
-/** Single cached source for user-visible English UI wording used by native code. */
+/** Single cached source for localized, user-visible UI wording used by native code. */
 public final class UiLanguage {
     private static final Object LOCK = new Object();
+    private static final String PREFERENCES = "jet_note_ui_language";
+    private static final String LANGUAGE_KEY = "language_code";
     private static volatile JSONObject cached;
 
     private UiLanguage() {}
@@ -21,7 +24,7 @@ public final class UiLanguage {
             if (cached != null) return cached;
             JSONObject loaded = new JSONObject();
             if (context != null) {
-                try (InputStream input = context.getAssets().open("language/english.json");
+                try (InputStream input = context.getAssets().open(assetPath(context));
                      ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                     byte[] buffer = new byte[4096];
                     int read;
@@ -32,6 +35,31 @@ public final class UiLanguage {
             cached = loaded;
             return loaded;
         }
+    }
+
+    public static String languageCode(Context context) {
+        if (context != null) {
+            String selected = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                    .getString(LANGUAGE_KEY, "");
+            if ("zh".equals(selected) || "en".equals(selected)) return selected;
+        }
+        return "zh".equalsIgnoreCase(Locale.getDefault().getLanguage()) ? "zh" : "en";
+    }
+
+    public static boolean setLanguageCode(Context context, String languageCode) {
+        if (context == null || !("zh".equals(languageCode) || "en".equals(languageCode))) return false;
+        boolean saved = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+                .edit().putString(LANGUAGE_KEY, languageCode).commit();
+        if (saved) synchronized (LOCK) { cached = null; }
+        return saved;
+    }
+
+    public static String assetPath(Context context) {
+        return "zh".equals(languageCode(context)) ? "language/chinese.json" : "language/english.json";
+    }
+
+    public static String json(Context context) {
+        return data(context).toString();
     }
 
     public static String text(Context context, String key) {

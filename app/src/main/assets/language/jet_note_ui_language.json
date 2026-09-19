@@ -1,6 +1,21 @@
 {
-  "schema_version": 10,
+  "schema_version": 11,
   "purpose": "Shared UI terminology and naming language for Jet Note development.",
+  "post_movement_bottom_up_fixed_suffix": {
+    "display_name": "Post Movement 自下而上固定后缀算法",
+    "rule": "从变化前和变化后序列的最底部开始逐个比较 ID；只要 ID 一一对应就继续向上。遇到第一个不同 ID 时停止。已经对应的整个尾部片段固定不动。",
+    "participation": "固定尾部中的 Post 不得进入 FLIP、transform、transition、共同用时或 V小/V大计算。只有第一个不匹配位置及其上方的变化片段可以参与移动。",
+    "geometry_boundary": "几何距离只能计算已经由 ID 拓扑确认参与移动的 Post 如何移动；distance 大于任何阈值都不得推翻固定尾部判定。",
+    "example": "A B C D E -> B A C D E：从底部得到 E=E、D=D、C=C，遇到 B!=A 后停止；C D E 固定，只有 A B 移动。",
+    "implementation": "app/home/post_movement/order_preserved_blocks.js -> fixedBottomUpSuffix(); app/home/posts.js 在构造 prepared 之前排除返回的 ids。",
+    "details": "documentation/POST_MOVEMENT_IMPLEMENTATION.md"
+  },
+  "post_movement_normative_contracts": {
+    "text_drawer": "超过八行的 Post 使用 300ms 配置化抽屉高度动画；收缩完成后才重建第八行字符渐隐，动画期间禁止重入。",
+    "acted_post_layer": "被操作的真实 Post 或跨表面代理在完整移动事务中使用最高 Post 层 2001，清理时恢复原层级；其他跨表面代理使用 2000。Top/Main 跨表面代理必须使用 document coordinates 与 position:absolute，禁止使用绑定 viewport 的 position:fixed。",
+    "camera": "Star 四种动作不得记录、恢复、纠正或写入 window.scrollX/window.scrollY。动画期间用户可自由滚动；结束时以用户当时的位置为准，不调用 fit、scrollTo、scrollIntoView 或自动可见区域修正。",
+    "details": "documentation/POST_MOVEMENT_IMPLEMENTATION.md"
+  },
   "ui_language_primitives": {
     "jetnote_style_border": {
       "display_name": "JetNote 风格边框",
@@ -263,10 +278,10 @@
     },
     "ui_language_single_source": {
       "display_name": "UI Language Single Source",
-      "description": "All user-visible English wording is stored in assets/language/english.json. WebView code reads it through shared/core/language_catalog.js and native Android code reads it through UiLanguage.java. Compatibility language facades may delegate to these shared readers but must not create another independent language cache.",
+      "description": "All user-visible English wording is stored in assets/language/English.json. WebView code reads it through shared/core/language_catalog.js and native Android code reads it through UiLanguage.java. Compatibility language facades may delegate to these shared readers but must not create another independent language cache.",
       "web_reader": "assets/shared/core/language_catalog.js",
       "native_reader": "java/com/ingeniousidea/space/UiLanguage.java",
-      "language_file": "assets/language/english.json",
+      "language_file": "assets/language/English.json",
       "non_language_configuration": "Geometry, colors, behavior values, limits, asset paths and URLs remain in config.json rather than the language file."
     },
     "shared_image_viewer_modules": {
@@ -688,7 +703,7 @@
       "page_title": "Tools"
     },
     "color_view": {
-      "preview_sample_1": "Configured sample text from language/english.json.",
+      "preview_sample_1": "Configured sample text from language/English.json.",
       "preview_sample_2": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
       "set_background": "Set Background",
       "format_hex": "HEX",
@@ -725,7 +740,7 @@
     }
   },
   "ui_string_storage_rule": {
-    "english": "User-visible wording belongs in assets/language/english.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
+    "english": "User-visible wording belongs in assets/language/English.json. jet_note_ui_language.json documents canonical UI terminology and architecture; config.json is reserved for geometry, colors, behavior, action identifiers, asset paths, URLs, and other non-language configuration."
   },
   "interaction_rules": {
     "color_view_radix_selector": {
@@ -872,15 +887,58 @@
     "viewer": "app/settings/date_time_viewer.js"
   },
   "animation_models": {
+    "acted_post_shared_duration_model": {
+      "display_name": "操作说说共享用时模型",
+      "english_name": "Acted Post Shared Duration Model",
+      "type": "Jet Note Star/Cancel Star/Super Star/Cancel Super Star movement timing model",
+      "applies_to": [
+        "star",
+        "cancel_star",
+        "super_star",
+        "cancel_super_star"
+      ],
+      "principle": "收藏、取消收藏、超级收藏或取消超级收藏时，配置的 V小应用到用户本次操作的说说真实移动距离；由该距离计算公共总用时，其他参与移动元素共享该总用时并按自身距离反算速度。",
+      "formula": {
+        "acted_post_distance": "D_active",
+        "configured_small_speed": "V_small",
+        "shared_duration_seconds": "T = D_active / V_small",
+        "element_duration": "T_i = T",
+        "element_speed": "V_i = D_i / T"
+      },
+      "fallback": "若操作说说没有有效移动距离，则回退到最小距离共享用时模型。"
+    },
+    "minimum_distance_shared_duration_model": {
+      "display_name": "最小距离共享用时模型",
+      "english_name": "Minimum Distance Shared Duration Model",
+      "type": "Jet Note Post movement timing fallback model",
+      "applies_to": [
+        "star",
+        "cancel_star",
+        "super_star",
+        "cancel_super_star"
+      ],
+      "principle": "仅当本次操作说说没有有效移动距离时使用：测量本轮所有实际移动元素的真实移动距离，以最短有效位移和配置 V小计算公共总用时。",
+      "formula": {
+        "minimum_distance": "D_min = min(D_1, D_2, ..., D_n), D_i > 0",
+        "configured_small_speed": "V_small",
+        "shared_duration_seconds": "T = D_min / V_small",
+        "element_duration": "T_i = T",
+        "element_speed": "V_i = D_i / T",
+        "small_reference_speed": "V_min = D_min / T = V_small"
+      },
+      "rules": [
+        "所有参与本轮动画的元素先完成距离测量，再计算 D_min。",
+        "配置的 speed_px_per_second 只作为 V小，不得直接赋给每个元素。",
+        "所有元素使用同一个 T，同时开始并同时结束。",
+        "距离较长的元素按 V_i = D_i / T 得到更高速度。",
+        "使用 linear timing，使计算得到的速度在单次移动中保持恒定。"
+      ]
+    },
     "maximum_distance_shared_duration_model": {
       "display_name": "最大距离共享用时模型",
       "english_name": "Maximum Distance Shared Duration Model",
       "type": "Jet Note movement timing model",
       "applies_to": [
-        "star",
-        "cancel_star",
-        "super_star",
-        "cancel_super_star",
         "enable_debug_expand",
         "cancel_debug_close"
       ],
@@ -924,7 +982,7 @@
   },
   "animation_speed_configuration_schema": {
     "standard": "Each independently configurable motion uses an object containing speed_px_per_second (and duration_ms only when duration mode is supported). Avoid action-prefixed flat speed keys.",
-    "speed_semantics": "Configured speed_px_per_second is V_max. D_max=max(D_i); T=D_max/V_max; all participants share T; V_i=D_i/T.",
+    "speed_semantics": "Star/Cancel Star/Super Star/Cancel Super Star all apply configured V_small to the acted-on Post: T=D_active/V_small; all participants share T. If D_active is unavailable, fall back to D_min=min(D_i), T=D_min/V_small. Debug Settings keeps V_max semantics: D_max=max(D_i), T=D_max/V_max.",
     "debug_settings": "debug_settings_viewer_animation is the single configuration source for both open and close; close may derive its V_max using close_speed_multiplier without introducing a second speed setting."
   }
 }

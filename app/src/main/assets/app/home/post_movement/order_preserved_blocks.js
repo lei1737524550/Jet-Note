@@ -54,5 +54,27 @@
     return map;
   }
 
-  global.JetNoteOrderPreservedBlocks = { find, membership };
+  // Jet Note bottom-up fixed-suffix algorithm. Starting at the last visible
+  // identity, compare before/after IDs one by one. The first mismatch ends the
+  // fixed suffix. Every matched ID below that boundary is layout-invariant and
+  // must never become a Post Movement participant.
+  function fixedBottomUpSuffix(beforeSequence, afterSequence) {
+    const before = Array.from(beforeSequence || [], String);
+    const after = Array.from(afterSequence || [], String);
+    const ids = new Set();
+    let beforeIndex = before.length - 1;
+    let afterIndex = after.length - 1;
+    while (beforeIndex >= 0 && afterIndex >= 0 && before[beforeIndex] === after[afterIndex]) {
+      ids.add(after[afterIndex]);
+      beforeIndex -= 1;
+      afterIndex -= 1;
+    }
+    return {
+      ids,
+      startBefore: beforeIndex + 1,
+      startAfter: afterIndex + 1
+    };
+  }
+
+  global.JetNoteOrderPreservedBlocks = { find, membership, fixedBottomUpSuffix };
 })(window);

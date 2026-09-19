@@ -229,11 +229,11 @@ final class BidirectionalConversionController {
     }
 
     private String buildRuntimeScript() throws IOException {
-        String xmlModule = readAssetText("converter/svg_xml/xml.js");
-        String pathModule = readAssetText("converter/svg_xml/path.js");
-        String converterModule = readAssetText("converter/svg_xml/converter.js");
-        String reverseModule = readAssetText("converter/svg_xml/svg_to_vector.js");
-        String shapeModule = readAssetText("converter/svg_xml/shape_to_svg.js");
+        String xmlModule = readAssetText("converter/svg_xml_xml.js");
+        String pathModule = readAssetText("converter/svg_xml_path.js");
+        String converterModule = readAssetText("converter/svg_xml_converter.js");
+        String reverseModule = readAssetText("converter/svg_xml_svg_to_vector.js");
+        String shapeModule = readAssetText("converter/svg_xml_shape_to_svg.js");
 
         return "(function(){\n" +
                 "window.__vectorBridgeRuntimeVersion=\"1.2-refactor\";\n" +

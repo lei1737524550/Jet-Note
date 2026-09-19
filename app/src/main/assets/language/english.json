@@ -64,6 +64,16 @@
   "attachmentReadFailed": "Unable to read the selected attachment.",
   "edit": "Edit",
   "star": "Star",
+  "today": "Today",
+  "expandPostText": "Expand text",
+  "collapsePostText": "Collapse text",
+  "moreActions": "More actions",
+  "videoPosition": "Video position",
+  "enableBrowser": "Enable Browser",
+  "browserEnabled": "Browser Enabled",
+  "enableResourceFilter": "Enable Resource Filter",
+  "resourceFilterEnabled": "Resource Filter Enabled",
+  "resourceFilterAccessibilityLabel": "Get Source file extension filter",
   "ui_strings": {
     "common": {
       "back": "Back",
@@ -92,7 +102,9 @@
       "browser_title": "Browser",
       "relaunch": "Relaunch",
       "relaunch_accessibility_label": "Reload configuration and restart Jet Note",
-      "cancel_debug": "Cancel Debug"
+      "cancel_debug": "Cancel Debug",
+      "language_title": "Language",
+      "switch_language_target": "切换到中文"
     },
     "post_composer": {
       "new_post_title": "New Post",

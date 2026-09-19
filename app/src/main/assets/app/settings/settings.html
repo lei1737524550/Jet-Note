@@ -115,11 +115,11 @@
           <button class="backup-stop-button browser-relaunch-button common_border" id="browserRelaunchButton" type="button" data-ui-string="settings.relaunch" aria-label="" data-ui-aria-label="settings.relaunch_accessibility_label">Relaunch</button>
         </div>
         <div class="settings-option-grid">
-          <button class="settings-choice settings-action-choice common_border" id="enableBrowserButton" type="button"><span class="settings-choice-main">Enable Browser</span></button>
-          <button class="settings-choice settings-action-choice common_border" id="enableResourceFilterButton" type="button"><span class="settings-choice-main">Enable res-Filter</span></button>
+          <button class="settings-choice settings-action-choice common_border" id="enableBrowserButton" type="button"><span class="settings-choice-main" data-language-text="enableBrowser"></span></button>
+          <button class="settings-choice settings-action-choice common_border" id="enableResourceFilterButton" type="button"><span class="settings-choice-main" data-language-text="enableResourceFilter"></span></button>
         </div>
         <div class="browser-resource-filter" id="browserResourceFilter" hidden>
-          <div class="browser-resource-filter-grid" id="browserResourceFilterGrid" aria-label="Get Source file extension filter"></div>
+          <div class="browser-resource-filter-grid" id="browserResourceFilterGrid" aria-label="" data-language-aria-label="resourceFilterAccessibilityLabel"></div>
         </div>
       </div>
 
@@ -131,6 +131,15 @@
           <button class="settings-choice settings-action-choice common_border" id="saveConfigJsonButton" type="button" onclick="DebugConfigurationFeature.saveJsonToDownloads()"><span class="settings-choice-main" data-ui-string="settings.save_json"></span></button>
         </div>
         <p id="debugSettingsStatus" role="status"></p>
+      </div>
+
+      <div class="settings-card setting-box language-settings-card common_border" id="languageSettingsCard" data-setting-id="setting_6" data-setting-name="Language">
+        <div class="settings-row-title" data-ui-string="settings.language_title"></div>
+        <div class="settings-option-grid">
+          <button class="settings-choice settings-action-choice common_border" id="switchLanguageButton" type="button">
+            <span class="settings-choice-main" data-ui-string="settings.switch_language_target"></span>
+          </button>
+        </div>
       </div>
 
     </div>

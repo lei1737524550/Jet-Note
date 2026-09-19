@@ -1,9 +1,24 @@
 (function () {
   'use strict';
 
-  const LANGUAGE_URL = 'language/english.json';
+  const ENGLISH_LANGUAGE_URL = 'language/english.json';
+  const CHINESE_LANGUAGE_URL = 'language/chinese.json';
   let languageData = null;
   let languagePromise = null;
+
+  function preferredLanguage() {
+    let tag = '';
+    try { tag = window.JetNoteNative?.getUiLanguageCode?.() || ''; } catch (_) { }
+    if (!tag) {
+      try { tag = window.localStorage.getItem('jet_note_ui_language') || ''; } catch (_) { }
+    }
+    if (!tag) tag = navigator.languages?.[0] || navigator.language || '';
+    return String(tag).toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  }
+
+  function languageUrl() {
+    return preferredLanguage() === 'zh' ? CHINESE_LANGUAGE_URL : ENGLISH_LANGUAGE_URL;
+  }
 
   function readPath(object, path) {
     return String(path || '').split('.').filter(Boolean).reduce((value, key) => {
@@ -27,16 +42,57 @@
     return languageData;
   }
 
+  function isLanguageCatalog(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value)
+      && value.ui_strings && typeof value.ui_strings === 'object'
+      && typeof value.ui_strings.settings?.page_title === 'string'
+      && typeof value.ui_strings.post_composer?.new_post_title === 'string');
+  }
+
+  function readNativeCatalog() {
+    try {
+      const raw = window.JetNoteNative?.getUiLanguageJson?.();
+      if (typeof raw !== 'string' || !raw.trim()) return null;
+      const parsed = JSON.parse(raw);
+      return isLanguageCatalog(parsed) ? parsed : null;
+    } catch (error) {
+      console.warn('Jet Note native language catalog unavailable', error);
+      return null;
+    }
+  }
+
   function load() {
     if (languageData) return Promise.resolve(languageData);
     if (window.JET_NOTE_LANGUAGE_DATA && typeof window.JET_NOTE_LANGUAGE_DATA === 'object') {
-      return Promise.resolve(setData(window.JET_NOTE_LANGUAGE_DATA));
+      if (isLanguageCatalog(window.JET_NOTE_LANGUAGE_DATA)) {
+        return Promise.resolve(setData(window.JET_NOTE_LANGUAGE_DATA));
+      }
     }
     if (!languagePromise) {
-      languagePromise = fetch(LANGUAGE_URL, { cache: 'no-store' })
+      const nativeCatalog = readNativeCatalog();
+      if (nativeCatalog) {
+        languagePromise = Promise.resolve(setData(nativeCatalog));
+        return languagePromise;
+      }
+      const selectedUrl = languageUrl();
+      languagePromise = fetch(selectedUrl, { cache: 'no-store' })
         .then(response => {
           if (!response.ok) throw new Error(`Language file unavailable: ${response.status}`);
-          return response.json();
+          return response.json().then(value => {
+            if (!isLanguageCatalog(value)) throw new Error('Invalid language catalog');
+            return value;
+          });
+        })
+        .catch(error => {
+          if (selectedUrl === ENGLISH_LANGUAGE_URL) throw error;
+          console.warn('Jet Note Chinese language fallback', error);
+          return fetch(ENGLISH_LANGUAGE_URL, { cache: 'no-store' }).then(response => {
+            if (!response.ok) throw new Error(`English language file unavailable: ${response.status}`);
+            return response.json();
+          }).then(value => {
+            if (!isLanguageCatalog(value)) throw new Error('Invalid English language catalog');
+            return value;
+          });
         })
         .then(setData)
         .catch(error => {
@@ -77,7 +133,7 @@
 
   async function apply(root = document) {
     await load();
-    document.documentElement.lang = 'en';
+    document.documentElement.lang = preferredLanguage() === 'zh' ? 'zh-CN' : 'en';
 
     // Canonical attributes for new UI.
     applyElementAttribute(root, '[data-language-text]', 'languageText', 'textContent');

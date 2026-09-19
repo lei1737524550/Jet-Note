@@ -156,15 +156,14 @@ function createToolButton(tool) {
 
   button.innerHTML = toolIcon(tool.icon);
 
-  // Tool actions are keyboard-neutral: suppress the button's default focus and
-  // explicitly release any editable focus before the action runs. This also
-  // covers dynamically rendered Toolbox children, because every tool is built
-  // through createToolButton().
+  // Keep the composer focused while a tool is tapped. Blurring the textarea on
+  // pointerdown makes Android resize the WebView as the IME closes; that layout
+  // change can cancel/retarget the following click, so the first tap only hides
+  // the keyboard. Preventing the button's focus default preserves the IME and
+  // lets the same gesture reach the tool's click handler.
   button.addEventListener('pointerdown', event => {
     captureToolKeyboardState();
     event.preventDefault();
-    const active = document.activeElement;
-    if (active && typeof active.blur === 'function') active.blur();
   });
 
   if (isToolboxTrigger) {

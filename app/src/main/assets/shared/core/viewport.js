@@ -7,6 +7,7 @@ const ViewportManager = (() => {
   const KEYBOARD_DETECTION_THRESHOLD_PX = 120;
 
   let nativeImeViewportHeight = 0;
+  let nativeImeHeight = 0;
   let scheduledFrame = 0;
 
   const stableEditorViewport = {
@@ -44,7 +45,16 @@ const ViewportManager = (() => {
     stableEditorViewport.offsetLeft = visualViewport.offsetLeft;
   }
 
-  function writeViewportCssVariables(visualViewport, keyboardOpen) {
+  function keyboardHeight(visualViewport, keyboardOpen) {
+    if (!keyboardOpen) return 0;
+    const stableDelta = Math.max(0, stableEditorViewport.height - visualViewport.height);
+    const nativeViewportDelta = nativeImeViewportHeight > 0
+      ? Math.max(0, stableEditorViewport.height - nativeImeViewportHeight)
+      : 0;
+    return Math.max(nativeImeHeight, stableDelta, nativeViewportDelta);
+  }
+
+  function writeViewportCssVariables(visualViewport, keyboardOpen, imeHeight) {
     const root = document.documentElement.style;
 
     root.setProperty('--viewport-height', `${visualViewport.height}px`);
@@ -58,15 +68,18 @@ const ViewportManager = (() => {
     root.setProperty('--editor-stable-offset-left', `${stableEditorViewport.offsetLeft}px`);
 
     root.setProperty('--keyboard-open', keyboardOpen ? '1' : '0');
+    root.setProperty('--ime-height', `${imeHeight}px`);
     root.setProperty('--content-bottom', keyboardOpen ? '0px' : 'var(--safe-bottom)');
+    document.documentElement.dataset.jetnoteKeyboardOpen = keyboardOpen ? 'true' : 'false';
   }
 
-  function emitViewportChange(visualViewport, keyboardOpen) {
+  function emitViewportChange(visualViewport, keyboardOpen, imeHeight) {
     window.dispatchEvent(
       new CustomEvent('jetnote:viewport-change', {
         detail: {
           ...visualViewport,
           keyboardOpen,
+          keyboardHeight: imeHeight,
           editorHeight: stableEditorViewport.height,
           editorWidth: stableEditorViewport.width,
           editorOffsetTop: stableEditorViewport.offsetTop,
@@ -83,10 +96,11 @@ const ViewportManager = (() => {
     const keyboardOpen = isKeyboardOpen(visualViewport);
 
     captureStableEditorViewport(visualViewport, keyboardOpen);
-    writeViewportCssVariables(visualViewport, keyboardOpen);
-    emitViewportChange(visualViewport, keyboardOpen);
+    const imeHeight = keyboardHeight(visualViewport, keyboardOpen);
+    writeViewportCssVariables(visualViewport, keyboardOpen, imeHeight);
+    emitViewportChange(visualViewport, keyboardOpen, imeHeight);
 
-    return { ...visualViewport, keyboardOpen };
+    return { ...visualViewport, keyboardOpen, keyboardHeight: imeHeight };
   }
 
   function requestUpdate() {
@@ -96,12 +110,23 @@ const ViewportManager = (() => {
 
   /**
    */
-  function applySystemInsets(top, right, bottom, left, imeViewportHeight = 0) {
+  function applySystemInsets(top, right, bottom, left, imeViewportHeight = 0, imeHeight = 0) {
     const devicePixelRatio = window.devicePixelRatio || 1;
     const root = document.documentElement.style;
     const cssInsets = {};
 
     nativeImeViewportHeight = Math.max(0, Number(imeViewportHeight) / devicePixelRatio);
+    nativeImeHeight = Math.max(0, Number(imeHeight) / devicePixelRatio);
+    // Insets and visualViewport resize callbacks are not ordered consistently
+    // across WebView versions. Reconstruct the pre-IME height here so a resize
+    // callback cannot accidentally record the already-shrunken viewport as the
+    // editor's stable camera.
+    if (nativeImeViewportHeight > 0 && nativeImeHeight > 0) {
+      stableEditorViewport.height = Math.max(
+        stableEditorViewport.height,
+        nativeImeViewportHeight + nativeImeHeight
+      );
+    }
 
     for (const [name, physicalPixels] of Object.entries({ top, right, bottom, left })) {
       const cssPixels = Math.max(0, Number(physicalPixels) / devicePixelRatio);

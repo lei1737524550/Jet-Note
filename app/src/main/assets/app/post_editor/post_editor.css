@@ -8,7 +8,7 @@
   left: var(--viewport-offset-left, 0px);
   top: var(--viewport-offset-top, 0px);
   width: var(--viewport-width, 100vw);
-  height: var(--viewport-height, 100dvh);
+  height: var(--editor-stable-viewport-height, var(--viewport-height, 100dvh));
   z-index: 9999;
   display: none;
   overflow: hidden;
@@ -89,7 +89,9 @@
     --jet-note-type-edit-post-background,
     var(--page-background)
   );
-  padding: 22px 20px 16px;
+  padding: 22px 20px calc(16px + var(--ime-height, 0px));
+  transition: padding-bottom var(--post-editor-keyboard-lift-duration, 220ms) cubic-bezier(.22,.72,.22,1);
+  will-change: padding-bottom;
 }
 
 .post-input-row {

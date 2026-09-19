@@ -13,7 +13,7 @@
     "_main_status_bar_settings_button_hit_area_size": 44,
     "_main_status_bar_settings_icon_size": 26,
     "_main_status_bar_settings_button_horizontal_offset_px": 13,
-    "_main_status_bar_datetime_format_pattern": "yyyy/MM/dd-HH-mm",
+    "_main_status_bar_datetime_format_pattern": "HH:mm",
     "_main_status_bar_time_region_right_padding": 6,
     "_main_status_bar_time_text_horizontal_offset_px": 0
   },

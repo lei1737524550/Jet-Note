@@ -15,7 +15,7 @@ import android.webkit.WebView;
 final class EdgeToEdgeController {
     private final Activity activity;
     private final WebView webView;
-    private int top, right, bottom, left, keyboardViewportHeight; // available viewport height above IME, physical px
+    private int top, right, bottom, left, keyboardViewportHeight, keyboardHeight;
     private boolean hasInsets;
 
     EdgeToEdgeController(Activity activity, WebView webView) {
@@ -50,17 +50,20 @@ final class EdgeToEdgeController {
                 top = bars.top; right = bars.right; bottom = bars.bottom; left = bars.left;
                 if (insets.isVisible(WindowInsets.Type.ime())) {
                     int imeBottom = insets.getInsets(WindowInsets.Type.ime()).bottom;
+                    keyboardHeight = Math.max(0, imeBottom - bottom);
                     int windowHeight = activity.getWindowManager().getCurrentWindowMetrics().getBounds().height();
                     // This is the usable window height above the IME, not the IME height itself.
                     keyboardViewportHeight = Math.max(1, Math.min(webView.getHeight(), windowHeight - imeBottom));
                 } else {
                     keyboardViewportHeight = 0;
+                    keyboardHeight = 0;
                 }
             } else {
                 top = insets.getSystemWindowInsetTop();
                 right = insets.getSystemWindowInsetRight();
                 // Stable bottom excludes the keyboard on API 23–29.
                 bottom = insets.getStableInsetBottom();
+                keyboardHeight = 0; // visualViewport supplies the API 23-29 fallback.
                 left = insets.getSystemWindowInsetLeft();
                 if (Build.VERSION.SDK_INT >= 28 && insets.getDisplayCutout() != null) {
                     top = Math.max(top, insets.getDisplayCutout().getSafeInsetTop());
@@ -132,6 +135,7 @@ final class EdgeToEdgeController {
     void dispatchInsets() {
         if (!hasInsets) return;
         webView.evaluateJavascript("window.applySystemInsets && window.applySystemInsets("
-                + top + "," + right + "," + bottom + "," + left + "," + keyboardViewportHeight + ")", null);
+                + top + "," + right + "," + bottom + "," + left + ","
+                + keyboardViewportHeight + "," + keyboardHeight + ")", null);
     }
 }

@@ -1,6 +1,7 @@
 {
   "three_post_one_body": {
     "vertical_move_px": -32,
+    "surface_vertical_gap_px": 6,
     "font_size_px": 17,
     "top_post": {
       "super_star": {
