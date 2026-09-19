@@ -10,9 +10,9 @@
       if (!el) continue;
       saved.push([el, el.style.willChange]);
       el.style.willChange = 'transform';
-      el.getBoundingClientRect();
     }
-    await new Promise(r => requestAnimationFrame(() => r()));
+    // Preparation must not stall the interaction for an extra painted frame.
+    // FIRST measurement in posts.js provides the required synchronous layout read.
     return () => { for (const [el, value] of saved) if (el?.isConnected) el.style.willChange = value; };
   }
   global.JetNoteSuperStarTwoBodyFlip = { prepare };

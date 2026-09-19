@@ -39,20 +39,20 @@
         "post_reflow_animation": {
           "speed_or_duration": "speed",
           "star": {
-            "duration_ms": 900,
-            "speed_px_per_second": 600
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
           },
           "cancel_star": {
-            "duration_ms": 900,
-            "speed_px_per_second": 600
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
           },
           "super_star": {
-            "duration_ms": 900,
-            "speed_px_per_second": 600
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
           },
           "cancel_super_star": {
-            "duration_ms": 900,
-            "speed_px_per_second": 600
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
           }
         },
         "post_star_highlight": {

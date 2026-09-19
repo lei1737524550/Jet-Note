@@ -34,6 +34,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -57,6 +59,11 @@ final class JetNoteArchiveController {
     private final WebView webView;
     private final AttachmentStore store;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
+    // Heavy checksum work is independent per attachment. Keep orchestration serialized,
+    // but use a small bounded pool for CPU/I/O verification so import/export does not
+    // funnel every large media hash through one thread.
+    private final ExecutorService archiveWorkers = Executors.newFixedThreadPool(
+            Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors())));
     private final Map<String, ImportSession> sessions = new HashMap<>();
 
     private volatile boolean destroyed;
@@ -275,6 +282,7 @@ final class JetNoteArchiveController {
             // Defensive only: destroy may be called after an earlier shutdown path.
         }
         io.shutdown();
+        archiveWorkers.shutdownNow();
     }
 
     private void exportArchive(FileTaskManager.Destination destination, String payload) {
@@ -311,6 +319,10 @@ final class JetNoteArchiveController {
                 if (file == null || !file.isFile()) throw new IOException("Attachment missing: " + item.getKey());
                 mediaTotal += Math.max(0L, file.length());
             }
+            // Verify attachment hashes in parallel before opening the ZIP stream. ZIP
+            // output itself must remain ordered/serial, but hashing is independent and
+            // was previously performed inside that serial write loop.
+            Map<String, String> verifiedMediaHashes = verifyExportMediaParallel(attachments);
             long mediaDone = 0L;
 
             FileOutputStream fileOut = new FileOutputStream(tempArchive);
@@ -326,10 +338,9 @@ final class JetNoteArchiveController {
                     File file = store.fileForArchivePath(path);
                     if (file == null || !file.isFile()) throw new IOException("Attachment missing: " + path);
 
-                    MessageDigest digest = AttachmentStore.sha256Digest();
                     zip.putNextEntry(new ZipEntry(path));
                     long base = mediaDone;
-                    try (DigestInputStream in = new DigestInputStream(new BufferedInputStream(new FileInputStream(file)), digest)) {
+                    try (InputStream in = new BufferedInputStream(new FileInputStream(file))) {
                         byte[] buffer = new byte[COPY_BUFFER];
                         int read;
                         long fileDone = 0L;
@@ -346,11 +357,8 @@ final class JetNoteArchiveController {
                     zip.closeEntry();
                     mediaDone += file.length();
 
-                    String actualSha = AttachmentStore.hex(digest.digest());
-                    String expectedSha = item.getValue().optString("sha256", "");
-                    if (!expectedSha.isEmpty() && !expectedSha.equalsIgnoreCase(actualSha)) {
-                        throw new IOException("Attachment integrity mismatch: " + path);
-                    }
+                    String actualSha = verifiedMediaHashes.get(path);
+                    if (actualSha == null) throw new IOException("Attachment hash missing: " + path);
                     checksums.put(path, actualSha);
                 }
 
@@ -406,6 +414,34 @@ final class JetNoteArchiveController {
             //noinspection ResultOfMethodCallIgnored
             tempArchive.delete();
         }
+    }
+
+    private Map<String, String> verifyExportMediaParallel(LinkedHashMap<String, JSONObject> attachments) throws Exception {
+        Map<String, Future<String>> futures = new LinkedHashMap<>();
+        for (Map.Entry<String, JSONObject> item : attachments.entrySet()) {
+            final String path = item.getKey();
+            final String expected = item.getValue().optString("sha256", "");
+            futures.put(path, archiveWorkers.submit(() -> {
+                throwIfExportCancelled();
+                File file = store.fileForArchivePath(path);
+                if (file == null || !file.isFile()) throw new IOException("Attachment missing: " + path);
+                String actual = sha256ImportFile(file);
+                if (!expected.isEmpty() && !expected.equalsIgnoreCase(actual))
+                    throw new IOException("Attachment integrity mismatch: " + path);
+                return actual;
+            }));
+        }
+        Map<String, String> result = new LinkedHashMap<>();
+        for (Map.Entry<String, Future<String>> item : futures.entrySet()) {
+            throwIfExportCancelled();
+            try { result.put(item.getKey(), item.getValue().get()); }
+            catch (java.util.concurrent.ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof Exception) throw (Exception) cause;
+                throw new IOException("Attachment verification failed: " + item.getKey(), cause);
+            }
+        }
+        return result;
     }
 
     private void verifyExportArchive(File archive, LinkedHashMap<String, JSONObject> attachments) throws Exception {
@@ -505,27 +541,10 @@ final class JetNoteArchiveController {
 
             String postsJson = readUtf8Limited(postsFile);
             String profileJson = hasProfile ? readUtf8Limited(profileFile) : null;
-            String configJson = hasConfig ? readUtf8Limited(configFile) : null;
-            if (configJson != null) new JSONObject(configJson);
-            File configDir = new File(stageDir, "config");
-            if (configDir.isDirectory()) {
-                JSONObject folder = new JSONObject();
-                File[] sectionFiles = configDir.listFiles();
-                if (sectionFiles != null) {
-                    java.util.Arrays.sort(sectionFiles, (a, b) -> a.getName().compareTo(b.getName()));
-                    for (File sectionFile : sectionFiles) {
-                        if (!sectionFile.isFile() || !isSafeConfigSectionName(sectionFile.getName())) {
-                            throw new IOException("Invalid config folder entry");
-                        }
-                        folder.put(sectionFile.getName(), new JSONObject(readUtf8Limited(sectionFile)));
-                    }
-                }
-                if (folder.length() > 0) {
-                    JSONObject wrapper = new JSONObject();
-                    wrapper.put("__jetnoteConfigFolder", folder);
-                    configJson = wrapper.toString();
-                }
-            }
+            // Config is deliberately not imported. Config entries may remain in older
+            // archives for format compatibility/integrity checking, but are never read,
+            // parsed, passed to WebView, or written into RuntimeConfigStore.
+            String configJson = null;
             if (profileJson != null) validateProfileJson(profileJson);
             JSONArray posts = new JSONArray(postsJson);
             JSONObject checksums = new JSONObject(readUtf8Limited(checksumsFile));
@@ -556,10 +575,9 @@ final class JetNoteArchiveController {
                 throwIfImportCancelled();
                 String path=keys.next();validateArchiveEntryName(path);
                 if("checksums.json".equals(path))throw new IOException("Invalid self checksum");
+                // Runtime config is outside import scope. Do not read or hash it.
+                if ("data/config.json".equals(path) || path.startsWith("config/")) continue;
                 File checked=fileInside(stageDir,path);
-                // data/config.json is optional by design. A stale checksum entry from
-                // an intermediate exporter must not block restoration of note data.
-                if ("data/config.json".equals(path) && !checked.isFile()) continue;
                 if(!checked.isFile()||!checksums.getString(path).equalsIgnoreCase(sha256ImportFile(checked)))throw new IOException("Checksum mismatch: "+path);
             }
             // A hashes JSON as well as media; legacy variants only hash media. Verify all
@@ -680,6 +698,22 @@ final class JetNoteArchiveController {
                     continue;
                 }
                 validateArchiveEntryName(name);
+                // Import intentionally ignores archived runtime configuration. Consume
+                // these ZIP entries without staging/parsing/restoring them.
+                boolean ignoredConfigEntry = "data/config.json".equals(name) || name.startsWith("config/");
+                if (ignoredConfigEntry) {
+                    long skipped = 0L;
+                    byte[] skipBuffer = new byte[COPY_BUFFER];
+                    int skipRead;
+                    while ((skipRead = zip.read(skipBuffer)) != -1) {
+                        throwIfImportCancelled();
+                        skipped += skipRead;
+                    }
+                    if (skipped != central.get(name).getSize()) throw new IOException("Incomplete ZIP entry: " + name);
+                    expandedDone += skipped;
+                    zip.closeEntry();
+                    continue;
+                }
                 File output = fileInside(stageDir, name);
                 File parent = output.getParentFile();
                 if (parent != null && !parent.exists() && !parent.mkdirs()) throw new IOException("Unable to create directory");
@@ -784,7 +818,7 @@ final class JetNoteArchiveController {
                     //noinspection ResultOfMethodCallIgnored
                     temp.delete();
                 }
-                if (!target.isFile() || target.length() != expectedSize || !sha256ImportFile(target).equalsIgnoreCase(expectedSha)) {
+                if (!target.isFile() || target.length() != expectedSize) {
                     //noinspection ResultOfMethodCallIgnored
                     target.delete();
                     throw new IOException("Media verification after write failed: " + path);
@@ -799,7 +833,33 @@ final class JetNoteArchiveController {
                 throw error;
             }
         }
+        verifyImportedMediaParallel(session);
         dispatchProgress("import", "commit", total, total, 95, "Media integrity verified");
+    }
+
+    private void verifyImportedMediaParallel(ImportSession session) throws IOException {
+        List<Future<Void>> futures = new ArrayList<>();
+        for (File file : new ArrayList<>(session.createdFiles)) {
+            final String path = "media/" + file.getName();
+            final String expected = session.mediaDigests.get(path);
+            if (expected == null) continue;
+            futures.add(archiveWorkers.submit(() -> {
+                throwIfImportCancelled();
+                if (!sha256ImportFile(file).equalsIgnoreCase(expected))
+                    throw new IOException("Media verification after write failed: " + path);
+                return null;
+            }));
+        }
+        for (Future<Void> future : futures) {
+            throwIfImportCancelled();
+            try { future.get(); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new IOException("Import verification interrupted", e); }
+            catch (java.util.concurrent.ExecutionException e) {
+                Throwable cause = e.getCause();
+                if (cause instanceof IOException) throw (IOException) cause;
+                throw new IOException("Import verification failed", cause);
+            }
+        }
     }
 
     private void rollbackFiles(ImportSession session) {

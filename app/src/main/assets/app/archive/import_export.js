@@ -419,7 +419,8 @@ window.JetNoteArchive={
       }));
       // Legacy archives may still carry profile.json. It is intentionally ignored.
       pendingArchive.profile=null;
-      pendingArchive.config=configJson?JSON.parse(configJson):null;
+      // Import restores note/media data only. Runtime config from archives is ignored.
+      pendingArchive.config=null;
       pendingArchive.nativeToken=token;
       showImportPreview();
       entriesBusy=false;
@@ -441,22 +442,10 @@ window.JetNoteArchive={
       setArchiveProgress({message:'Committing note data…',percent:96});
       archiveFallbackCancellationRequested=false;
       setArchiveOperationState('import','database',true);
-      const importedConfig=pendingArchive?.config||null;
       const stats=await importSnapshot(pendingArchive,pendingArchive.selectedMode);
-      if(importedConfig?.__jetnoteConfigFolder){
-        for(const [sectionName, sectionValue] of Object.entries(importedConfig.__jetnoteConfigFolder)){
-          const saved=window.JetNoteNative?.setRuntimeConfigSectionJson?.(sectionName,JSON.stringify(sectionValue));
-          if(saved===false)throw Error('Unable to restore config/'+sectionName+' from backup.');
-        }
-      }else if(importedConfig){
-        // Legacy .jnote archives used one data/config.json snapshot.
-        const saved=window.JetNoteNative?.setRuntimeConfigJson?.(JSON.stringify(importedConfig));
-        if(saved===false)throw Error('Unable to restore legacy config.json from backup.');
-      }
       setArchiveOperationState('import','finalize',true,true);
       JetNoteNative.finalizeImport(token);
       finishImport(stats);
-      if(importedConfig)setTimeout(()=>location.reload(),120);
     }catch(error){
       JetNoteNative.rollbackImport(token);
       pendingArchive=null;

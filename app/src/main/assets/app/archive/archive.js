@@ -89,7 +89,7 @@ const ArchiveCodec=(()=>{
           type:attachment.mimeType
         }),imageSource:attachment.type==='image'?'data:'+attachment.mimeType+';base64,'+bytesToBase64(bytes):null
       };
-    }); result.profile=null; result.config=files['data/config.json']?decodeJSON(files['data/config.json']):null; if(result.config!==null&&!object(result.config))fail('Invalid config.json'); const configFolder={}; for(const [path,bytes] of Object.entries(files)){ if(!/^config\/[A-Za-z0-9_.-]+\.json$/.test(path))continue; const sectionName=path.slice('config/'.length); const section=decodeJSON(bytes); if(!object(section))fail('Invalid config/'+sectionName); configFolder[sectionName]=section; } if(Object.keys(configFolder).length)result.config={__jetnoteConfigFolder:configFolder}; return result;
+    }); result.profile=null; result.config=null; return result;
   }
   return{
     exportSnapshot,validate

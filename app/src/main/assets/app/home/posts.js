@@ -32,16 +32,19 @@ const THREE_POST_ONE_BODY_DEFAULT_CONFIG = Object.freeze({
   }),
   main_posts: Object.freeze({
     interaction_timing: Object.freeze({
-      post_horizontal_ellipsis_menu_dismiss_delay_ms: 1000,
+      // Fallback only: used if the real Home config cannot provide this value.
+      // The normally effective value is in: app/src/main/assets/config/home.json
+      //   main_posts.interaction_timing.post_horizontal_ellipsis_menu_dismiss_delay_ms
+      post_horizontal_ellipsis_menu_dismiss_delay_ms: 100,
       delete_content_to_border_clear_delay_ms: 140,
       delete_border_clear_to_reflow_delay_ms: 140,
       post_delete_reflow_animation_duration_ms: 320,
       post_reflow_animation: Object.freeze({
         speed_or_duration: 'speed',
-        star: Object.freeze({ duration_ms: 900, speed_px_per_second: 600 }),
-        cancel_star: Object.freeze({ duration_ms: 900, speed_px_per_second: 600 }),
-        super_star: Object.freeze({ duration_ms: 900, speed_px_per_second: 600 }),
-        cancel_super_star: Object.freeze({ duration_ms: 900, speed_px_per_second: 600 })
+        star: Object.freeze({ duration_ms: 150, speed_px_per_second: 3600 }),
+        cancel_star: Object.freeze({ duration_ms: 150, speed_px_per_second: 3600 }),
+        super_star: Object.freeze({ duration_ms: 150, speed_px_per_second: 3600 }),
+        cancel_super_star: Object.freeze({ duration_ms: 150, speed_px_per_second: 3600 })
       }),
       post_star_highlight: Object.freeze({
         inset_width_px: 5,
@@ -148,8 +151,17 @@ function getPostStarState(post) {
 
 function setPostStarState(post, state) {
   if (!post) return;
+  const previous = getPostStarState(post);
   const normalized = state === 'super_star' ? 'super_star' : state === 'star' ? 'star' : 'none';
   post.starState = normalized;
+
+  // Ordinary favorites are ordered by the moment they ENTER the favorite area,
+  // not by the Post publication timestamp. Re-favoriting therefore moves the
+  // Post back to the top of the ordinary favorite area.
+  if (normalized === 'star' && previous !== 'star') {
+    post.starredAt = new Date().toISOString();
+  }
+
   delete post.star;
 }
 
@@ -183,7 +195,17 @@ function getMainPosts()
     .filter(post => getPostStarState(post) !== 'star')
     .sort(comparePostDisplayOrder);
   const star = display.star_post
-    ? visible.filter(post => getPostStarState(post) === 'star').sort(comparePostDisplayOrder)
+    ? visible.filter(post => getPostStarState(post) === 'star').sort((a, b) => {
+        const aStarred = Date.parse(a?.starredAt || '');
+        const bStarred = Date.parse(b?.starredAt || '');
+        const aHasStarredAt = Number.isFinite(aStarred);
+        const bHasStarredAt = Number.isFinite(bStarred);
+        if (aHasStarredAt && bHasStarredAt && aStarred !== bStarred) return bStarred - aStarred;
+        if (aHasStarredAt !== bHasStarredAt) return aHasStarredAt ? -1 : 1;
+        // Legacy favorites do not have starredAt. Keep their old deterministic
+        // publication-time order until the user favorites them again.
+        return comparePostDisplayOrder(a, b);
+      })
     : [];
   return star.concat(regular);
 }
@@ -1126,7 +1148,10 @@ function cancelPostHorizontalEllipsisDismissTimer() {
 function holdHorizontalEllipsisMenuAfterPostMovement(postId) {
   cancelPostHorizontalEllipsisDismissTimer();
   const token = postHorizontalEllipsisDismissToken;
-  const delay = postInteractionDelay('post_horizontal_ellipsis_menu_dismiss_delay_ms', 1000);
+  // 100 ms here is only the fallback used when the configured value is missing/invalid.
+  // The normally effective value lives near the top of:
+  // app/src/main/assets/config/home.json -> main_posts.interaction_timing
+  const delay = postInteractionDelay('post_horizontal_ellipsis_menu_dismiss_delay_ms', 100);
   // This function is called only after Post movement and the visual settle
   // barrier have completed. First paint the menu at its final Post
   // relative coordinate, then start the configured dismiss clock.  A small RAF follower
@@ -1767,12 +1792,8 @@ async function commitStarStateChange(previous, postMovementActionName, activePos
     // Android's TextureView is outside WebView composition. Freeze it BEFORE the
     // DOM rebuild; otherwise a Video Post can visibly lag/jump while its HTML body FLIPs.
     try { window.__jetBeginPostMovementVideoFreeze?.(); } catch (_) {}
-    // Commit the favorite/star paint and the frozen media geometry before the
-    // destructive DOM reorder. Two frame boundaries are intentional on Android
-    // WebView: frame 1 commits the lock; frame 2 starts movement from that stable
-    // visual state instead of racing TextureView/poster teardown.
-    await nextAnimationFrame();
-    await nextAnimationFrame();
+    // Freeze geometry synchronously and start the reorder immediately.
+    // Do not insert artificial paint-frame waits before Star/Super-Star movement.
     try {
       // Rebuild only when the list really reorders. Post Movement never reads,
       // stores or writes the user's camera position.
@@ -2009,7 +2030,7 @@ document.addEventListener('pointerdown', event => {
     suppressStarClick = true;
     if (navigator.vibrate) navigator.vibrate(28);
     void toggleSuperStarActivePost();
-  }, 550);
+  }, 275);
 });
 
 document.addEventListener('pointerup', event => {
