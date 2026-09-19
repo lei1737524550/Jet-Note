@@ -1,0 +1,18 @@
+<!-- Full-screen image / video viewer -->
+  <div class="image-viewer" id="imageViewer" onclick="closeImageViewer(event)">
+    <button class="image-viewer-background-switch"
+            id="imageViewerBackgroundSwitch"
+            type="button"
+            data-language-aria-label="imageViewerSwitchBackground"
+            aria-label="">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M20 7H5M8 4L5 7L8 10M4 17H19M16 14L19 17L16 20"/>
+      </svg>
+    </button>
+    <button class="image-viewer-close"
+            id="imageViewerClose"
+            data-language-aria-label="viewerCloseAccessibilityLabel"
+            aria-label="">×</button>
+    <img id="imageViewerImg" src="" alt="">
+    <video id="imageViewerVideo" controls playsinline preload="metadata"></video>
+  </div>

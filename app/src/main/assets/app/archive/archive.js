@@ -1,0 +1,97 @@
+/* Post-only Jet Note Archive Format v2. */
+const ARCHIVE_MAX=128*1024*1024,ARCHIVE_FILES_MAX=10000;
+const ArchiveCodec=(()=>{
+  const encode=value=>fflate.strToU8(JSON.stringify(value));
+  const extension=mime=>({
+    'audio/mpeg':'mp3','audio/wav':'wav','audio/ogg':'ogg','audio/mp4':'m4a','image/jpeg':'jpg','image/png':'png','image/gif':'gif','image/webp':'webp','video/mp4':'mp4'
+  }
+  [mime]||'bin');
+  const fail=message=>{
+    throw Error(message);
+  },object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value),safePath=path=>typeof path==='string'&&/^[A-Za-z0-9_./-]+$/.test(path)&&!path.startsWith('/')&&!path.split('/').some(x=>x==='..'||x==='.'||x==='');
+  const uuidHash=hash=>hash.slice(0,8)+'-'+hash.slice(8,12)+'-8'+hash.slice(13,16)+'-a'+hash.slice(17,20)+'-'+hash.slice(20,32);
+  function decodeJSON(bytes){
+    return JSON.parse(new TextDecoder('utf-8',{
+      fatal:true
+    }).decode(bytes));
+  }
+  function crc32(bytes){
+    let crc=-1; for(const byte of bytes){
+      crc^=byte; for(let i=0; i<8; i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
+    }
+    return(crc^-1)>>>0;
+  }
+  function directory(bytes){
+    if(bytes.length>ARCHIVE_MAX)fail('Backup exceeds 128 MiB'); const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength); let end=-1;
+    for(let p=bytes.length-22; p>=Math.max(0,bytes.length-65557); p--)if(view.getUint32(p,true)===0x06054b50&&p+22+view.getUint16(p+20,true)===bytes.length){
+      end=p; break;
+    }
+    if(end<0)fail('Invalid ZIP'); const count=view.getUint16(end+10,true),start=view.getUint32(end+16,true),size=view.getUint32(end+12,true);
+    if(view.getUint16(end+4,true)||view.getUint16(end+6,true)||count!==view.getUint16(end+8,true)||count>ARCHIVE_FILES_MAX||count===65535||start+size!==end)fail('Unsupported ZIP layout');
+    let p=start,total=0; const entries=new Map(),regions=[];
+    for(let i=0; i<count; i++){
+      if(p+46>end||view.getUint32(p,true)!==0x02014b50)fail('Invalid ZIP directory'); const flags=view.getUint16(p+8,true),method=view.getUint16(p+10,true),packed=view.getUint32(p+20,true),length=view.getUint32(p+24,true),nameLength=view.getUint16(p+28,true),extra=view.getUint16(p+30,true),comment=view.getUint16(p+32,true),offset=view.getUint32(p+42,true); if(p+46+nameLength+extra+comment>end)fail('Invalid ZIP name'); const name=new TextDecoder('utf-8',{
+        fatal:true
+      }).decode(bytes.subarray(p+46,p+46+nameLength)); if(!safePath(name)||entries.has(name)||(flags&1)||![0,8].includes(method)||length>MEDIA_MAX||((view.getUint32(p+38,true)>>>16)&0xf000)===0xa000)fail('Unsafe ZIP entry'); total+=length; if(total>ARCHIVE_MAX)fail('Unpacked backup exceeds 128 MiB'); if(offset+30>start||view.getUint32(offset,true)!==0x04034b50)fail('Invalid ZIP header'); const localNameLength=view.getUint16(offset+26,true),localExtra=view.getUint16(offset+28,true),dataStart=offset+30+localNameLength+localExtra,localName=new TextDecoder('utf-8',{
+        fatal:true
+      }).decode(bytes.subarray(offset+30,offset+30+localNameLength)); if(localName!==name||view.getUint16(offset+8,true)!==method||view.getUint16(offset+6,true)!==flags||dataStart+packed>start)fail('ZIP headers disagree'); entries.set(name,{
+        length,crc:view.getUint32(p+16,true),offset,dataStart,packed
+      }); regions.push([offset,dataStart+packed]); p+=46+nameLength+extra+comment;
+    }
+    if(p!==end)fail('Invalid ZIP directory size'); regions.sort((a,b)=>a[0]-b[0]); for(let i=1; i<regions.length; i++)if(regions[i][0]<regions[i-1][1])fail('Overlapping ZIP entries'); return entries;
+  }
+  function unpack(bytes){
+    const entries=directory(bytes),files=Object.create(null); let total=0; const unzip=new fflate.Unzip(file=>{
+      const expected=entries.get(file.name); if(!expected)fail('Unknown ZIP entry'); let size=0; const chunks=[]; file.ondata=(error,data,final)=>{
+        if(error)throw error; size+=data.length; total+=data.length; if(size>expected.length||total>ARCHIVE_MAX){
+          file.terminate(); fail('ZIP size mismatch');
+        }
+        chunks.push(data); if(final){
+          if(size!==expected.length)fail('Truncated ZIP entry'); const result=new Uint8Array(size); let offset=0; for(const chunk of chunks){
+            result.set(chunk,offset); offset+=chunk.length;
+          }
+          if(crc32(result)!==expected.crc)fail('ZIP CRC mismatch'); files[file.name]=result;
+        }
+      }; file.start();
+    }); unzip.register(fflate.UnzipInflate); for(let i=0; i<bytes.length; i+=16384)unzip.push(bytes.subarray(i,i+16384),i+16384>=bytes.length); if(Object.keys(files).length!==entries.size)fail('Incomplete ZIP'); return files;
+  }
+  async function exportSnapshot(state){
+    const files=Object.create(null); let total=0; function add(path,bytes){
+      if(files[path]){
+        if(sha256(files[path])!==sha256(bytes))fail('Conflicting attachment'); return;
+      }
+      total+=bytes.length; if(total>ARCHIVE_MAX||Object.keys(files).length>=ARCHIVE_FILES_MAX)fail('Backup exceeds supported size'); files[path]=bytes;
+    }
+    async function stored(meta){
+      const value=await EntryStore.media(meta.id); if(!value?.blob)fail('Native media requires Android export'); const bytes=new Uint8Array(await value.blob.arrayBuffer()),hash=sha256(bytes); if(meta.sha256&&meta.sha256!==hash)fail('Stored checksum mismatch'); const path='media/'+meta.id+'.'+extension(meta.mimeType); add(path,bytes); return{
+        ...meta,path,size:bytes.length,sha256:hash
+      };
+    }
+    async function image(source){
+      const match=/^data:(image\/[A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(source); if(!match)fail('Native media requires Android export'); const bytes=base64ToBytes(match[2]),hash=sha256(bytes),id=uuidHash(hash),path='media/'+id+'.'+extension(match[1]); add(path,bytes); return{
+        id,type:'image',mimeType:match[1],originalName:null,path,size:bytes.length,sha256:hash
+      };
+    }
+    const posts=[]; for(const record of state.posts||[])posts.push(await ArchiveMapping.toCanonical(record,stored,image)); add('data/posts.json',encode(posts)); const content={posts:'data/posts.json'}; if(object(state.config)){add('data/config.json',encode(state.config));content.config='data/config.json';} add('manifest.json',encode({
+      format:'jet-note',formatVersion:2,app:'Jet Note',appVersion:'2.4',createdAt:new Date().toISOString(),encoding:'UTF-8',content
+    })); const checksums={
+    }; for(const[path,bytes]of Object.entries(files))checksums[path]=sha256(bytes); add('checksums.json',encode(checksums)); const zip=fflate.zipSync(files,{
+      level:0
+    }); if(zip.length>ARCHIVE_MAX)fail('Backup exceeds 128 MiB'); return zip;
+  }
+  function validate(bytes){
+    const files=unpack(bytes); for(const path of ['manifest.json','checksums.json','data/posts.json'])if(!files[path])fail('Missing '+path); for(const path of Object.keys(files))if(!['manifest.json','checksums.json','data/posts.json','data/profile.json','data/config.json'].includes(path)&&!/^config\/[A-Za-z0-9_.-]+\.json$/.test(path)&&!/^media\/[A-Za-z0-9_.-]+$/.test(path))fail('Unexpected archive entry'); const sums=decodeJSON(files['checksums.json']); if(!object(sums))fail('Invalid checksums'); for(const path of Object.keys(files))if(path!=='checksums.json'&&(!Object.hasOwn(sums,path)||String(sums[path]).toLowerCase()!==sha256(files[path])))fail('Checksum mismatch: '+path); for(const path of Object.keys(sums))if(path==='checksums.json'||!files[path])fail('Missing checked file'); const manifest=decodeJSON(files['manifest.json']); if(manifest.format!=='jet-note'||manifest.formatVersion!==2||manifest.encoding!=='UTF-8'||!object(manifest.content)||manifest.content.posts!=='data/posts.json')fail('Unsupported Jet Note archive'); if(Object.keys(manifest.content).some(key=>!['posts','profile','config'].includes(key))||manifest.content.profile&&manifest.content.profile!=='data/profile.json'||manifest.content.config&&manifest.content.config!=='data/config.json')fail('Unsupported Jet Note archive'); const result=ArchiveMapping.fromCanonical(decodeJSON(files['data/posts.json']),attachment=>{
+      const bytes=files[attachment.path]; if(!bytes)fail('Missing media'); const hash=sha256(bytes); if(!attachment.sha256||attachment.sha256.toLowerCase()!==hash||attachment.size!==bytes.length)fail('Attachment checksum mismatch'); const{
+        path,...meta
+      }
+      =attachment; return{
+        ...meta,sha256:hash,size:bytes.length,blob:new Blob([bytes],{
+          type:attachment.mimeType
+        }),imageSource:attachment.type==='image'?'data:'+attachment.mimeType+';base64,'+bytesToBase64(bytes):null
+      };
+    }); result.profile=null; result.config=null; return result;
+  }
+  return{
+    exportSnapshot,validate
+  };
+})();

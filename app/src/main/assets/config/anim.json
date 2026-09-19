@@ -1,0 +1,90 @@
+{
+  "load_animation": {
+    "load_animation_background": "#AED194",
+    "load_animation_minimum_duration_ms": 900
+  },
+  "frozen_split_transition": {
+    "x_to_home": {
+      "split_percent": 50,
+      "duration_ms": 320,
+      "easing": [
+        0.22,
+        0.72,
+        0.22,
+        1.0
+      ]
+    },
+    "x_to_editor": {
+      "split_percent": 50,
+      "duration_ms": 320,
+      "easing": [
+        0.22,
+        0.72,
+        0.22,
+        1.0
+      ]
+    }
+  },
+  "settings_enter_animation": {
+    "duration_ms": 320
+  },
+  "three_post_one_body": {
+    "top_post": {
+      "super_star": {}
+    },
+    "post_composer": {},
+    "main_posts": {
+      "interaction_timing": {
+        "post_delete_reflow_animation_duration_ms": 320,
+        "post_reflow_animation": {
+          "speed_or_duration": "speed",
+          "star": {
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
+          },
+          "cancel_star": {
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
+          },
+          "super_star": {
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
+          },
+          "cancel_super_star": {
+            "duration_ms": 150,
+            "speed_px_per_second": 3600
+          }
+        },
+        "post_star_highlight": {
+          "inset_width_px": 2,
+          "display_delay_after_reflow_ms": 300
+        }
+      },
+      "non_star": {},
+      "star": {}
+    }
+  },
+  "color_view_copy_feedback_transition": {
+    "copied_first_transition_color": "#34A853",
+    "copied_second_transition_color": "#F9AB00",
+    "copied_final_resting_color": "#111111",
+    "first_transition_color_display_duration_ms": 2000,
+    "second_transition_color_display_duration_ms": 1050
+  },
+  "date_time_viewer_fold_animation": {
+    "letters_duration_ms": 300,
+    "explain_duration_ms": 300,
+    "comment": "Drawer-style expand/collapse duration in milliseconds. Larger values make the animation slower; 150 ms is fast, 300 ms is moderate, and 500 ms is slow."
+  },
+  "post_editor_text_caret": {
+    "text_caret_visible_state_duration_ms": 750,
+    "text_caret_hidden_state_duration_ms": 750
+  },
+  "debug_settings_viewer_animation": {
+    "speed_or_duration": "speed",
+    "duration_ms": 900,
+    "speed_px_per_second": 1800,
+    "close_speed_multiplier": 2,
+    "comment": "Single soft-coded source for Debug Settings viewer motion. speed_px_per_second is V_max for opening. Closing uses the same configured speed source with close_speed_multiplier. In speed mode: D_max=max(D_i), T=D_max/V_max, all participants share T, V_i=D_i/T."
+  }
+}

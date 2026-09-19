@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#AED194">
+<base href="/assets/">
+<title>Jet Note Browser</title>
+<style>html,body{margin:0;width:100%;height:100%;background:#AED194;overflow:hidden}</style>
+</head>
+<body>
+<script>
+/* Startup Browser route.
+   Selection is data-driven: no toolbox id/name/url is hard-coded here.
+   A startup browser is any enabled toolbox child with:
+     isbrowser === true && as_a_browser === true
+   The same tool opened from Post Editor is still opened with browserMode=false;
+   as_a_browser controls only the app startup route. */
+(async function startBrowserMode(){
+  const ready=()=>{ try{ window.JetNoteNative?.frontendReady?.(); }catch(_){} };
+  const findStartupBrowser=(model)=>{
+    for(const group of (model?.tools||[])){
+      if(!group || group.enabled===false || group.type!=='toolbox') continue;
+      for(const tool of (group.children||[])){
+        if(tool && tool.enabled!==false && tool.isbrowser===true && tool.as_a_browser===true && /^https:\/\//.test(tool.url||'')){
+          return tool;
+        }
+      }
+    }
+    return null;
+  };
+  const labelOf=(tool)=>String(tool?.startupTitle||tool?.title||tool?.name||tool?.labelKey||tool?.id||'Browser').replace(/Button$/,'');
+  try {
+    const response=await fetch('app/post_editor/tools/tools.json',{cache:'no-store'});
+    if(!response.ok) throw new Error(`Tool config unavailable (${response.status})`);
+    const model=await response.json();
+    const tool=findStartupBrowser(model);
+    if(!tool) throw new Error('No enabled toolbox tool has isbrowser=true and as_a_browser=true');
+
+    let timeout=3500;
+    let configuredBackground='#AED194';
+    let configuredBody='#D2E9C2';
+    try {
+      const configResponse=await fetch('config.json',{cache:'no-store'});
+      if(configResponse.ok){
+        const config=await configResponse.json();
+        const configured=Number(config?.new_post_tools?.network_probe_timeout_ms);
+        if(Number.isFinite(configured)) timeout=Math.max(500,Math.floor(configured));
+        if(typeof config?.global_set_background==='string' && config.global_set_background.trim()) configuredBackground=config.global_set_background.trim();
+        if(typeof config?.global_set_body==='string' && config.global_set_body.trim()) configuredBody=config.global_set_body.trim();
+      }
+    } catch(_) {}
+
+    const readCachedColor=(key,fallback)=>{
+      try{
+        const rgb=JSON.parse(localStorage.getItem(key)||'null')?.rgb;
+        if(rgb && [rgb.r,rgb.g,rgb.b].every(v=>Number.isInteger(v)&&v>=0&&v<=255)) return `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+      }catch(_){}
+      return fallback;
+    };
+    const background=readCachedColor('jet_note_appearance_background_cache',configuredBackground);
+    const body=readCachedColor('jet_note_appearance_body_cache',configuredBody);
+    document.documentElement.style.setProperty('--page-background',background);
+    document.documentElement.style.setProperty('--jet-note-current-background',background);
+    document.documentElement.style.setProperty('--jet-note-current-body-background',body);
+    document.documentElement.style.setProperty('--page-body',body);
+    document.documentElement.style.background=background;
+    document.body.style.background=background;
+    const theme=document.querySelector('meta[name="theme-color"]'); if(theme) theme.content=background;
+
+    const title=labelOf(tool);
+    const fallbackTitle=String(tool?.fallbackTitle||title);
+    window.JET_NOTE_BROWSER_MODE=true;
+    if(window.JetNoteNative?.openToolWithFallbackMode && tool.fallbackUrl){
+      window.JetNoteNative.openToolWithFallbackMode(tool.url,tool.fallbackUrl,title,fallbackTitle,'en',background,'#bfc1c4',timeout,true);
+    } else if(window.JetNoteNative?.openToolWithFallback && tool.fallbackUrl){
+      window.JetNoteNative.openToolWithFallback(tool.url,tool.fallbackUrl,title,'en',background,'#bfc1c4',timeout);
+    } else if(window.JetNoteNative?.openTool){
+      window.JetNoteNative.openTool(tool.url,title,'en',background,'#bfc1c4');
+    } else {
+      location.replace(tool.url);
+      return;
+    }
+    ready();
+  } catch(error) {
+    console.error('Jet Note Browser startup failed:',error);
+    document.body.textContent='Browser initialization failed: '+(error?.message||String(error));
+    ready();
+  }
+})();
+</script>
+</body>
+</html>

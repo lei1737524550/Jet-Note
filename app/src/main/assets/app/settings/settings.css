@@ -1,0 +1,1144 @@
+.settings-screen {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100dvh;
+  z-index: 10000;
+  display: none;
+  overflow: hidden;
+  background: var(--jet-note-type-settings-set-background,var(--page-background));
+  color: #111;
+}
+
+.settings-screen.open {
+  display: block;
+}
+
+.settings-header {
+  position:absolute;
+  left:0;
+  width:100%;
+}
+.settings-title { font-weight:400; }
+.settings-header .page-action-bar-control { color:var(--page-action-bar-normal-color); }
+
+.settings-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Explicit names keep the action-bar boundary and the content breathing room
+     separate. This prevents a later CSS file from silently collapsing Backup
+     underneath the Settings header. */
+  --settings-content-start-below-action-bar: calc(var(--safe-top) + var(--page-action-bar-height));
+  --settings-content-top-spacing: 24px;
+  top: var(--settings-content-start-below-action-bar);
+  bottom: var(--content-bottom, var(--safe-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--settings-content-top-spacing) var(--content-horizontal-padding) 16px;
+}
+
+.settings-card {
+  width: 100%;
+  background: #fff;
+  border-color:var(--jet-note-type-settings-border-color,var(--common-border-color));
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.backup-card .settings-choice,
+.backup-card .archive-progress {
+  background:inherit;
+}
+
+.backup-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-right:18px;
+}
+.backup-title-row .settings-row-title { min-width:0; }
+.backup-stop-button {
+  flex:0 0 auto;
+  min-width:72px;
+  height:38px;
+  padding:6px 14px;
+  background:inherit;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:13px;
+  line-height:1;
+  text-align:center;
+}
+.backup-stop-button:enabled:active { background:rgba(0,0,0,.055); }
+.backup-stop-button:disabled { opacity:.42; cursor:default; }
+
+.color-view-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-right:18px;
+}
+.color-view-title-row .settings-row-title { min-width:0; }
+
+.settings-row-title {
+  padding: 18px 18px 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.settings-row-title-compact {
+  padding-top: 4px;
+}
+
+.settings-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.language-settings-card .settings-choice {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  border-width: 5px !important;
+  border-color: #00dddd !important;
+}
+
+.settings-choice {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 74px;
+  padding: 11px 34px 11px 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.settings-choice.active {
+  border-color: #74b9e6;
+  background: #eaf6ff;
+  box-shadow: inset 0 0 0 1px rgba(52,155,219,.12);
+}
+
+.settings-choice-main {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.settings-choice-sub {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  color: #999;
+}
+
+.settings-choice-check {
+  position: absolute;
+  right: 10px;
+  top: 9px;
+  display: none;
+  font-size: 17px;
+  color: #1599e8;
+  font-weight: 700;
+}
+
+.settings-choice.active .settings-choice-check {
+  display: block;
+}
+
+.settings-action-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px;
+  text-align: center;
+}
+
+.settings-action-choice.cache-attention {
+  border-color: #87cba0;
+  background: #eaf8ee;
+  box-shadow: inset 0 0 0 1px rgba(61, 157, 88, .10);
+}
+
+.settings-choice-cache-arrow {
+  position: absolute;
+  top: 9px;
+  right: 10px;
+  display: none;
+  color: #29934d;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.settings-action-choice.cache-attention .settings-choice-cache-arrow {
+  display: block;
+}
+
+
+
+.settings-status {
+  min-height: 18px;
+  margin: 0 18px 14px;
+  color: #4e6678;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-status.error {
+  color: #b43b3b;
+}
+
+.shape-preview {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 7px;
+  border: 2px solid #315f98;
+  background: #edf5fb;
+}
+
+.shape-preview.round { border-radius: 50%; }
+.shape-preview.square { border-radius: 5px; }
+
+.rgb-editor {
+  display: none;
+  margin: 0 12px 12px;
+  padding: 12px;
+  background: #f8fafb;
+}
+
+.rgb-editor.open { display: block; }
+
+.rgb-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rgb-fields label {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px;
+  color: #59636d;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.rgb-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 5px;
+  background: #fff;
+  text-align: center;
+}
+
+.rgb-apply {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 10px;
+  background: #eaf6ff;
+  color: #245f86;
+  font-weight: 600;
+}
+
+.appearance-status,#archiveStatus {
+  min-height: 0;
+  margin: 0 14px 12px;
+  color: #68727c;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+#postEditorTools.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eeeeee;
+}
+
+#postEditorTools.tools > .tool {
+  height: 44px;
+  padding: 0 12px;
+  background: var(--jet-note-type-edit-post-right-side-tool-button-background,#fff);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #333;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#postEditorTools.tools > .tool svg, #postEditorTools.tools > .tool img {
+  width: 25px;
+  height: 25px;
+}
+
+.post .text-content:empty {
+  display: none;
+}
+
+
+
+.settings-row-subtitle {
+  margin-top: -6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #8b949d;
+}
+
+/* Settings controls are deliberately compact vertically; their horizontal
+   footprint stays unchanged for predictable tap targets and alignment. */
+.settings-choice { min-height: 59px; padding-top: 8px; padding-bottom: 8px; }
+.settings-action-choice { padding-top: 8px; padding-bottom: 8px; }
+
+/* Each RGB channel owns an identical third of the row. The label/input pair
+   is centred inside that third rather than squeezed by per-field margins. */
+.rgb-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  width: 100%;
+}
+.rgb-inputs label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #59636d;
+  font-size: 13px;
+  font-weight: 600;
+}
+.rgb-inputs input {
+  box-sizing: border-box;
+  width: 56px;
+  height: 30px;
+  min-width: 0;
+  padding: 4px;
+  background: #fff;
+  text-align: center;
+}
+.rgb-apply { min-height: 32px; margin-top: 8px; }
+
+.rgb-editor.open{display:block;}
+
+
+/* Color View -------------------------------------------------------------
+   One unified color state drives the HSV picker, RGB/HEX editor, previews,
+   application background action, and exported color value. */
+.color-view-tool {
+  display:grid;
+  grid-template-columns:minmax(0, 1.5fr) minmax(174px, .92fr);
+  gap:14px;
+  margin:0 12px 12px;
+  padding:12px;
+  background:inherit;
+}
+.color-view-picker-column,
+.color-view-preview-column { min-width:0; }
+.color-view-picker-column {
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  min-height:0;
+}
+.color-view-field {
+  position:relative;
+  flex:1 1 auto;
+  width:100%;
+  min-height:132px;
+  overflow:hidden;
+  touch-action:none;
+  cursor:crosshair;
+  background:
+    linear-gradient(to top, #000 0%, rgba(0,0,0,0) 100%),
+    linear-gradient(to right, #fff 0%, hsl(0 100% 50%) 100%);
+}
+.color-view-field-handle {
+  position:absolute;
+  pointer-events:none;
+  left:100%;
+  top:0%;
+  width:22px;
+  height:22px;
+  border:3px solid #fff;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 1px rgba(17,18,20,.52), 0 1px 4px rgba(0,0,0,.24);
+}
+.color-view-hue-control {
+  position:relative;
+  height:36px;
+  flex:0 0 36px;
+  overflow:visible;
+}
+.color-view-hue {
+  position:absolute;
+  left:0;
+  right:0;
+  top:0;
+  height:24px;
+  overflow:hidden;
+  touch-action:none;
+  cursor:ew-resize;
+  background:linear-gradient(90deg,
+    #ff0000 0%,
+    #ffff00 16.666%,
+    #00ff00 33.333%,
+    #00ffff 50%,
+    #0000ff 66.666%,
+    #ff00ff 83.333%,
+    #ff0000 100%);
+}
+/* Two high-contrast guide bars straddle the exact hue coordinate. */
+.color-view-hue-handle {
+  position:absolute;
+  pointer-events:none;
+  left:0%;
+  top:50%;
+  width:14px;
+  height:30px;
+  transform:translate(-50%,-50%);
+}
+.color-view-hue-handle::before,
+.color-view-hue-handle::after {
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:3px;
+  border-radius:2px;
+  background:#fff;
+  box-shadow:0 0 0 1px rgba(17,18,20,.45);
+}
+.color-view-hue-handle::before { left:2px; }
+.color-view-hue-handle::after { right:2px; }
+/* The caret is a separate marker below the strip; its tip sits exactly on the
+   midpoint between the two guide bars. */
+.color-view-hue-caret {
+  position:absolute;
+  left:0%;
+  top:26px;
+  width:0;
+  height:0;
+  border-left:6px solid transparent;
+  border-right:6px solid transparent;
+  border-top:0;
+  border-bottom:8px solid #59636d;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.color-view-preview-column {
+  display:grid;
+  grid-template-rows:minmax(44px,auto) minmax(44px,auto) auto;
+  align-content:stretch;
+  gap:10px;
+}
+.color-view-text-preview {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+  min-height:44px;
+  padding:8px 10px;
+  /* The preview surface stays neutral so the picked text color remains visible
+     after that same color is applied to Body. */
+  background:#fff;
+  text-align:center;
+  line-height:1.45;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  color:#ff0000;
+}
+.color-view-text-preview-latin {
+  letter-spacing:.02em;
+  font-size:13px;
+}
+.color-view-rgb-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px 8px;
+  align-items:center;
+  align-self:end;
+}
+.color-view-rgb-label {
+  text-align:center;
+  font-size:13px;
+  font-weight:700;
+}
+.color-view-rgb-label-r { color:#ff0000; }
+.color-view-rgb-label-g { color:#00a000; }
+.color-view-rgb-label-b { color:#0000ff; }
+.color-view-rgb-value {
+  width:100%;
+  min-width:0;
+  height:36px;
+  padding:0 4px;
+  background:inherit;
+  text-align:center;
+  text-transform:uppercase;
+  outline:0;
+  -moz-appearance:textfield;
+}
+.color-view-rgb-value::-webkit-outer-spin-button,
+.color-view-rgb-value::-webkit-inner-spin-button {
+  margin:0;
+  -webkit-appearance:none;
+}
+.color-view-rgb-value:focus {
+  border-color:#74b9e6;
+  box-shadow:inset 0 0 0 1px rgba(52,155,219,.12);
+}
+.color-view-format-copy-layout {
+  grid-column:1 / -1;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  align-items:stretch;
+  margin-top:2px;
+  min-height:76px;
+  /* Layout only: intentionally no visible outer border/background card. */
+}
+.jet-note-vertical-pill {
+  width:100%;
+  min-width:0;
+  height:76px;
+  display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  overflow:hidden;
+  background:inherit;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+.jet-note-pill-part {
+  min-width:0;
+  min-height:0;
+  border:0;
+  border-radius:0;
+}
+.jet-note-vertical-pill > .jet-note-pill-part + .jet-note-pill-part {
+  border-top:1px solid var(--jet-note-type-settings-border-color,var(--common-border-color));
+}
+.color-view-copy-column {
+  min-width:0;
+  height:76px;
+  display:grid;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  align-items:center;
+  /* Deliberately borderless: value + Copy share geometry, not a visible box. */
+}
+.color-view-export-value {
+  display:block;
+  min-width:0;
+  padding:0 6px;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font-size:13px;
+  line-height:1.2;
+  text-align:center;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:clip;
+  border:1px solid var(--jet-note-type-settings-border-color,var(--common-border-color)) !important;
+  border-radius:var(--common-border-radius);
+  background:rgba(255,255,255,.24) !important;
+}
+.color-view-copy-slot {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:0;
+}
+.color-view-copy-button {
+  width:68px;
+  min-width:68px;
+  height:30px;
+  min-height:30px;
+  padding:0 10px;
+  background:inherit;
+  color:#111;
+  font:inherit;
+  font-size:12px;
+  line-height:1;
+}
+.color-view-copy-button:active { background:#f0f3f5; }
+.color-view-copy-button.is-copied { color:#34A853; }
+
+.color-view-status {
+  grid-column:1 / -1;
+  min-height:0;
+  margin:0;
+  color:#59636d;
+  font-size:12px;
+  text-align:center;
+}
+.color-view-status:empty { display:none; }
+@media (max-width:520px) {
+  .color-view-tool {
+    grid-template-columns:minmax(0, 1.34fr) minmax(150px, .96fr);
+    gap:10px;
+    padding:10px;
+  }
+  .color-view-field { min-height:124px; }
+  .color-view-preview-column { gap:8px; }
+  .color-view-text-preview { min-height:42px; padding:6px 7px; font-size:12px; }
+  .color-view-text-preview-latin { font-size:11px; }
+  .color-view-rgb-grid { gap:5px; }
+  .color-view-rgb-value { height:34px; font-size:13px; }
+  .color-view-format-copy-layout { gap:8px; }
+}
+
+/* Automatic foreground contrast for ordinary controls on Body-colored
+   surfaces. Preview text, RGB labels, picker graphics, and feedback states are
+   deliberately excluded because their colors communicate function. */
+.backup-card,
+.backup-card .settings-choice,
+.color-view-card,
+.color-view-tool,
+.color-view-rgb-value,
+.color-view-action-button,
+.color-view-radix-option,
+.color-view-copy-button,
+.color-view-export-value {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+.settings-screen .common_border{border-color:var(--jet-note-type-settings-border-color,var(--common-border-color));}
+/* Color View radix selector ------------------------------------------------
+   One vertical Jet Note capsule is split into equal HEX / DEC halves. The
+   selected-state overlay remains inside the capsule and follows the active
+   top/bottom half. */
+.color-view-radix-switch {
+  position:relative;
+  width:100%;
+  min-width:0;
+  height:76px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  overflow:hidden;
+  background:inherit;
+}
+.color-view-radix-switch::after {
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:50%;
+  height:1px;
+  background:var(--jet-note-type-settings-border-color,var(--common-border-color));
+  transform:translateY(-.5px);
+  pointer-events:none;
+}
+.color-view-radix-option {
+  min-width:0;
+  min-height:40px;
+  padding:7px 4px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#4f5962;
+  font:inherit;
+  font-size:12px;
+  font-weight:400;
+  line-height:1.15;
+  text-align:center;
+  appearance:none;
+  -webkit-appearance:none;
+}
+.color-view-radix-option.is-active {
+  background:rgba(0,0,0,.035);
+  color:#111;
+  font-weight:600;
+}
+.color-view-radix-option:active {
+  background:rgba(0,0,0,.055);
+}
+.color-view-radix-option:focus-visible {
+  outline:1px solid #b7bdc3;
+  outline-offset:-2px;
+}
+@media (max-width:520px) {
+  .color-view-radix-switch,
+  .color-view-radix-option { min-height:36px; }
+  .jet-note-vertical-pill,
+  .color-view-copy-column { height:72px; }
+  .color-view-radix-option { font-size:11px; }
+}
+
+#enableDebugButton.debug-enabled{background:#dff5e5;border-color:#34A853;box-shadow:inset 0 0 0 1px rgba(52,168,83,.18)}
+#debugSettingsStatus{min-height:0;margin:0 18px 12px;font-size:12px;color:#777}
+
+
+/* Settings module background contract
+   -----------------------------------
+   Set Background paints the Settings page outside modules.
+   Set Body paints every canonical .setting-box and ordinary box-like controls
+   inside it. Adding setting_N therefore requires no new background selector.
+   A deliberately special surface can opt out with
+   data-settings-background-exempt="true". */
+.settings-body {
+  /* Every setting_* module semantically IS a Body surface. Bind the shared
+     module contract to the canonical live Set Body source instead of a
+     feature-specific background chain. */
+  --settings-set-body-background: var(
+    --jet-note-current-body-background,
+    var(--jet-note-type-settings-set-body, #fff)
+  );
+}
+
+.settings-body > .setting-box {
+  background-color: var(--settings-set-body-background) !important;
+}
+
+.settings-body > .setting-box :where(
+  .common_border,
+  button,
+  input,
+  output,
+  [role="group"],
+  .jet-note-pill-part
+) {
+  background-color: inherit;
+}
+
+/* Explicit whitelist: these preview samples intentionally remain white. */
+.settings-body [data-settings-background-exempt="true"],
+.settings-body .settings-background-exempt {
+  background-color: #fff !important;
+}
+
+/* Color format selected state -------------------------------------------------
+   The selected outline is its own indicator layer inside the shared capsule.
+   It is inset from the neutral outer border and from the center divider, so
+   WebView rounding/cropping cannot hide the lower green edge. */
+.settings-body .color-view-format-pill {
+  position:relative;
+}
+
+.settings-body .color-view-format-pill::before {
+  content:"";
+  position:absolute;
+  left:1px;
+  right:1px;
+  pointer-events:none;
+  box-sizing:border-box;
+  border:1px solid #34A853;
+  background:#dff5e5;
+  z-index:0;
+  opacity:0;
+}
+
+.settings-body .color-view-format-pill.format-selected-hex::before {
+  top:1px;
+  height:calc(50% - 2px);
+  border-radius:calc(var(--common-border-radius) - 1px) calc(var(--common-border-radius) - 1px) 0 0;
+  opacity:1;
+}
+
+.settings-body .color-view-format-pill.format-selected-decimal::before {
+  top:calc(50% + 1px);
+  bottom:1px;
+  border-radius:0 0 calc(var(--common-border-radius) - 1px) calc(var(--common-border-radius) - 1px);
+  opacity:1;
+}
+
+.settings-body .color-view-format-pill > .color-view-radix-option {
+  position:relative;
+  z-index:1;
+  background:transparent !important;
+}
+
+.settings-body .color-view-format-pill > .color-view-radix-option.is-active,
+.settings-body .color-view-format-pill > .color-view-radix-option[aria-pressed="true"] {
+  border:0 !important;
+  background:transparent !important;
+  color:#111;
+  font-weight:600;
+  box-shadow:none !important;
+}
+
+.settings-body .color-view-format-pill > .color-view-radix-option.is-active:active,
+.settings-body .color-view-format-pill > .color-view-radix-option[aria-pressed="true"]:active {
+  background:transparent !important;
+  box-shadow:none !important;
+}
+
+/* Date/Time Viewer ------------------------------------------------------- */
+.date-time-viewer-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding-right:18px;
+}
+.date-time-viewer-title-row .settings-row-title{min-width:0;}
+.date-time-viewer-title-actions{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.date-time-viewer-set-button,
+.date-time-viewer-reset-button {
+  flex:0 0 auto;
+  min-width:72px;
+  height:38px;
+  padding:6px 14px;
+  background:inherit;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:13px;
+  line-height:1;
+  text-align:center;
+}
+.date-time-viewer-set-button:active,
+.date-time-viewer-reset-button:active{background:rgba(0,0,0,.055);}
+.date-time-viewer-tool {
+  margin-top:12px;
+  padding:0;
+  display:grid;
+  gap:8px;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent;
+}
+.date-time-viewer-pattern-input {
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  height:48px;
+  padding:0 12px;
+  background:rgba(255,255,255,.68);
+  color:#111;
+  font:500 15px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  outline:none;
+}
+.date-time-viewer-pattern-input:focus {
+  border-color:#38a169;
+  box-shadow:0 0 0 1px rgba(56,161,105,.25);
+}
+
+.date-time-viewer-value-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:stretch;
+  gap:8px;
+}
+.date-time-viewer-copy-button{
+  width:68px;
+  min-width:68px;
+  height:30px;
+  min-height:30px;
+  align-self:center;
+  padding:0 10px;
+  background:transparent;
+  color:#111;
+  font:inherit;
+  font-size:13px;
+}
+.date-time-viewer-copy-button.is-copied{
+  color:#34A853;
+}
+.date-time-viewer-preview-block {
+  height:48px;
+  min-height:48px;
+  box-sizing:border-box;
+  padding:9px 12px;
+  display:flex;
+  align-items:center;
+  /* Ordinary Settings controls inherit the setting-box Set Body surface. */
+  background:inherit;
+}
+.date-time-viewer-preview-value {
+  white-space:nowrap;
+  overflow:visible;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:600 18px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  cursor:text;
+  -webkit-user-select:text;
+  user-select:text;
+  -webkit-touch-callout:default;
+}
+.date-time-viewer-expand-row{
+  display:flex;
+  justify-content:flex-end;
+}
+.date-time-viewer-expand-button,
+.date-time-viewer-explain-button{
+  min-width:112px;
+  min-height:34px;
+  padding:6px 14px;
+  background:transparent;
+  color:#111;
+  font:inherit;
+  font-size:13px;
+}
+.date-time-viewer-letters-panel{
+  display:grid;
+  grid-template-rows:0fr;
+  overflow:hidden;
+  pointer-events:none;
+  transition:grid-template-rows var(--date-time-fold-duration,300ms) cubic-bezier(.2,.8,.2,1);
+  will-change:grid-template-rows;
+}
+.date-time-viewer-letters-panel.is-open{
+  grid-template-rows:1fr;
+  pointer-events:auto;
+}
+.date-time-viewer-letters-inner{
+  min-height:0;
+  overflow:hidden;
+  display:grid;
+  gap:10px;
+}
+.date-time-viewer-token-grid {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px;
+}
+.date-time-viewer-token {
+  flex:0 0 auto;
+  width:auto;
+  min-width:42px;
+  min-height:32px;
+  padding:6px 9px;
+  display:inline-grid;
+  place-items:center;
+  background:rgba(255,255,255,.38);
+  color:#111;
+  text-align:center;
+  font:700 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.date-time-viewer-token:active{background:rgba(255,255,255,.72);}
+.date-time-viewer-explain-row{display:flex;justify-content:flex-end;}
+.date-time-viewer-explanation{
+  display:grid;
+  grid-template-rows:0fr;
+  overflow:hidden;
+  pointer-events:none;
+  transition:grid-template-rows var(--date-time-fold-duration,300ms) cubic-bezier(.2,.8,.2,1);
+  will-change:grid-template-rows;
+}
+.date-time-viewer-explanation.is-open{
+  grid-template-rows:1fr;
+  pointer-events:auto;
+}
+.date-time-viewer-explanation-inner{
+  min-height:0;
+  overflow:hidden;
+}
+.date-time-viewer-explanation-surface{
+  box-sizing:border-box;
+  padding:8px 10px;
+  display:grid;
+  gap:0;
+  background:rgba(255,255,255,.28);
+}
+.date-time-viewer-explanation-item{
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(54px,max-content) minmax(0,1fr);
+  align-items:baseline;
+  column-gap:12px;
+  padding:6px 2px;
+  border-bottom:1px solid rgba(98,106,115,.12);
+}
+.date-time-viewer-explanation-item:last-child{border-bottom:0;}
+.date-time-viewer-explanation-code{
+  color:#111;
+  font:700 12px/1.25 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.date-time-viewer-explanation-text{
+  min-width:0;
+  color:#59636d;
+  font-size:11px;
+  line-height:1.3;
+}
+
+/* The Color View export text is intentionally editable. */
+.color-view-export-value {
+  appearance:none;
+  -webkit-appearance:none;
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  height:34px;
+  padding:4px 8px;
+  background:transparent;
+  text-align:center;
+  color:#111;
+  outline:none;
+}
+.color-view-export-value:focus {
+  border-color:#38a169 !important;
+  box-shadow:0 0 0 1px rgba(56,161,105,.2);
+}
+
+
+
+/* Keep Date/Time Viewer contents inside the card even when a user enters a
+   very long pattern. The preview has a visual width ceiling; the complete
+   value is still available through Copy. The editable pattern stays inside
+   its own input and scrolls horizontally while editing. */
+.date-time-viewer-card,
+.date-time-viewer-tool,
+.date-time-viewer-value-row,
+.date-time-viewer-preview-block,
+.date-time-viewer-pattern-input,
+.date-time-viewer-letters-panel,
+.date-time-viewer-token-grid {
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+.date-time-viewer-tool {
+  overflow:hidden;
+}
+.date-time-viewer-value-row {
+  width:100%;
+  overflow:hidden;
+}
+.date-time-viewer-preview-block {
+  overflow:hidden;
+}
+.date-time-viewer-preview-value {
+  display:block;
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.date-time-viewer-pattern-input {
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+}
+.date-time-viewer-letters-panel,
+.date-time-viewer-token-grid {
+  overflow-x:hidden;
+}
+
+
+/* Settings entrance ---------------------------------------------------------
+   Header and body are the only moving layers. The fixed Settings screen clips
+   them to its own viewport and owns an isolated stacking context, preventing
+   off-screen content or the Home page from painting through the transition. */
+.settings-screen{
+  isolation:isolate;
+  contain:paint;
+  clip-path:inset(0);
+}
+.settings-header{
+  z-index:2;
+  will-change:transform;
+  backface-visibility:hidden;
+}
+.settings-body{
+  z-index:1;
+  will-change:transform;
+  backface-visibility:hidden;
+}
+
+/* Date View geometry: keep every control on the same inset/grid so the card's
+   border, title actions, value fields and trailing buttons read as one system. */
+.date-time-viewer-card {
+  padding-left:20px;
+  padding-right:20px;
+}
+.date-time-viewer-title-row {
+  padding-right:0;
+  gap:14px;
+}
+.date-time-viewer-title-actions { gap:10px; }
+.date-time-viewer-set-button,
+.date-time-viewer-reset-button {
+  min-width:76px;
+  height:42px;
+  padding:0 16px;
+}
+.date-time-viewer-tool { margin-top:14px; gap:10px; }
+.date-time-viewer-value-row {
+  grid-template-columns:minmax(0,1fr) 76px;
+  gap:12px;
+  align-items:center;
+}
+.date-time-viewer-preview-block,
+.date-time-viewer-pattern-input { height:50px; min-height:50px; }
+.date-time-viewer-copy-button {
+  width:76px;
+  min-width:76px;
+  height:42px;
+  min-height:42px;
+}
+.date-time-viewer-expand-row { padding-right:0; }
+.date-time-viewer-expand-button { min-height:40px; }
+
+
+/* Debug-only Settings lifecycle. Cards marked with data-debug-setting-card share
+   one upward reveal contract so future Debug tools do not need per-card CSS. */
+[data-debug-setting-card="true"] { transform-origin: bottom center; }
+.color-view-cancel-debug-button {
+  flex:0 0 auto;
+  min-width:110px;
+  height:42px;
+  padding:0 16px;
+  background:inherit;
+  color:var(--jet-note-type-body-foreground-color,#111111);
+  font:inherit;
+  font-size:13px;
+  line-height:1;
+  text-align:center;
+}
+\n\n/* Debug state control. Enable Debug becomes inert while Debug is already enabled. */
+
+#enableDebugButton:disabled{opacity:.46;cursor:default;pointer-events:none;filter:grayscale(1);background:#e3e5e3!important;border-color:#bfc1c4!important;box-shadow:none!important;}
+
+/* Debug Settings FLIP ownership boundary: temporary visual owners must never
+   escape the Settings viewport onto Home. */
+#settingsScreen { overflow: hidden; }
+#settingsScreen > [data-debug-setting-card="true"] { max-width: 100%; }
+
+/* V29: Debug viewer motion surfaces must stay visually identical to Set Body
+   while compositor-owned. Never let a promoted/animated card fall back to
+   transparent/white during its opening or closing movement. */
+#settingsScreen .settings-body > [data-debug-setting-card="true"] {
+  background-color: var(--settings-set-body-background, var(--jet-note-current-body-background, var(--jet-note-type-settings-set-body, #fff))) !important;
+}
+
+/* V35 — the two Debug viewer panels are ordinary Settings Body surfaces. */
+#colorViewCard,
+#dateTimeViewerCard{
+  background-color:var(--settings-set-body-background)!important;
+}
+
+/* Backup actions: export and import share the available width equally. */
+.backup-option-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.backup-option-grid .settings-choice {
+  min-height: 74px;
+  padding-left: 10px;
+  padding-right: 10px;
+  text-align: center;
+}
+.backup-option-grid .settings-choice-main {
+  font-size: 14px;
+}

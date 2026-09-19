@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#ffffff">
+<base href="/assets/">
+<script>
+// Startup Browser preloads a fully live Home behind the native Browser, but
+// Browser -> Home transition itself is native and bitmap-frozen. No live Home
+// DOM element is transformed during the merge.
+(function(){
+  const preload=new URLSearchParams(location.search).get('startupBrowserPreload')==='1';
+  let ready=false;
+  if(preload){
+    document.documentElement.classList.add('startup-browser-home-preload');
+    window.addEventListener('DOMContentLoaded',()=>{
+      document.body.style.pointerEvents='none';
+    },{once:true});
+  }
+  window.JetNoteStartupBrowserEntry={
+    isPreload:()=>preload,
+    isReady:()=>preload&&ready,
+    markReady:()=>{ready=true; return true;},
+    finishFrozenReveal:()=>{
+      document.body.style.pointerEvents='';
+      try{history.replaceState(null,'',location.pathname);}catch(_){}
+      return true;
+    }
+  };
+})();
+</script>
+<script>
+// Apply only the last confirmed user background before the first body paint.
+// The full appearance module later verifies it against IndexedDB.
+(function restoreFirstFrameBackground(){
+  try {
+    const value=JSON.parse(localStorage.getItem('jet_note_appearance_background_cache')||'null');
+    const rgb=value&&value.rgb;
+    const channels=rgb&&[rgb.r,rgb.g,rgb.b];
+    if(!channels||!channels.every(channel=>Number.isInteger(channel)&&channel>=0&&channel<=255))return;
+    const color=`rgb(${channels[0]},${channels[1]},${channels[2]})`;
+    document.documentElement.style.setProperty('--page-background',color);
+    const theme=document.querySelector('meta[name="theme-color"]');
+    if(theme)theme.content=color;
+  } catch(_) {}
+})();
+</script>
+
+<title data-language-text="fileTaskFeedbackAppTitle"></title>
+<link rel="stylesheet" href="shared/styles/base.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="shared/components/components.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="shared/styles/layout.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="shared/components/page_action_bar.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="app/home/home.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="app/post_editor/post_editor.css?v=20260914-horizontal-tools-v1">
+<link rel="stylesheet" href="app/post_editor/editor_tools.css?v=20260914-horizontal-tools-v1">
+<link rel="stylesheet" href="app/tools/tools.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="app/settings/settings.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="app/media/media.css?v=20260914-horizontal-tools-v1">
+<link rel="stylesheet" href="app/video/video.css?v=20260913-video-layer-font-wrap-v1">
+<link rel="stylesheet" href="app/archive/archive.css?v=20260913-feature-layout">
+<link rel="stylesheet" href="app/debug_post/debug_post.css?v=20260914-debug-layout-v3">
+<script src="shared/core/compatibility.js?v=20260914-webview-compat-v1"></script>
+<script src="shared/core/viewport.js"></script>
+</head>
+
+<body>
+<!-- Startup splash is rendered natively by MainActivity so background, icon, and app name
+     appear in the same first frame while WebView initializes underneath. -->
+<div id="stage">
+<div class="phone" id="phone">
+
+  <section class="header"><div class="wave3"></div></section>
+
+  <!-- main_status_bar: home-only battery / configurable date-time / Settings component.
+       main_status_bar_height controls only this section box height.
+       main_status_bar_vertical_move moves only this row vertically without moving Three Posts, One Body.
+       Android system_safe_area is applied separately by .phone. -->
+  <section class="main-status-bar" id="mainStatusBar" aria-label="" data-language-aria-label="homeStatusAccessibilityLabel">
+    <img class="main-status-bar-battery-icon" id="mainStatusBarBatteryIcon" src="shared/icons/battery_75.svg" alt="">
+    <span class="main-status-bar-battery-percentage" id="mainStatusBarBatteryPercentage">--%</span>
+    <span class="main-status-bar-time" id="mainStatusBarTime">--:--</span>
+    <button class="main-status-bar-settings-button" type="button" onclick="openSettings()" aria-label="" data-ui-aria-label="home.settings_accessibility_label">
+      <img src="shared/icons/settings_gear.svg" alt="">
+    </button>
+  </section>
+
+  <!-- Three Posts, One Body: move only Top Post, Post Composer and Main Posts
+       as a single unit; the independent top status row is intentionally excluded. -->
+  <div class="three-posts-one-body" id="threePostsOneBody">
+    <div class="home-actions three-posts-one-body__layout" aria-label="" data-language-aria-label="homeTopPostAccessibilityLabel">
+      <section class="top-post-card three-posts-one-body__box common_border" id="topPostCard" aria-live="polite"></section>
+    </div>
+    <!-- Main Layout World: Composer + Main Posts share one global FLIP coordinate frame. -->
+    <div class="post-main-layout-world three-posts-one-body__layout" id="postMainLayoutWorld">
+      <div class="post-composer-wrap three-posts-one-body__layout" id="postComposerMount"></div>
+      <main class="main-posts three-posts-one-body__layout" id="mainPosts"></main>
+    </div>
+  </div>
+
+
+
+
+  <!-- Runtime fragment mount points. HTML pages remain separate in source,
+       but are mounted into the same WebView/document before application scripts start. -->
+  <div id="pageMount"></div>
+  <div id="overlayMount"></div>
+  <div class="jet-scrollbar" id="jetScrollbar" aria-hidden="true"><div class="jet-scrollbar-track"><div class="jet-scrollbar-thumb"></div></div></div>
+
+</div>
+</div>
+
+<script src="shared/components/jet_note_type.js?v=20260913-feature-layout"></script>
+<script src="shared/core/view_loader.js?v=20260913-feature-layout"></script>
+<script>
+(async function startJetNoteFrontend() {
+  try {
+    await window.JetNoteViewLoader.mountAll({
+      pageMount: 'pageMount',
+      overlayMount: 'overlayMount',
+      pages: [
+        'app/settings/settings.html',
+        'app/post_editor/post_editor.html',
+        'app/debug_post/debug_post.html'
+      ],
+      components: [
+        'app/media/image_viewer.html',
+        'shared/components/delete_confirm_dialog.html',
+        'shared/components/post_action_sheet.html',
+        'app/archive/import_preview.html'
+      ]
+    });
+
+    await window.JetNoteViewLoader.loadScripts([
+      'shared/core/language_catalog.js',
+      'shared/core/ui_language.js',
+      'shared/components/notice.js',
+      'shared/components/page_action_bar.js',
+      'shared/components/jet_scrollbar.js',
+      'shared/vendor/fflate.js',
+      'shared/vendor/sha256.js',
+      'shared/data/post_store.js',
+      'shared/data/post_attachment_policy.js',
+      'shared/core/media_resource_manager.js',
+      'app/media/post_audio.js',
+      'app/video/video_player.js',
+      'shared/data/media_adapter.js',
+      'app/archive/archive_mapping.js',
+      'app/archive/archive.js',
+      'app/archive/import_export.js',
+      'shared/data/storage.js',
+      'shared/core/dom.js',
+      'shared/components/post_menu_icon.js',
+      'shared/core/language.js',
+      'shared/core/date_time_format.js',
+      'app/settings/settings.js',
+      'app/settings/language_settings.js',
+      'app/settings/date_time_viewer.js',
+      'shared/core/json_syntax_validator.js',
+      'app/debug_post/debug_editor_config.js',
+      'app/debug_post/debug_post.js',
+      // Post editor is deliberately split into small modules; keep this order.
+      'app/post_editor/editor_config.js',
+      'app/post_editor/draft_store.js',
+      'app/post_editor/composer_caret.js',
+      'app/post_editor/editor_controller.js',
+      // Tool system: config loader -> action registry -> UI renderer.
+      'app/post_editor/tools/tool_loader.js',
+      'app/post_editor/tools/tool_actions.js',
+      'app/post_editor/tools.js',
+      'app/media/post_media.js',
+      'app/media/image_viewer/configuration.js',
+      'app/media/image_viewer/background_control.js',
+      'app/media/image_viewer/close_control.js',
+      'app/media/image_viewer.js',
+      'shared/components/delete_confirm_dialog.js',
+      'app/home/post_movement/order_preserved_blocks.js',
+      'app/home/post_movement/flip_topology.js',
+      'app/home/post_movement/normal_star_flip.js',
+      'app/home/post_movement/super_star_two_body_flip.js',
+      'app/home/post_movement/super_star_three_body_flip.js',
+      'app/home/posts.js',
+      'app/home/main_status_bar.js',
+      'shared/core/target_transition.js',
+      'shared/core/navigation.js',
+      'app/settings/appearance.js',
+      'shared/core/bootstrap.js',
+    ]);
+  } catch (error) {
+    console.error('Jet Note frontend startup failed:', error);
+
+    const panel = document.createElement('main');
+    panel.style.cssText = 'padding:24px;font-family:sans-serif;line-height:1.6;background:#fff;min-height:100vh';
+    const section = document.createElement('section');
+    section.style.cssText = 'max-width:560px;margin:48px auto;padding:20px;border:1px solid #c8cdd2;border-radius:16px;background:#fff';
+    const title = document.createElement('strong');
+    title.style.color = '#b3261e';
+    title.textContent = 'Interface initialization failed';
+    const message = document.createElement('div');
+    message.style.cssText = 'margin-top:10px;overflow-wrap:anywhere';
+    message.textContent = error && error.message ? error.message : String(error);
+    section.append(title, message);
+    panel.appendChild(section);
+    document.body.appendChild(panel);
+  }
+})();
+</script>
+</body>
+</html>

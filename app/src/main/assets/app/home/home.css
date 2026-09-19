@@ -1,0 +1,250 @@
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.name.editing {
+  border-bottom: 2px solid #2d8cff;
+  padding-bottom: 3px;
+}
+
+.black-card {
+  position: absolute;
+  left: 17px;
+  top: 96px;
+  width: 628px;
+  height: 207px;
+  overflow: hidden;
+  padding: 22px 26px 18px 27px;
+  border-radius: 8px 8px 0 0;
+  background: #020202;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1.42;
+  letter-spacing: .2px;
+}
+
+.black-card .line2 {
+  margin-top: 22px;
+  padding-left: 25px;
+}
+
+button:active {
+  opacity: .68;
+}
+
+.zoom-row {
+  position: absolute;
+  left: 65px;
+  top: 910px;
+  width: 561px;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  color: #fff;
+}
+
+.zoom-row svg {
+  width: 26px;
+  height: 26px;
+  flex: none;
+}
+
+#zoomRange {
+  width: 100%;
+  accent-color: #20a9ff;
+}
+
+.black-card {
+  display: none !important;
+}
+
+
+
+/* Three Posts, One Body Set Background / Set Body ownership --------------------------------
+   There are two deliberately separate paint layers:
+   1) Set Background: the parent paint visible in gaps, padding, margins, and
+      other space outside real Post surfaces.
+   2) Set Body: only real Post boxes and explicit internal controls.
+
+   Never paint Set Body/current_body on .home-actions, .post-composer-wrap or .main-posts.
+   Those are geometry containers, not content surfaces. */
+.three-posts-one-body {
+  --three-post-set-background: var(--jet-note-type-three-post-set-background, var(--page-background));
+  --three-post-set-body: var(--jet-note-type-three-post-set-body, #fff);
+  --three-post-internal-surface-background: var(--jet-note-type-three-post-internal-control-background, var(--three-post-set-body));
+  background-color: var(--three-post-set-background);
+}
+
+.three-posts-one-body > .three-posts-one-body__layout {
+  background-color: transparent !important;
+}
+
+/* Only descendants of a real Post box participate in Body-surface inheritance.
+   This prevents a future layout wrapper from accidentally covering Set Background. */
+.three-posts-one-body .three-posts-one-body__box :where(
+  button,
+  input,
+  output,
+  [role="group"],
+  .attachment-strip,
+  .audio-token,
+  .audio-token-play,
+  .video-attachment-shell,
+  .video-progress-track,
+  .video-playback-time-button
+) {
+  background-color: var(--three-post-internal-surface-background) !important;
+}
+
+/* Opt-out remains explicit and narrow for pixels/surfaces that genuinely own
+   a different renderer. */
+.three-posts-one-body [data-three-post-background-exempt="true"],
+.three-posts-one-body .three-post-background-exempt {
+  background-color: revert !important;
+}
+
+/* Post Composer rounded-border integrity -------------------------------------
+   Three-Post background inheritance gives the composer controls an actual
+   background paint. Clip those child paints to the composer's rounded padding
+   box so they cannot cover the anti-aliased pixels of the common_border at the
+   four corners. This changes clipping only; the controls remain part of the
+   inherited background family and are not exemptions. */
+.three-posts-one-body .post-composer.common_border {
+  overflow: hidden;
+  isolation: isolate;
+  border-width:3px;
+  border-color:#00dddd;
+}
+
+/* FLIP surface transparency: playback time is text/control chrome, not a Body paint owner. */
+.three-posts-one-body .three-posts-one-body__box .video-playback-time-button {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+
+/* FLIP layout world: geometry-only wrapper. It must never own Set Body paint. */
+#postMainLayoutWorld.post-main-layout-world {
+  background: transparent !important;
+  background-color: transparent !important;
+  transform-origin: 0 0;
+}
+
+/* Home vertical rhythm -----------------------------------------------------
+   External spacing has exactly one owner per boundary. Surface components
+   (.post and composer) never contribute margins. The outer Three-Post body
+   owns Top -> MainWorld spacing; MainWorld owns Composer -> Main spacing;
+   MainPosts owns Post -> Post spacing. This prevents Super Star from stacking
+   a Post margin with home-actions padding (the former 12px vs 6px mismatch). */
+.three-posts-one-body {
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+}
+.post-main-layout-world {
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+}
+.three-posts-one-body .home-actions,
+.three-posts-one-body .post-composer-wrap,
+.three-posts-one-body .post-surface {
+  margin-top:0;
+  margin-bottom:0;
+}
+
+/* Unified Post architecture -------------------------------------------------
+   Top/Main/Composer are roles of the same Post surface. Role selectors below
+   may add behavior/layout, but .post-surface owns the common surface identity. */
+.three-posts-one-body .post-surface {
+  box-sizing: border-box;
+  background-color: var(--jet-note-type-three-post-set-body,#fff);
+}
+.three-posts-one-body .post-surface[data-post-role="top"],
+.three-posts-one-body .post-surface[data-post-role="main"],
+.three-posts-one-body .post-surface[data-post-role="composer"] {
+  background-clip: padding-box;
+}
+.three-posts-one-body .post-surface[data-post-role="composer"] {
+  width:100%; margin:0; padding:0;
+}
+/* Top/Main published Posts use the exact same .post box geometry.
+   A role must not override padding/margins; only .post owns them. */
+
+/* v19 geometry invariant: published Post geometry is role-independent.
+   data-post-role may change paint/state, never padding/content/media geometry. */
+.published-post-surface[data-post-role="main"],
+.published-post-surface[data-post-role="top"] {
+  --published-post-horizontal-padding: 12px;
+  font-size:var(--three-post-one-body-font-size,17px);
+  line-height:1.55;
+}
+
+.published-post-surface > .post-text-drawer > .text-content {
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  word-break:break-all;
+  letter-spacing:normal;
+}
+
+.published-post-surface > .post-text-drawer {
+  min-height:0;
+  overflow:visible;
+  will-change:height;
+}
+
+.published-post-surface .post-text-toggle {
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  min-width:28px;
+  padding:4px;
+  border:0;
+  background:transparent!important;
+  color:inherit;
+}
+.published-post-surface .post-text-toggle[hidden] { display:none; }
+.published-post-surface .post-text-toggle img {
+  display:block;
+  width:20px;
+  height:20px;
+}
+.published-post-surface .post-head-minimal .more {
+  display:grid!important;
+  place-items:center;
+  width:32px!important;
+  height:32px!important;
+  padding:6px!important;
+  position:relative;
+}
+.published-post-surface .post-head-actions {
+  gap:8px;
+}
+.published-post-surface .post-head-minimal .more::before {
+  content:"";
+  position:absolute;
+  inset:-3.2px;
+}
+.published-post-surface .post-head-minimal .more img,
+.published-post-surface .post-head-minimal .more svg {
+  display:block;
+  width:19px!important;
+  height:19px!important;
+  transform:translateY(-2px);
+}
+.post-text-fade-character { transition:color .12s linear; }

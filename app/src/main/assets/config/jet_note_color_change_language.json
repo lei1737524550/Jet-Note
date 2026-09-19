@@ -1,0 +1,132 @@
+{
+  "three_post_one_body": {
+    "top_post": {
+      "super_star": {
+        "border_rule": {
+          "change_count": 0,
+          "sequence": [
+            {
+              "color": "#bfc1c4",
+              "duration_ms": 1000
+            }
+          ]
+        }
+      }
+    },
+    "post_composer": {
+      "border_rule": {
+        "change_count": 0,
+        "sequence": [
+          {
+            "color": "#00dddd",
+            "duration_ms": 1000
+          }
+        ]
+      }
+    },
+    "main_posts": {
+      "interaction_timing": {
+        "post_star_highlight": {
+          "normal": {
+            "change_count": 0,
+            "sequence": [
+              {
+                "color": "#ffff00",
+                "duration_ms": 500
+              }
+            ]
+          },
+          "super": {
+            "change_count": 0,
+            "sequence": [
+              {
+                "color": "#ff0000",
+                "duration_ms": 500
+              }
+            ]
+          }
+        }
+      },
+      "non_star": {
+        "border_rule": {
+          "change_count": 0,
+          "sequence": [
+            {
+              "color": "#bfc1c4",
+              "duration_ms": 1000
+            }
+          ]
+        }
+      },
+      "star": {
+        "border_rule": {
+          "change_count": 0,
+          "sequence": [
+            {
+              "color": "#bfc1c4",
+              "duration_ms": 1000
+            }
+          ]
+        }
+      }
+    }
+  },
+  "debug_ui_border_rule": {
+    "change_count": -1,
+    "sequence": [
+      {
+        "color": "#FF0000",
+        "duration_ms": 200
+      },
+      {
+        "color": "#FF8C00",
+        "duration_ms": 200
+      },
+      {
+        "color": "#FFD700",
+        "duration_ms": 200
+      },
+      {
+        "color": "#00A000",
+        "duration_ms": 200
+      }
+    ],
+    "comment": "Shared dynamic border rule for Debug Posts and Debug-only Settings cards (Color View and Date View). Uses the standard change_count + sequence rule language; -1 means infinite cycling."
+  },
+  "date_time_viewer_set_success_text_color_rule": {
+    "change_count": 1,
+    "sequence": [
+      {
+        "color": "#34A853",
+        "duration_ms": 350
+      },
+      {
+        "color": "#111111",
+        "duration_ms": 0
+      }
+    ]
+  },
+  "debug_post_search": {
+    "text_color_rule": {
+      "change_count": -1,
+      "sequence": [
+        {
+          "color": "#FF0000",
+          "duration_ms": 200
+        },
+        {
+          "color": "#FF8C00",
+          "duration_ms": 200
+        },
+        {
+          "color": "#FFD700",
+          "duration_ms": 200
+        },
+        {
+          "color": "#00A000",
+          "duration_ms": 200
+        }
+      ]
+    }
+  }
+}

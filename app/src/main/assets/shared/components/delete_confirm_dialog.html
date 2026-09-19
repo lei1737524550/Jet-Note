@@ -1,0 +1,16 @@
+<!-- Custom delete confirmation -->
+  <div class="delete-confirm-backdrop"
+       id="deleteConfirmBackdrop"
+       onclick="handleDeleteConfirmBackdrop(event)">
+    <div class="delete-confirm-panel post-action-menu common_border" role="dialog" aria-modal="true">
+      <div class="delete-confirm-message" id="deleteConfirmMessage"></div>
+      <div class="delete-confirm-actions post-action-menu-actions">
+        <button class="delete-confirm-btn post-action-menu-button common_border" type="button" onclick="cancelDeleteConfirm()" aria-label="" data-language-aria-label="cancel">
+          <img class="delete-confirm-x-icon post-action-menu-icon" src="shared/icons/close_x.svg" alt="">
+        </button>
+        <button class="delete-confirm-btn post-action-menu-button delete common_border" type="button" onclick="confirmPendingDelete()" aria-label="" data-language-aria-label="delete">
+          <img class="delete-confirm-trash-icon post-action-menu-icon" src="shared/icons/trash_can_open.svg" alt="">
+        </button>
+      </div>
+    </div>
+  </div>

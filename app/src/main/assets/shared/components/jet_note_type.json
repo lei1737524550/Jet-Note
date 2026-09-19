@@ -1,0 +1,39 @@
+{
+  "body_content_automatic_contrast": {
+    "relative_luminance_threshold": 0.5,
+    "light_background_foreground_color": "#111111",
+    "dark_background_foreground_color": "#f5f5f5"
+  },
+  "jet_note_type_background": {
+    "settings": {
+      "set_background": "current_background",
+      "set_body": "current_body"
+    },
+    "edit_post": "current_background",
+    "tools": {
+      "tool_1": "current_background",
+      "tool_2": "current_background",
+      "fallback": "current_background"
+    },
+    "three_post_one_body": {
+      "set_background": "current_background",
+      "set_body": "current_body",
+      "internal_controls": "current_body"
+    },
+    "edit_post_right_side_tool_buttons": {
+      "normal_background": "current_body",
+      "tools_expanded_background": "current_body"
+    },
+    "page_action_bar": "current_background"
+  },
+  "jet_note_type_border_color": {
+    "settings": "#bfc1c4",
+    "edit_post": "#bfc1c4",
+    "tools": {
+      "tool_1": "#bfc1c4",
+      "tool_2": "#bfc1c4",
+      "fallback": "#bfc1c4"
+    },
+    "page_action_bar": "#bfc1c4"
+  }
+}

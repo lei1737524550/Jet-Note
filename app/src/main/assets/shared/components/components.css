@@ -1,0 +1,859 @@
+.crop-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  background: #000;
+}
+.crop-screen.open {
+  display: block;
+}
+.crop-header {
+  height: 82px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 28px;
+  font-weight: 500;
+}
+.crop-back {
+  position: absolute;
+  left: 25px;
+  top: 16px;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.crop-back svg {
+  width: 34px;
+  height: 34px;
+}
+.crop-body {
+  position: absolute;
+  left: 0;
+  top: 82px;
+  width: 691px;
+  height: 1110px;
+  background: #000;
+  overflow: hidden;
+}
+#cropCanvas {
+  position: absolute;
+  left: 30px;
+  top: 150px;
+  width: 631px;
+  height: 690px;
+  display: block;
+  touch-action: none;
+  background: #000;
+}
+.crop-hint {
+  position: absolute;
+  left: 0;
+  top: 865px;
+  width: 100%;
+  text-align: center;
+  color: rgba(255,255,255,.72);
+  font-size: 18px;
+}
+.crop-footer {
+  position: absolute;
+  left: 0;
+  top: 1050px;
+  bottom: auto;
+  width: 691px;
+  height: 90px;
+  background: #000;
+}
+.crop-cancel {
+  position: absolute;
+  left: 32px;
+  bottom: 16px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+.crop-done {
+  position: absolute;
+  right: 28px;
+  bottom: 10px;
+  min-width: 90px;
+  height: 58px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 29px;
+  background: #1da8f5;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+.post-action-btn:active {
+  background: #f5f5f5;
+}
+.post-action-icon {
+  display: block;
+}
+.post-action-btn.delete .post-action-icon {
+  stroke: #d93636;
+}
+.compose-image-preview {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 7px;
+}
+.post-compose-images {
+  margin-top: 16px;
+}
+.compose-image-preview:empty {
+  display: none;
+}
+.compose-image-item {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: #f2f2f2;
+}
+.compose-image-item img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.compose-image-remove {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,.65);
+  color: #fff;
+  font-size: 19px;
+  line-height: 27px;
+  text-align: center;
+  cursor: pointer;
+}
+.post-media-grid {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 9px;
+}
+.post-media-grid.one {
+  grid-template-columns: 1fr;
+}
+.post-media-grid.two {
+  grid-template-columns: repeat(2,1fr);
+}
+.post-media-grid.many {
+  grid-template-columns: repeat(3,1fr);
+}
+.post-media-grid img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #eee;
+}
+.post-media-grid.one img {
+  height: auto;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: initial;
+  background: transparent;
+}
+.post-media-grid.two img {
+  aspect-ratio: 1 / 1;
+}
+.post-media-grid.many img {
+  aspect-ratio: 1 / 1;
+}
+.post-media-grid img {
+  cursor: zoom-in;
+}
+
+/* Published single-photo mode mirrors the single-video edge-to-edge geometry.
+   Only this one-photo presentation escapes the Post's horizontal content
+   padding; the Post itself, editor previews, and 1xN strips are unchanged. */
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  width: calc(100% + var(--published-post-horizontal-padding, 12px) + var(--published-post-horizontal-padding, 12px) - var(--published-single-media-spacing-left, 3px) - var(--published-single-media-spacing-right, 3px));
+  margin-left: calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-left, 3px));
+  margin-right: calc(-1 * var(--published-post-horizontal-padding, 12px) + var(--published-single-media-spacing-right, 3px));
+  margin-top: var(--published-single-media-spacing-top, 3px);
+  margin-bottom: var(--published-single-media-spacing-bottom, 3px);
+  border-radius: 1px;
+}
+
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
+  border-radius: 1px;
+}
+
+.image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.96);
+  overflow: hidden;
+  touch-action: none;
+}
+.image-viewer.open {
+  display: flex;
+}
+.image-viewer img,
+.image-viewer video {
+  display: block;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center center;
+  transition: transform .14s ease-out;
+  will-change: transform;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  cursor: zoom-in;
+}
+.image-viewer img.is-gesturing,
+.image-viewer video.is-gesturing {
+  transition: none;
+}
+.image-viewer img,
+.image-viewer video { display:none; }
+.image-viewer img.active,
+.image-viewer video.active { display:block; }
+.image-viewer video {
+  background:#000;
+  /* Keep Android/WebView's native media controls responsive. */
+  touch-action: manipulation;
+}
+.image-viewer img.zoomed,
+.image-viewer video.zoomed {
+  cursor: grab;
+}
+.image-viewer-close {
+  position: fixed;
+  right: 18px;
+  top: 18px;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  mix-blend-mode: normal !important;
+}
+.image-viewer-close::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 24px;
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--image-viewer-control-color,#fff) !important;
+  transform-origin: center;
+}
+.image-viewer-close::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 24px;
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--image-viewer-control-color,#fff) !important;
+  transform-origin: center;
+}
+.image-viewer-close::before {
+  transform: rotate(45deg);
+}
+.image-viewer-close::after {
+  transform: rotate(-45deg);
+}
+
+/* Shared image-viewer background switch. The existing Post close button rules above
+   stay untouched; this control mirrors their position/blend behavior. */
+.image-viewer-background-switch {
+  position: fixed;
+  right: 78px;
+  top: 18px;
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  mix-blend-mode: normal !important;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  box-shadow: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.image-viewer-background-switch svg {
+  display: block;
+  width: 34px;
+  height: 34px;
+  margin: 9px;
+  fill: none;
+  stroke: var(--image-viewer-control-color,#fff) !important;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.image-viewer-background-switch:active,
+.image-viewer-background-switch:focus,
+.image-viewer-background-switch:focus-visible,
+.image-viewer-background-switch:hover {
+  background: transparent;
+  outline: none;
+  box-shadow: none;
+}
+.image-viewer-background-switch.is-hidden { display: none !important; }
+.post-compose-images .compose-image-item img {
+  cursor: zoom-in;
+}
+.delete-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0,0,0,.18);
+}
+.delete-confirm-backdrop.open {
+  display: flex;
+}
+.delete-confirm-btn:active {
+  background: #f5f5f5;
+}
+.delete-confirm-btn svg, .delete-confirm-btn img {
+  display: block;
+}
+.delete-confirm-btn.delete {
+  color: #d93636;
+}
+.delete-confirm-btn.delete svg, .delete-confirm-btn.delete img {
+  stroke: #d93636;
+}
+.post-action-panel {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 30020 !important;
+  width: 286px !important;
+  height: auto !important;
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+.post-action-panel.open {
+  display: grid !important;
+}
+.post-action-btn {
+  min-height: 126px !important;
+  height: 126px !important;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.post-action-icon {
+  width: 32px !important;
+  height: 32px !important;
+}
+.delete-confirm-backdrop {
+  z-index: 30010 !important;
+}
+.delete-confirm-panel {
+  width: 286px !important;
+  padding: 10px !important;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+.delete-confirm-message {
+  padding: 10px 8px 12px !important;
+  text-align: center;
+  color: #222;
+  font-size: 16px !important;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.delete-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.delete-confirm-btn {
+  min-height: 126px !important;
+  height: 126px !important;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #222;
+  font-size: 18px !important;
+  font-weight: 500;
+  cursor: pointer;
+}
+.delete-confirm-btn svg, .delete-confirm-btn img {
+  width: 32px !important;
+  height: 32px !important;
+}
+.jet-notice-backdrop{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:60000;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(20,27,35,.32);
+  backdrop-filter:blur(3px)
+}
+.jet-notice-backdrop.open{
+  display:flex
+}
+.jet-notice{
+  width:min(310px,100%);
+  padding:20px 18px 16px;
+  background:#fff;
+  box-shadow:0 18px 46px rgba(24,32,42,.22);
+  text-align:center
+}
+.jet-notice-mark{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  margin:0 auto 10px;
+  border-radius:50%;
+  background:#eaf4fb;
+  color:#315f98;
+  font-weight:700
+}
+.jet-notice h2{
+  margin:0;
+  font-size:18px
+}
+.jet-notice p{
+  margin:10px 0 18px;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  color:#4d545c;
+  line-height:1.5
+}
+.jet-notice button{
+  width:100%;
+  min-height:44px;
+  border:0;
+  border-radius:12px;
+  background:#315f98;
+  color:#fff;
+  font-weight:600
+}
+/* Post menus share one compact shape and are positioned left of the tapped dots. */
+.post-action-panel{
+  position:fixed!important;
+  left:auto!important;
+  top:auto!important;
+  right:auto!important;
+  transform:none!important;
+  z-index:32020!important;
+  width:max-content!important;
+  max-width:calc(100vw - 16px)!important;
+  display:none!important;
+  grid-template-columns:none!important;
+  gap:0!important;
+  padding:0!important;
+  background:#fff!important;
+  box-shadow:0 5px 18px rgba(21,31,42,.18)!important;
+  pointer-events:auto!important
+}
+.post-action-panel.open{
+  display:flex!important
+}
+.post-action-btn{
+  width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  background:#fff!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:0!important
+}
+.post-action-icon{
+  width:17px!important;
+  height:17px!important
+}
+.more{
+  width:32px!important;
+  height:32px!important;
+  padding:6px!important;
+  top:4px!important
+}
+.more svg, .more img{
+  width:19px!important;
+  height:19px!important
+}
+.delete-confirm-backdrop.post-menu-confirm{
+  display:none!important;
+  position:fixed!important;
+  inset:0!important;
+  z-index:32030!important;
+  padding:0!important;
+  background:transparent!important;
+  align-items:initial!important;
+  justify-content:initial!important
+}
+.delete-confirm-backdrop.post-menu-confirm.open{
+  display:block!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-panel{
+  position:fixed!important;
+  left:auto!important;
+  top:auto!important;
+  right:auto!important;
+  transform:none!important;
+  width:max-content!important;
+  max-width:calc(100vw - 16px)!important;
+  padding:4px!important;
+  background:#fff!important;
+  box-shadow:0 5px 18px rgba(21,31,42,.18)!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-message{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0 0 0 0)!important;
+  white-space:nowrap!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-actions{
+  display:flex!important;
+  grid-template-columns:none!important;
+  gap:2px!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn{
+  width:36px!important;
+  height:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  background:#fff!important;
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:5px!important;
+  color:#222!important;
+  font-size:14px!important;
+  font-weight:400!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn.delete{
+  color:#d93636!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn svg, .delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn img{
+  width:17px!important;
+  height:17px!important
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn span{
+  white-space:nowrap!important
+}
+
+
+
+.post-action-btn.star .post-action-star {
+    fill: transparent;
+    stroke: #555;
+    transition: fill .14s ease, stroke .14s ease;
+}
+
+.post-action-btn.star.active .post-action-star {
+    fill: #f4c430;
+    stroke: #b48a00;
+}
+
+.post-action-btn.star.super-active .post-action-star {
+    fill: #e23b3b;
+    stroke: #a81818;
+}
+
+/* Final compact post-menu rules. */
+#postActionPanel.post-action-panel { padding:0 !important; gap:0 !important; overflow:hidden; }
+#postActionPanel.post-action-panel .post-action-btn { margin:0 !important; }
+.delete-confirm-btn .delete-confirm-x-icon,
+.delete-confirm-btn .delete-confirm-trash-icon { width:24px; height:24px; display:block; }
+.delete-confirm-btn .delete-confirm-trash-icon { object-fit:contain; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-panel { padding:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-actions { gap:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn { width:36px !important; padding:0 !important; }
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn .delete-confirm-x-icon,
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-btn .delete-confirm-trash-icon { width:17px; height:17px; }
+
+/* Three-dot post actions: one generous shared surface, no circles or boxes
+   around individual icons. 19px is the former 17px icon scaled to 110%. */
+#postActionPanel.post-action-panel { border-radius: 14px; }
+#postActionPanel.post-action-panel .post-action-btn {
+  width: 50px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+#postActionPanel.post-action-panel .post-action-btn + .post-action-btn {
+  border-left: 1px solid #edf0f2 !important;
+}
+#postActionPanel.post-action-panel .post-action-icon { width: 19px !important; height: 19px !important; }
+#postActionPanel.post-action-panel .post-action-trash-icon {
+  filter: invert(22%) sepia(93%) saturate(2591%) hue-rotate(347deg) brightness(88%) contrast(90%);
+}
+
+
+/* Post Action Menu: normal (three actions) and delete-confirm (two actions)
+   are two states of one surface. Keep all visual metrics in this shared base. */
+.post-action-menu {
+  --post-action-menu-size: 50px;
+  --post-action-menu-icon-size: 19px;
+  --post-action-menu-background: var(--jet-note-type-three-post-internal-control-background, var(--jet-note-type-three-post-set-body, #fff));
+  --post-action-menu-divider: #edf0f2;
+  --post-action-menu-danger-filter: invert(22%) sepia(93%) saturate(2591%) hue-rotate(347deg) brightness(88%) contrast(90%);
+}
+#postActionPanel.post-action-menu,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu {
+  height: var(--post-action-menu-size) !important;
+  min-height: var(--post-action-menu-size) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: 14px !important;
+  background: var(--post-action-menu-background) !important;
+  box-shadow: 0 5px 18px rgba(21,31,42,.18) !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-button,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button {
+  width: var(--post-action-menu-size) !important;
+  height: var(--post-action-menu-size) !important;
+  min-height: var(--post-action-menu-size) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #222 !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-button + .post-action-menu-button,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button + .post-action-menu-button {
+  border-left: 1px solid var(--post-action-menu-divider) !important;
+}
+#postActionPanel.post-action-menu .post-action-menu-icon,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-icon {
+  display: block !important;
+  width: var(--post-action-menu-icon-size) !important;
+  height: var(--post-action-menu-icon-size) !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-actions {
+  display: flex !important;
+  height: var(--post-action-menu-size) !important;
+  gap: 0 !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-button.delete {
+  color: #d93636 !important;
+}
+.delete-confirm-backdrop.post-menu-confirm .delete-confirm-trash-icon,
+#postActionPanel.post-action-menu .post-action-trash-icon {
+  filter: var(--post-action-menu-danger-filter) !important;
+}
+
+
+/* Jet Note custom scrollbar. The visible track width and the actual touch-hit
+   lane are independent and are populated from config.json at runtime. */
+:root{--jet-scrollbar-visual-width:4px;--jet-scrollbar-interaction-width:20px;}
+.jet-scrollbar{position:fixed;left:0;right:auto;top:50%;transform:translateY(-50%);width:var(--jet-scrollbar-interaction-width);height:300px;z-index:28000;pointer-events:auto;display:none;align-items:stretch;justify-content:center;touch-action:none;-webkit-user-select:none;user-select:none;}
+.jet-scrollbar.visible{display:flex;}
+.jet-scrollbar-track{position:relative;width:var(--jet-scrollbar-visual-width);height:100%;border-radius:999px;background:rgba(120,128,136,.10);overflow:hidden;pointer-events:none;}
+.jet-scrollbar-thumb{position:absolute;left:0;width:100%;min-height:28px;border-radius:999px;background:#8b9299;opacity:.72;transform:translateY(0);will-change:transform,height;pointer-events:none;}
+.jet-scrollbar:active .jet-scrollbar-thumb{opacity:.95;}
+
+/* Published Post visual attachments.
+   1×N strip: exactly three attachment columns fit in the visible width and
+   any additional photo/video stays on the same row for horizontal scrolling. */
+.post-published-media-strip {
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:flex-start;
+  gap:5px;
+  width:100%;
+  margin-top:16px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+}
+.post-published-media-strip::-webkit-scrollbar { display:none; }
+.post-published-media-strip > .video-attachment-shell,
+.post-published-media-strip > .post-published-media-photo-frame {
+  flex:0 0 calc((100% - 10px) / 3);
+  width:calc((100% - 10px) / 3);
+  min-width:0;
+  scroll-snap-align:start;
+}
+.post-published-media-strip > .video-attachment-shell .video-attachment-item,
+.post-published-media-strip > .video-attachment-shell .video-poster {
+  width:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+}
+
+/* Main Post footer: keep the timestamp in its normal lower-left flow.
+   Video controls stay inside their own unified media component. */
+.published-post-surface > .post-footer-row {
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  min-width:0;
+}
+
+.published-post-surface > .post-footer-row > .time {
+  flex:0 0 auto;
+}
+
+/* Direct inline pinch zoom for published photos. The containing media cell is
+   the clipping boundary, so magnification never paints across neighboring Post
+   content or adjacent items in the 1×N strip. */
+.post-published-media-photo-frame {
+  flex:0 0 calc((100% - 10px) / 3);
+  width:calc((100% - 10px) / 3);
+  min-width:0;
+  aspect-ratio:1 / 1;
+  overflow:hidden;
+  border-radius:1px;
+  scroll-snap-align:start;
+}
+
+.post-published-media-strip > .post-published-media-photo-frame > .post-published-media-photo {
+  display:block;
+  width:100%;
+  height:100%;
+  aspect-ratio:1 / 1;
+  object-fit:cover;
+  background:#eee;
+  transform:scale(1);
+  will-change:transform;
+}
+
+.published-inline-zoom-media {
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-user-drag:none;
+  will-change:transform;
+}
+
+.published-inline-zoom-media.inline-pinching,
+.published-inline-zoom-media.inline-zoomed {
+  cursor:zoom-out;
+}
+
+/* Published media height guard -------------------------------------------------
+   A tall single photo must never take over the feed. The cap is driven by
+   config.json -> published_post_media_max_height_px (default: 234px), matching
+   the current New Post text-region height. Natural aspect ratio is preserved. */
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  max-height: var(--published-post-media-max-height, 234px);
+  overflow: hidden;
+}
+
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
+  width: 100%;
+  height: auto;
+  max-height: var(--published-post-media-max-height, 234px);
+  object-fit: contain;
+  object-position: center;
+}
+
+
+/* Interaction hardening for post action overlays.
+   Use the top of the WebView stacking range for these transient controls; the
+   native video TextureView is separately suspended in JS because CSS cannot
+   order native siblings. */
+#postActionPanel.post-action-panel {
+  z-index: var(--z-axis-height-post-action, 90000) !important;
+  isolation: isolate;
+  pointer-events: auto !important;
+}
+.delete-confirm-backdrop.post-menu-confirm {
+  z-index: calc(var(--z-axis-height-post-action, 90000) + 1) !important;
+  pointer-events: auto !important;
+}
+#postStarAction[data-post-action="star"] {
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+#postActionPanel.post-action-panel .post-action-icon,
+.delete-confirm-backdrop.post-menu-confirm .post-action-menu-icon {
+  pointer-events: none;
+}
+
+/* v17 Unified Post media geometry ------------------------------------------------
+   Top is a role of the same Post surface, so published single-photo geometry and
+   the configured height cap must not depend on #mainPosts.  This intentionally
+   covers both role=main and role=top (including .top-post-content wrappers). */
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  max-height: var(--published-post-media-max-height, 234px) !important;
+  overflow: hidden !important;
+}
+
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-height: var(--published-post-media-max-height, 234px) !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  aspect-ratio: auto !important;
+}

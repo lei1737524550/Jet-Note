@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="420"
+    android:viewportHeight="360">
+
+    <!-- Active = Inactive base half-eye + vertical mirror. Pupil center is the visual center. -->
+    <path
+        android:pathData="M17.5,180 C80,118 145,94 210,92 C275,94 340,118 402.5,180 C340,242 275,266 210,268 C145,266 80,242 17.5,180"
+        android:fillColor="#00000000"
+        android:strokeColor="#FF00FF00"
+        android:strokeWidth="15"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Upper five lashes. -->
+    <path android:pathData="M95,126 L70,82 M155,101 L145,55 M210,92 L210,43 M265,101 L275,55 M325,126 L350,82"
+        android:fillColor="#00000000" android:strokeColor="#FF00FF00" android:strokeWidth="15" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- Lower five are the exact horizontal-axis mirror of the upper five. -->
+    <path android:pathData="M95,234 L70,278 M155,259 L145,305 M210,268 L210,317 M265,259 L275,305 M325,234 L350,278"
+        android:fillColor="#00000000" android:strokeColor="#FF00FF00" android:strokeWidth="15" android:strokeLineCap="round" android:strokeLineJoin="round" />
+
+    <!-- Active visual center: (210, 180). -->
+    <path
+        android:pathData="M210,138 A42,42 0,1 1,210,222 A42,42 0,1 1,210,138"
+        android:fillColor="#FFFF0000" />
+</vector>

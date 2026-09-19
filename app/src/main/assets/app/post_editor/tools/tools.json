@@ -1,0 +1,72 @@
+{
+  "_comment": "The top-level tools[] is the canonical toolbar model. tool_m1 is the toolbox anchor node. When expanded, toolbox children occupy slots immediately to the LEFT of tool_m1 and temporarily cover primary tools without mutating the original tools[] model. name is maintainer-only metadata.",
+  "tools": [
+    {
+      "id": "tool_2",
+      "type": "tool",
+      "name": "AddImageButton",
+      "enabled": true,
+      "action": "photo",
+      "icon": "photo",
+      "labelKey": "addImage"
+    },
+    {
+      "id": "tool_3",
+      "type": "tool",
+      "name": "AddAudioButton",
+      "enabled": true,
+      "action": "sound",
+      "icon": "sound",
+      "labelKey": "addAudio"
+    },
+    {
+      "id": "tool_1",
+      "type": "tool",
+      "name": "AddVideoButton",
+      "enabled": true,
+      "action": "video",
+      "icon": "video",
+      "labelKey": "addVideo"
+    },
+    {
+      "id": "tool_m1",
+      "type": "toolbox",
+      "name": "ToolboxButton",
+      "enabled": true,
+      "action": "toolbox",
+      "icon": "tools",
+      "labelKey": "tools",
+      "unfoldAnimation": "app/post_editor/tools_unfold_animation.js",
+      "unfoldIcon": "shared/icons/is_unfold.svg",
+      "children": [
+        {
+          "id": "toolbox_1",
+          "type": "toolbox_tool",
+          "name": "MerriamWebsterButton",
+          "enabled": true,
+          "url": "https://www.merriam-webster.com/",
+          "icon": "dictionary",
+          "labelKey": "toolbox_1"
+        },
+        {
+          "id": "toolbox_2",
+          "type": "toolbox_tool",
+          "name": "SentenceButton",
+          "enabled": true,
+          "url": "https://soundoftext.com/",
+          "icon": "sentence",
+          "labelKey": "toolbox_2"
+        },
+        {
+          "id": "toolbox_3",
+          "type": "toolbox_tool",
+          "name": "BaiduButton",
+          "enabled": true,
+          "url": "https://www.baidu.com/",
+          "icon": "google_search",
+          "labelKey": "toolbox_3"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "new_post_tools": {
+    "maximum_visible_tools": 6,
+    "network_probe_timeout_ms": 3500
+  }
+}

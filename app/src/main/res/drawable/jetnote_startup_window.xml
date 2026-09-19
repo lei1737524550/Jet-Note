@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android draws this before MainActivity/WebView exists, preventing the old white first frame. -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#AED194" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="112dp" android:height="112dp">
+        <inset android:drawable="@drawable/icon" />
+    </item>
+</layer-list>

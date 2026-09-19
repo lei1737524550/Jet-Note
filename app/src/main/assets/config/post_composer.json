@@ -1,0 +1,28 @@
+{
+  "new_post_font_size": 17,
+  "new_post_text_area_height": {
+    "viewport_height_ratio": 0.3,
+    "minimum_px": 180,
+    "if_viewpoint_to_tall_edit_area_height": 262,
+    "fallback_px": 262
+  },
+  "post_editor_layout": {
+    "keyboard_hidden_text_display_area_vertical_offset_px": 180,
+    "text_area_padding_top": 0,
+    "text_area_padding_right": 0,
+    "text_area_padding_bottom": 0,
+    "text_area_padding_left": 0,
+    "attachment_row_height": 48,
+    "keyboard_lift_animation_duration_ms": 220,
+    "keyboard_viewport_policy": {
+      "keep_toolbar_and_media_rows_stable": true,
+      "preserve_keyboard_state_on_tool_activation": true,
+      "restore_keyboard_state_after_external_tool": true
+    }
+  },
+  "post_editor_text_caret": {
+    "text_caret_width_px": 2,
+    "text_caret_color": "#14A89A"
+  },
+  "cursor_drop_color": "#14A89A"
+}

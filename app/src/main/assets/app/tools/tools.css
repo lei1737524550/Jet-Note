@@ -1,0 +1,27 @@
+/* Tools uses the same Page Action Bar geometry as New Post instead of the older 64px
+   Settings header. The back button therefore shares New Post's left axis. */
+.tools-screen .tools-header {
+  position: absolute;
+  left: 0;
+  top: var(--safe-top);
+}
+.tools-screen .tools-back {
+  border: var(--common-border-width) solid var(--common-border-color);
+  border-radius: var(--page-action-bar-control-radius);
+  color: #222;
+}
+.tools-screen .settings-body {
+  top: calc(var(--safe-top) + var(--page-action-bar-height));
+}
+
+/* jet_note_type: centralized page/surface appearance. */
+.tools-screen{background:var(--jet-note-type-tools-background,var(--page-background));}
+.tools-screen .settings-body{background:var(--jet-note-type-tools-background,var(--page-background));}
+.tools-screen .common_border{border-color:var(--jet-note-type-tools-border-color,var(--common-border-color));}
+
+.tools-grid .tool-choice img {
+  width: 28px;
+  height: 28px;
+  display: block;
+  object-fit: contain;
+}

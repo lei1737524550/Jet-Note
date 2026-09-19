@@ -1,0 +1,500 @@
+
+/* Semantic WebView Z-axis heights. Keep stacking policy centralized and avoid
+   Integer.MAX_VALUE-style z-index competition. */
+:root {
+  --z-axis-height-content: 0;
+  --z-axis-height-controls: 1000;
+  --z-axis-height-screen: 10000;
+  --z-axis-height-overlay: 50000;
+  --z-axis-height-post-action: 90000;
+  --z-axis-height-image-viewer: 100000;
+}
+:root {
+  color-scheme: light;
+  --ink:#111214;
+  --muted:#999da2;
+  --blue:#315f98;
+  --page-background:rgb(255,255,255);
+  --page-background-image:none;
+  /* Canonical live appearance sources. Components that semantically mean
+     Set Background / Set Body may bind to these directly instead of
+     re-deriving colors through feature-specific selectors. */
+  --jet-note-current-background:var(--page-background);
+  --jet-note-current-body-background:#fff;
+  --body-size:17px;
+  --body-leading:1.5;
+  --card-radius:14px;
+  --common-border-color:#bfc1c4;
+  --common-border-width:1px;
+  --common-border-radius:14px;
+  --content-horizontal-padding:8px;
+  /* Android WindowInsets is the single source of truth for system safe area.
+     Do not combine it with env(safe-area-inset-*), otherwise a cutout/status
+     inset can be applied twice or appear only after a later viewport event. */
+  --system-safe-area-top:0px;
+  --system-safe-area-right:0px;
+  --system-safe-area-bottom:0px;
+  --system-safe-area-left:0px;
+  --safe-top:var(--system-safe-area-top);
+  --safe-right:var(--system-safe-area-right);
+  --safe-bottom:var(--system-safe-area-bottom);
+  --safe-left:var(--system-safe-area-left);
+  /* Fallback values for the reusable Jet Note top bar.
+     Runtime values are loaded from shared/components/page_action_bar.json by page_action_bar.js. */
+  --page-action-bar-height:50px;
+  --page-action-bar-control-height:36px;
+  --page-action-bar-title-size:16px;
+  --page-action-bar-control-size:14px;
+  --page-action-bar-left-axis:44px;
+  --page-action-bar-right-axis:44px;
+  --page-action-bar-icon-width:48px;
+  --page-action-bar-text-min-width:48px;
+  --page-action-bar-control-radius:14px;
+  --page-action-bar-background:#f8f9fa;
+  --page-action-bar-border-color:#bfc1c4;
+  --page-action-bar-divider-color:#eceef1;
+  --page-action-bar-title-color:#202124;
+  --page-action-bar-normal-color:#222222;
+  --page-action-bar-primary-color:#1599e8;
+  --page-action-bar-tool-action-color:#168a45;
+  --jet-note-type-settings-set-background:var(--page-background);
+  --jet-note-type-edit-post-background:var(--page-background);
+  --jet-note-type-tools-background:var(--page-background);
+  --jet-note-type-page-action-bar-background:var(--page-background);
+  --jet-note-type-three-post-set-background:var(--page-background);
+  --jet-note-type-three-post-set-body:#fff;
+  --jet-note-type-three-post-internal-control-background:#fff;
+  --jet-note-type-edit-post-right-side-tool-button-background:#fff;
+  --jet-note-type-edit-post-right-side-tools-expanded-button-background:#f5f6f7;
+  --jet-note-type-settings-set-body:#fff;
+  --jet-note-type-body-foreground-color:#111111;
+  --jet-note-type-settings-border-color:#bfc1c4;
+  --jet-note-type-edit-post-border-color:#bfc1c4;
+  --jet-note-type-tools-border-color:#bfc1c4;
+  --jet-note-type-page-action-bar-border-color:#bfc1c4;
+}
+html,body {
+  margin:0;
+  min-height:100%;
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+}
+* {
+  box-sizing:border-box;
+}
+body {
+  background-color:var(--page-background);
+  background-image:var(--page-background-image);
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+
+/* Hide platform/browser scrollbars without disabling scrolling. */
+html,body,.post-compose-body{ scrollbar-width:none; -ms-overflow-style:none; }
+html::-webkit-scrollbar,body::-webkit-scrollbar,.post-compose-body::-webkit-scrollbar{ width:0; height:0; display:none; }
+/* Shared rectangular boundary for Jet Note boxes and box-like controls. */
+.common_border {
+  box-sizing:border-box;
+  border:var(--common-border-width) solid var(--common-border-color);
+  border-radius:var(--common-border-radius);
+}
+
+button,input,textarea {
+  font:inherit;
+  color:inherit;
+}
+button {
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+button:focus-visible {
+  outline:2px solid #1599e8;
+  outline-offset:2px;
+}
+#stage {
+  width:100%;
+  margin:auto;
+}
+.phone {
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  min-height:100dvh;
+  padding:calc(var(--safe-top) + 14px) var(--safe-right) calc(var(--safe-bottom) + 16px) var(--safe-left);
+}
+.header,.ghost-line,.wave3 {
+  display:none;
+}
+.profile {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:0 10px 8px;
+  padding:12px 48px 12px 14px;
+  min-height:92px;
+  border-radius:22px;
+  background:linear-gradient(#ffffffeb,#eff7fbe6);
+}
+.avatar {
+  display:block;
+  width:70px;
+  height:70px;
+  flex-shrink:0;
+  border-radius:50%;
+  object-fit:cover;
+  cursor:pointer;
+}
+.name {
+  min-width:0;
+  font-size:clamp(19px,5.2vw,26px);
+  font-weight:500;
+  overflow-wrap:anywhere;
+  outline:none;
+}
+.settings {
+  position:absolute;
+  top:9px;
+  right:8px;
+  border:0;
+  border-radius:50%;
+  width:36px;
+  height:36px;
+  padding:8px;
+  background:#a7b0ba66;
+  display:grid;
+  place-items:center;
+}
+.settings svg, .settings img {
+  width:22px;
+  height:22px;
+}
+.tabs {
+  display:flex;
+  margin:0 10px;
+  border-radius:0;
+  overflow:visible;
+  background:transparent;
+}
+.tab {
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:76px;
+  border:0;
+  background:transparent;
+  padding:0;
+}
+.tab svg, .tab img {
+  width:30px;
+  height:30px;
+}
+.tab-label {
+  margin-top:6px;
+  font-size:16px;
+  line-height:1.1;
+}
+.main-posts {
+  width:100%;
+  padding:0 var(--content-horizontal-padding);
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+  background:transparent;
+  position:relative;
+  z-index:var(--z-axis-height-content, 0);
+  /* Keep transformed/reflowing Posts inside their own stacking context. */
+  isolation:isolate;
+}
+.post-composer-wrap {
+  width:100%;
+  margin:0;
+  padding:0 var(--content-horizontal-padding);
+  background:transparent;
+}
+.post-composer {
+  display:flex;
+  align-items:center;
+  min-height:54px;
+  background:var(--jet-note-type-three-post-set-body,#fff);
+}
+.post-composer-main {
+  flex:1;
+  min-width:0;
+  min-height:52px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:10px 14px;
+  color:#9da0a4;
+  font-size:16px;
+}
+.post-composer-media-button {
+  width:48px;
+  height:48px;
+  border:0;
+  background:transparent;
+  padding:10px;
+}
+.post-composer-media-button svg, .post-composer-media-button img {
+  width:26px;
+  height:26px;
+}
+.post {
+  /* Keep the published-post padding explicit so full-width media can opt out
+     without duplicating an unexplained 12px magic number elsewhere. */
+  --published-post-horizontal-padding:12px;
+  position:relative;
+  z-index:var(--z-axis-height-content, 0);
+  width:100%;
+  margin:0;
+  padding:12px var(--published-post-horizontal-padding) 14px;
+  background:var(--jet-note-type-three-post-set-body,#fff);
+}
+.post-head {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:42px;
+  padding-right:44px;
+}
+.mini-avatar {
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.post-name {
+  color:var(--blue);
+  font-size:16px;
+  font-weight:600;
+  overflow-wrap:anywhere;
+  min-width:0;
+}
+.text-content {
+  position:relative;
+  margin-top:0;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.post-content-clear {
+  clear:both;
+  height:0;
+}
+.time {
+  position:relative;
+  margin-top:3px;
+  margin-bottom:3px;
+  color:var(--muted);
+  font-size:12px;
+}
+@media(min-width:720px) {
+  .profile,.tabs,.main-posts {
+    max-width:700px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
+/* Keep settings near the top while moving the avatar/name down. The 8px
+   profile bottom padding plus the tab's 10px top padding keeps the avatar
+   bottom about 18px from the feature icon row, safely below the 60px limit. */
+.profile{
+  background:transparent;
+  border-radius:0;
+  padding:36px 44px 8px 4px;
+  min-height:114px;
+  margin-bottom:0
+}
+.tabs{
+  background:transparent;
+  border-radius:0;
+  overflow:visible
+}
+.post-composer-wrap{
+  background:transparent;
+  border-radius:0
+}
+.settings{
+  background:rgba(255,255,255,.48);
+  color:#48515b
+}
+.settings path{
+  fill:currentColor!important
+}
+:root[data-avatar-shape="round"] .avatar,:root[data-avatar-shape="round"] .mini-avatar{
+  border-radius:50%
+}
+:root[data-avatar-shape="square"] .avatar{
+  border-radius:12px
+}
+:root[data-avatar-shape="square"] .mini-avatar{
+  border-radius:7px
+}
+
+/* Three Posts, One Body vertical geometry.
+   The exact signed CSS-pixel offset comes from config.json:
+   three_post_one_body.vertical_move_px. Negative values move the unified body up;
+   positive values move it down. The same value is used for top and the matching
+   flow compensation so Top Post, Post Composer, and Main Posts never drift apart. */
+.three-posts-one-body{
+  position:relative;
+  top:var(--three-post-one-body-vertical-move,-32px);
+  margin-bottom:var(--three-post-one-body-vertical-move,-32px);
+  background:var(--jet-note-type-three-post-set-background,var(--page-background));
+}
+
+/* Layout containers only define geometry. They must stay transparent so gaps,
+   padding and margins reveal the Three Posts, One Body Set Background surface. */
+.three-posts-one-body__layout{
+  background:transparent!important;
+}
+
+/* Real Post surfaces are explicitly marked. Set Body ownership belongs to the surface itself, never to its layout wrapper. */
+.three-posts-one-body__box{
+  background-clip:padding-box;
+}
+
+/* Simplified home: no profile identity or permanent feature tabs. */
+.home-actions{width:100%;padding:8px var(--content-horizontal-padding) 0;}
+.post-head-minimal{
+  position:relative;
+  z-index:5;
+  display:flex;
+  float:none;
+  width:100%;
+  min-height:28px;
+  padding:0;
+  align-items:center;
+  justify-content:space-between;
+}
+.post-head-actions{
+  display:flex;
+  min-width:0;
+  align-items:center;
+  justify-content:flex-end;
+  gap:2px;
+}
+.post-head-minimal .more{
+  position:relative;
+  z-index:6;
+  top:0!important;
+  pointer-events:auto;
+}
+
+
+/* Three Posts, One Body border rules are state-aware and configured in config.json. */
+#topPostCard .post-surface[data-post-role="top"].common_border{border-color:var(--three-post-one-body-top-post-super-star-border-color,var(--common-border-color));}
+#postComposerMount .post-composer.common_border{border-color:var(--three-post-one-body-post-composer-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-not-star.common_border{border-color:var(--three-post-one-body-main-posts-non-star-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-star.common_border{border-color:var(--three-post-one-body-main-posts-star-border-color,var(--common-border-color));}
+
+/* Ordinary content follows the automatic contrast color of current_body.
+   State-specific timestamps and semantic feedback colors remain independent. */
+#topPostCard,
+#postComposerMount .post-composer,
+#mainPosts article.post,
+#topPostCard .text-content,
+#mainPosts article.post .text-content {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+#postComposerMount .post-composer-main,
+#postComposerMount .post-composer-media-button {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+
+/* Per-star-state visual settings supplied by config.json. */
+.post-surface[data-post-role="main"] > .post-head > .time,
+.post-surface[data-post-role="top"] > .post-head > .time{
+  color:var(--post-state-time-color,var(--muted));
+  margin-top:var(--post-state-time-top-margin,3px);
+  margin-bottom:var(--post-state-time-bottom-margin,3px);
+}
+
+/* Super Star: keep a short post's timestamp at the lower-left of its content column.
+   This remains normal flow: longer content grows the card and pushes the time down. */
+
+/* Home main_status_bar: one outer box only.
+   The old four region wrappers and the Settings three-way sub-grid were removed.
+   The four visible controls are positioned directly against the outer bar using
+   the same historical anchors, so existing config offsets keep their meaning. */
+.main-status-bar{
+  position:relative;
+  transform:translateY(var(--main-status-bar-vertical-move,0px));
+  width:calc(100% - (2 * var(--main-status-bar-horizontal-margin,8px)));
+  height:var(--main-status-bar-height,52px);
+  box-sizing:border-box;
+  overflow:visible;
+  margin:var(--main-status-bar-top-margin,0px) var(--main-status-bar-horizontal-margin,8px) var(--main-status-bar-bottom-margin,0px);
+  font-size:var(--main-status-bar-font-size,16px);
+  line-height:1;
+  color:#111;
+}
+.main-status-bar-battery-icon{
+  position:absolute;
+  top:50%;
+  left:calc(12.5% - ((var(--main-status-bar-battery-icon-size,30px) + var(--main-status-bar-battery-gap,7px) + 3.2ch) / 2));
+  display:block;
+  width:var(--main-status-bar-battery-icon-size,30px);
+  height:var(--main-status-bar-battery-icon-size,30px);
+  object-fit:contain;
+  transform:translate(var(--main-status-bar-battery-icon-horizontal-offset,0px),-50%) rotate(90deg);
+}
+.main-status-bar-battery-percentage{
+  position:absolute;
+  top:50%;
+  left:calc(12.5% - ((var(--main-status-bar-battery-icon-size,30px) + var(--main-status-bar-battery-gap,7px) + 3.2ch) / 2) + var(--main-status-bar-battery-icon-size,30px) + var(--main-status-bar-battery-gap,7px));
+  display:block;
+  min-width:3.2ch;
+  white-space:nowrap;
+  text-align:left;
+  font-variant-numeric:tabular-nums;
+  transform:translate(var(--main-status-bar-battery-percentage-horizontal-offset,0px),-50%);
+}
+.main-status-bar-time{
+  position:absolute;
+  top:50%;
+  right:calc(25% + var(--main-status-bar-time-right-padding,0px));
+  display:block;
+  width:max-content;
+  max-width:none;
+  white-space:nowrap;
+  overflow:visible;
+  overflow-wrap:normal;
+  word-break:keep-all;
+  font-variant-numeric:tabular-nums;
+  transform:translate(var(--main-status-bar-time-text-horizontal-offset,0px),-50%);
+}
+.main-status-bar-settings-button{
+  position:absolute;
+  top:50%;
+  left:87.5%;
+  width:var(--main-status-bar-settings-button-size,44px);
+  height:var(--main-status-bar-settings-button-size,44px);
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:#626a73;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transform:translate(calc(-50% + var(--main-status-bar-settings-button-horizontal-offset,0px)),-50%);
+}
+.main-status-bar-settings-button svg,
+.main-status-bar-settings-button img{
+  display:block;
+  width:var(--main-status-bar-settings-icon-size,30px);
+  height:var(--main-status-bar-settings-icon-size,30px);
+  fill:currentColor;
+}
+.main-status-bar-settings-button:active{background:rgba(98,106,115,.08);}

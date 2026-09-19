@@ -1,0 +1,31 @@
+{
+  "three_post_one_body": {
+    "vertical_move_px": -32,
+    "surface_vertical_gap_px": 6,
+    "font_size_px": 17,
+    "top_post": {
+      "super_star": {
+        "time_stamp_color": "999da2",
+        "time_stamp_top_margin": 10,
+        "time_stamp_bottom_margin": 3
+      }
+    },
+    "main_posts": {
+      "interaction_timing": {
+        "post_horizontal_ellipsis_menu_dismiss_delay_ms": 100,
+        "delete_content_to_border_clear_delay_ms": 140,
+        "delete_border_clear_to_reflow_delay_ms": 140
+      },
+      "non_star": {
+        "time_stamp_color": "999da2",
+        "time_stamp_top_margin": 3,
+        "time_stamp_bottom_margin": 3
+      },
+      "star": {
+        "time_stamp_color": "999da2",
+        "time_stamp_top_margin": 3,
+        "time_stamp_bottom_margin": 3
+      }
+    }
+  }
+}

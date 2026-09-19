@@ -1,0 +1,38 @@
+<!-- New Post page fragment -->
+  <section class="post-compose-screen" id="postComposeScreen">
+    <div class="page-action-bar post-compose-header buttom-string-buttom-bar" data-buttom-string-buttom-bar-page="new_post_page">
+      <button class="page-action-bar-control page-action-bar-left common_border post-compose-cancel" type="button" data-buttom-string-buttom-bar-side="left"></button>
+      <div class="page-action-bar-title post-compose-title" data-buttom-string-buttom-bar-title></div>
+      <button class="page-action-bar-control page-action-bar-right common_border post-compose-publish" type="button" data-buttom-string-buttom-bar-side="right"></button>
+    </div>
+
+    <div class="post-compose-body">
+      <div class="post-input-row">
+        <textarea id="postComposerText" placeholder="" data-language-placeholder="share"></textarea>
+
+        <!-- Two fixed attachment rows intentionally consume the height removed from
+             the text editor. The Tools row itself is not moved or resized. -->
+        <div class="post-compose-attachment-stack" aria-label="" data-language-aria-label="postAttachmentsAccessibilityLabel">
+          <div class="post-compose-attachment-row post-compose-audio-row">
+            <div id="postAudioDraft"></div>
+          </div>
+          <div class="post-compose-attachment-row post-compose-media-row">
+            <div class="compose-media-preview post-compose-visual-media" id="postVisualMediaPreview"></div>
+            <div id="postImagePreview" hidden></div>
+            <div id="postVideoPreview" hidden></div>
+          </div>
+        </div>
+
+        <!-- Tool/Toolbox slots are rendered from tools/tools.json; tool_m1 expands toolbox_* children leftward over primary slots. -->
+        <div class="tools" id="postEditorTools" aria-label="" data-language-aria-label="postTools"></div>
+      </div>
+
+    </div>
+  </section>
+  <input id="postAudioPicker" type="file" accept="audio/*,.mp3" multiple hidden onchange="handleAudioFiles(event,'post')">
+  <input id="postVideoPicker"
+         type="file"
+         accept="video/*"
+         multiple
+         style="display:none"
+         onchange="handlePostVideos(event)">
