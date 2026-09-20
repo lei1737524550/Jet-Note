@@ -1,0 +1,19 @@
+Jet Note is a lightweight note-taking and information collection app for Android.
+
+Create notes that combine text, images, audio, and video. Favorite important notes for quick access, with recently favorited items shown first.
+
+Jet Note also includes web-oriented tools for searching, looking up words, and collecting useful resources while browsing. When supported media is detected on a web page, you can save images, audio, or video to your device.
+
+Features:
+* Create and organize text notes
+* Add images, audio, and video to notes
+* Favorite notes for quick access
+* Browse the web and detect supported media resources
+* Save detected media individually or in batches
+* Use built-in search, sentence, and dictionary tools
+* Import and export .jnote backups
+* Switch between Chinese and English
+* Customize the interface appearance
+* Reopen the built-in tutorial from Settings
+
+Jet Note is designed for people who want note-taking, browsing tools, and media collection in a single workflow.

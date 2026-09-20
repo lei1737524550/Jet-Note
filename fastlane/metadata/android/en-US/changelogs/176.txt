@@ -1,0 +1,1 @@
+Jet Note 8.0.6. Current release prepared for F-Droid metadata and source-based distribution.

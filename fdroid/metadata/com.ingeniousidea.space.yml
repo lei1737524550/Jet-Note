@@ -1,0 +1,23 @@
+# Draft for fdroiddata/metadata/com.ingeniousidea.space.yml
+# Prepared for fdroiddata submission.
+Categories:
+  - Writing
+License: GPL-3.0-only
+SourceCode: https://github.com/lei1737524550/Jet-Note
+IssueTracker: https://github.com/lei1737524550/Jet-Note/issues
+
+RepoType: git
+Repo: https://github.com/lei1737524550/Jet-Note.git
+
+Builds:
+  - versionName: 8.0.6
+    versionCode: 176
+    commit: v8.0.6
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version %v
+UpdateCheckMode: Tags
+CurrentVersion: 8.0.6
+CurrentVersionCode: 176
