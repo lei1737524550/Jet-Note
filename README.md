@@ -75,7 +75,7 @@ Use the built-in color controls to customize the appearance of Jet Note.
 
 ## In Short
 
-**Jet Note is designed not only for writing things down, but also for finding, collecting, and organizing information and media while you work.**
+>**Jet Note is designed not only for writing things down, but also for finding, collecting, and organizing information and media while you work.**
 
 
 ## License
@@ -155,8 +155,8 @@ See the [LICENSE](LICENSE) file for details.
 ## 简而言之
 
 > **Jet Note 不仅用于记录内容，也用于在使用过程中查找、收集和整理信息与多媒体资源。**
->
-> ## 开源许可证
+
+## 开源许可证
 
 Jet Note 采用 GNU 通用公共许可证第 3 版（GPL-3.0-only）进行许可。
 
