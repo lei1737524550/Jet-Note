@@ -1,0 +1,28 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.leixj.jetnote.app-mergeDebugResources-2:/values-v29/values-v29.xml",
+            "map": [
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values-v29/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "13",
+                        "endColumns": "12",
+                        "endOffsets": "854"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "13",
+                        "endColumns": "12",
+                        "endOffsets": "711"
+                    }
+                }
+            ]
+        }
+    ]
+}

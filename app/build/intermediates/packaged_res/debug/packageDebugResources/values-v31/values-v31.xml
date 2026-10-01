@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.JetNote" parent="@android:style/Theme.Material.Light.NoActionBar">
+        
+        <item name="android:windowSplashScreenBackground">#AED194</item>
+        
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/jetnote_system_splash_transparent</item>
+        
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+
+        <item name="android:windowBackground">@drawable/jetnote_startup_window</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#AED194</item>
+        <item name="android:statusBarColor">#AED194</item>
+        <item name="android:colorControlActivated">#14A89A</item>
+        <item name="android:colorAccent">#14A89A</item>
+        <item name="android:textCursorDrawable">@drawable/jetnote_text_cursor</item>
+    </style>
+</resources>

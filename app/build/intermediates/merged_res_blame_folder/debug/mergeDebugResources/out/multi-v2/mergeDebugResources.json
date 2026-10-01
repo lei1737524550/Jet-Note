@@ -1,0 +1,110 @@
+{
+    "logs": [
+        {
+            "outputFile": "/data/data/com.termux/files/home/.gradle/daemon/8.11.1/com.leixj.jetnote.app-debug-4:/values_values.arsc.flat",
+            "map": [
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values/strings.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "45",
+                        "endOffsets": "96"
+                    }
+                },
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "12",
+                        "endColumns": "12",
+                        "endOffsets": "764"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "101",
+                        "endLines": "13",
+                        "endColumns": "12",
+                        "endOffsets": "672"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "/data/data/com.termux/files/home/.gradle/daemon/8.11.1/com.leixj.jetnote.app-debug-4:/values-v31_values-v31.arsc.flat",
+            "map": [
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values-v31/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "20",
+                        "endColumns": "12",
+                        "endOffsets": "1489"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "20",
+                        "endColumns": "12",
+                        "endOffsets": "1075"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "/data/data/com.termux/files/home/.gradle/daemon/8.11.1/com.leixj.jetnote.app-debug-4:/values-v29_values-v29.arsc.flat",
+            "map": [
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values-v29/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "13",
+                        "endColumns": "12",
+                        "endOffsets": "854"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "13",
+                        "endColumns": "12",
+                        "endOffsets": "711"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.leixj.jetnote.app-debug-4:/values-v31_values-v31.arsc.flat",
+            "map": [
+                {
+                    "source": "/storage/emulated/0/Jet_Note_dev/app/src/main/res/values-v31/styles.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "20",
+                        "endColumns": "12",
+                        "endOffsets": "1559"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "20",
+                        "endColumns": "12",
+                        "endOffsets": "1089"
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,10 @@
+com.leixj.jetnote:string/app_name = 0x7f030000
+com.leixj.jetnote:mipmap/ic_launcher_round = 0x7f020001
+com.leixj.jetnote:drawable/jetnote_text_cursor = 0x7f010005
+com.leixj.jetnote:drawable/jetnote_startup_window = 0x7f010003
+com.leixj.jetnote:style/Theme.JetNote = 0x7f040000
+com.leixj.jetnote:drawable/ic_launcher_background = 0x7f010000
+com.leixj.jetnote:drawable/ic_launcher_foreground = 0x7f010001
+com.leixj.jetnote:drawable/jetnote_system_splash_transparent = 0x7f010004
+com.leixj.jetnote:mipmap/ic_launcher = 0x7f020000
+com.leixj.jetnote:drawable/jetnote_splash_icon = 0x7f010002
