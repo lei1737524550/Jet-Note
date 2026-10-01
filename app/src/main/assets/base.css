@@ -1,0 +1,290 @@
+/* WebView 的语义化 Z 轴高度。
+   将层叠策略集中管理，避免使用 Integer.MAX_VALUE 一类的 z-index 竞争。 */
+:root {
+  --z-axis-height-content: 0;
+  --z-axis-height-controls: 1000;
+  --z-axis-height-screen: 10000;
+  --z-axis-height-overlay: 50000;
+  --z-axis-height-post-action: 90000;
+  --z-axis-height-image-viewer: 100000;
+}
+:root {
+  color-scheme: light;
+  --ink:#111214;
+  --muted:#999da2;
+  --blue:#315f98;
+  --page-background:rgb(255,255,255);
+  --page-background-image:none;
+
+  /* 当前实时外观的标准数据源。
+     在语义上表示“设置背景 / 设置主体”的组件可以直接绑定这些变量，
+     无需再通过特定功能的选择器重新推导颜色。 */
+  --jet-note-current-background:var(--page-background);
+  --jet-note-current-body-background:#fff;
+  --card-radius:14px;
+  --common-border-color:#bfc1c4;
+  --common-border-width:1px;
+  --common-border-radius:14px;
+  --content-horizontal-padding:8px;
+
+  /* Android WindowInsets 是系统安全区域的唯一数据源。
+     不要再与 env(safe-area-inset-*) 叠加，否则刘海/状态栏 Insets
+     可能被重复计算，或者直到后续 viewport 事件发生后才错误出现。 */
+  --system-safe-area-top:0px;
+  --system-safe-area-right:0px;
+  --system-safe-area-bottom:0px;
+  --system-safe-area-left:0px;
+  --safe-top:var(--system-safe-area-top);
+  --safe-right:var(--system-safe-area-right);
+  --safe-bottom:var(--system-safe-area-bottom);
+  --safe-left:var(--system-safe-area-left);
+
+  /* Jet Note 可复用顶部栏的备用值。
+     运行时实际值由 page_action_bar.js
+     从 src/shared/ui/action_bar/page_action_bar.json 加载。 */
+  --page-action-bar-height:50px;
+  --page-action-bar-control-height:36px;
+  --page-action-bar-title-size:16px;
+  --page-action-bar-control-size:14px;
+  --page-action-bar-left-axis:44px;
+  --page-action-bar-right-axis:44px;
+  --page-action-bar-icon-width:48px;
+  --page-action-bar-text-min-width:48px;
+  --page-action-bar-control-radius:14px;
+  --page-action-bar-background:#f8f9fa;
+  --page-action-bar-border-color:#bfc1c4;
+  --page-action-bar-divider-color:#eceef1;
+  --page-action-bar-title-color:#202124;
+  --page-action-bar-normal-color:#222222;
+  --page-action-bar-primary-color:#1599e8;
+  --page-action-bar-tool-action-color:#168a45;
+  --jet-note-type-settings-set-background:var(--page-background);
+  --jet-note-type-edit-post-background:var(--page-background);
+  --jet-note-type-tools-background:var(--page-background);
+  --jet-note-type-page-action-bar-background:var(--page-background);
+  --jet-note-type-three-post-set-body:#fff;
+  --jet-note-type-three-post-internal-control-background:#fff;
+  --jet-note-type-edit-post-right-side-tool-button-background:#fff;
+  --jet-note-type-edit-post-right-side-tools-expanded-button-background:#f5f6f7;
+  --jet-note-type-settings-set-body:#fff;
+  --jet-note-type-body-foreground-color:#111111;
+  --jet-note-type-settings-border-color:#bfc1c4;
+  --jet-note-type-edit-post-border-color:#bfc1c4;
+  --jet-note-type-tools-border-color:#bfc1c4;
+  --jet-note-type-page-action-bar-border-color:#bfc1c4;
+}
+html,body {
+  margin:0;
+  min-height:100%;
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+}
+* {
+  box-sizing:border-box;
+}
+body {
+  background-color:var(--note-surface);
+  background-image:var(--page-background-image);
+  background-size:cover;
+  background-position:center;
+  background-attachment:fixed;
+  overflow-x:hidden;
+}
+
+/* 隐藏平台/浏览器滚动条，但不禁用页面滚动。 */
+html,body,.post-compose-body{ scrollbar-width:none; -ms-overflow-style:none; }
+html::-webkit-scrollbar,body::-webkit-scrollbar,.post-compose-body::-webkit-scrollbar{ width:0; height:0; display:none; }
+
+/* Jet Note 方框及方框类控件共用的矩形边界样式。 */
+.common_border {
+  box-sizing:border-box;
+  border:var(--common-border-width) solid var(--common-border-color);
+  border-radius:var(--common-border-radius);
+}
+
+button,input,textarea {
+  font:inherit;
+  color:inherit;
+}
+button {
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+button:focus-visible {
+  outline:2px solid #1599e8;
+  outline-offset:2px;
+}
+#stage {
+  width:100%;
+  margin:auto;
+}
+.phone {
+  position:relative;
+  width:100%;
+  min-height:100vh;
+  min-height:100dvh;
+  padding:var(--safe-top) var(--safe-right) calc(var(--safe-bottom) + 16px) var(--safe-left);
+}
+.main-posts {
+  width:100%;
+  padding:0 var(--content-horizontal-padding);
+  display:flex;
+  flex-direction:column;
+  gap:var(--post-surface-vertical-gap,6px);
+  background:transparent;
+  position:relative;
+  z-index:var(--z-axis-height-content, 0);
+
+  /* 将正在进行 transform / reflow 的帖子限制在自己的层叠上下文中。 */
+  isolation:isolate;
+}
+.post-composer-wrap {
+  width:100%;
+  margin:0;
+  padding:0 var(--content-horizontal-padding);
+  background:transparent;
+}
+.post-composer {
+  display:flex;
+  align-items:center;
+  min-height:54px;
+  background:var(--jet-note-type-three-post-set-body,#fff);
+}
+.post-composer-main {
+  flex:1;
+  min-width:0;
+  min-height:52px;
+  border:0;
+  background:transparent;
+  text-align:left;
+  padding:10px var(--note-column-padding);
+  color:#9da0a4;
+}
+.post-composer-media-button {
+  width:48px;
+  height:48px;
+  border:0;
+  background:transparent;
+  padding:10px;
+}
+.post-composer-media-button svg, .post-composer-media-button img {
+  width:26px;
+  height:26px;
+}
+.post {
+  /* 明确定义已发布帖子的水平内边距，
+     这样需要全宽显示的媒体可以主动取消该间距，
+     而不必在其他位置重复写一个来源不明的 12px 魔法数字。 */
+  --published-post-horizontal-padding:var(--note-column-padding);
+  position:relative;
+  z-index:var(--z-axis-height-content, 0);
+  width:100%;
+  margin:0;
+  padding:12px var(--published-post-horizontal-padding) 14px;
+  background:var(--jet-note-type-three-post-set-body,#fff);
+}
+.post-head {
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:42px;
+  padding-right:44px;
+}
+
+.text-content {
+  position:relative;
+  margin-top:0;
+}
+.post-content-clear {
+  clear:both;
+  height:0;
+}
+.time {
+  position:relative;
+  margin-top:3px;
+  margin-bottom:3px;
+  color:var(--muted);
+  font-size:12px;
+}
+
+
+/* 顶部边缘完全由原生 WindowInsets 管理；
+   不再使用旧版状态栏行偏移。 */
+.three-posts-one-body{
+  position:relative;
+  background:var(--note-surface);
+}
+
+/* 布局容器只负责几何结构。
+   必须保持透明，使间隙、padding 和 margin 能露出
+   “Three Posts, One Body”的 Set Background 背景表面。 */
+.three-posts-one-body__layout{
+  background:transparent!important;
+}
+
+/* 真正的 Post 表面会被明确标记。
+   Set Body 的归属属于表面本身，绝不能属于它的布局包装容器。 */
+.three-posts-one-body__box{
+  background-clip:padding-box;
+}
+
+/* 简化主页：不显示个人身份区域，也不保留永久功能标签栏。 */
+.home-actions{width:100%;padding:0 var(--content-horizontal-padding) 0;}
+.post-head-minimal{
+  position:relative;
+  z-index:5;
+  display:flex;
+  float:none;
+  width:100%;
+  min-height:28px;
+  padding:0;
+  align-items:center;
+  justify-content:space-between;
+}
+.post-head-actions{
+  display:flex;
+  min-width:0;
+  align-items:center;
+  justify-content:flex-end;
+  gap:2px;
+}
+.post-head-minimal .more{
+  position:relative;
+  z-index:6;
+  pointer-events:auto;
+}
+
+/* “Three Posts, One Body”的边框规则会根据状态变化，
+   具体配置来自 config.json。 */
+#topPostCard .post-surface[data-post-role="top"].common_border{border-color:var(--three-post-one-body-top-post-super-star-border-color,var(--common-border-color));}
+#postComposerMount .post-composer.common_border{border-color:var(--three-post-one-body-post-composer-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-not-star.common_border{border-color:var(--three-post-one-body-main-posts-non-star-border-color,var(--common-border-color));}
+#mainPosts article.post.post-state-star.common_border{border-color:var(--three-post-one-body-main-posts-star-border-color,var(--common-border-color));}
+
+/* 普通内容跟随 current_body 自动计算出的对比色。
+   不同状态的时间戳颜色以及具有语义意义的反馈颜色保持独立。 */
+#topPostCard,
+#postComposerMount .post-composer,
+#mainPosts article.post,
+#topPostCard .text-content,
+#mainPosts article.post .text-content {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+#postComposerMount .post-composer-main,
+#postComposerMount .post-composer-media-button {
+  color:var(--jet-note-type-body-foreground-color,#111111);
+}
+
+/* 由 config.json 提供的各个 Star 状态视觉配置。 */
+.post-surface[data-post-role="main"] > .post-head > .time,
+.post-surface[data-post-role="top"] > .post-head > .time{
+  color:var(--post-state-time-color,var(--muted));
+  margin-top:var(--post-state-time-top-margin,3px);
+  margin-bottom:var(--post-state-time-bottom-margin,3px);
+}
+
+/* Super Star：
+   当帖子内容较短时，让时间戳保持在内容列左下方。
+   这里仍然使用正常文档流：
+   内容变长时卡片会自然增高，并将时间戳继续向下推。 */

@@ -1,0 +1,1270 @@
+/* =========================================================
+   Post Editor
+   ========================================================= */
+
+.post-compose-screen {
+  --audio-control-background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
+
+  position: fixed;
+  left: var(--viewport-offset-left, 0px);
+  top: 0;
+  width: var(--viewport-width, 100vw);
+  height: max(100dvh, var(--editor-stable-viewport-height, 100dvh));
+
+  z-index: 9999;
+
+  display: none;
+  flex-direction: column;
+
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--content-bottom);
+  padding-left: var(--safe-left);
+
+  background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
+
+}
+
+.post-compose-screen.open {
+  display: flex;
+}
+
+
+/* =========================================================
+   Header / Page Action Bar
+   ========================================================= */
+
+.post-compose-cancel,
+.post-compose-publish {
+  width: var(--page-action-bar-icon-width);
+  min-width: var(--page-action-bar-icon-width);
+  padding: 0;
+}
+
+.post-compose-cancel.page-action-bar-string,
+.post-compose-publish.page-action-bar-string {
+  width: auto;
+  min-width: var(--page-action-bar-text-min-width);
+  padding-inline: 12px;
+}
+
+.post-compose-cancel {
+  color: var(--page-action-bar-normal-color);
+}
+
+.post-compose-publish {
+  color: var(--page-action-bar-primary-color);
+}
+
+.post-compose-cancel-icon,
+.post-compose-send-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.post-compose-send-icon {
+  background: currentColor;
+
+  -webkit-mask:
+    url('/assets/src/shared/icons/send_svg_repo_com.svg')
+    center / contain
+    no-repeat;
+
+  mask:
+    url('/assets/src/shared/icons/send_svg_repo_com.svg')
+    center / contain
+    no-repeat;
+}
+
+
+/* =========================================================
+   Editor Body
+   ========================================================= */
+
+.post-compose-body {
+  position: relative;
+
+  display: flex;
+  flex: 0 0 auto;
+  height: max(0px, calc(var(--editor-visible-viewport-height, 100dvh) - var(--safe-top) - var(--page-action-bar-height) - var(--content-bottom, 0px)));
+  box-sizing: border-box;
+  flex-direction: column;
+
+  min-height: 0;
+  margin-top: 0;
+  /* Always reserve the same lower panel; attachment mutations cannot move tools. */
+  padding: 22px 0 calc(26px + 48px + 24px + var(--media-card-height));
+  --media-picture-height: var(--post-editor-attachment-row-height, 48px);
+  --media-card-height: calc(var(--media-picture-height) + var(--media-seek-height) + var(--media-time-height));
+
+  overflow: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+
+  background: var(
+    --jet-note-type-edit-post-background,
+    var(--page-background)
+  );
+}
+
+
+/*
+ * Editor layout:
+ *
+ *   row 1 — text
+ *   row 2 — tools
+ *   row 3 — independent optional attachments below the toolbar
+ *
+ * Text absorbs viewport-height changes.
+ * Attachment and tool rows retain their own geometry.
+ */
+.post-compose-body > .post-input-row {
+  --post-editor-vertical-section-gap: 12px;
+  --post-editor-tools-row-height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  position: relative;
+
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) var(--post-editor-tools-row-height);
+  align-content: stretch;
+
+  flex: 1 1 auto;
+
+  width: 100%;
+  max-width: var(--note-column-max-width);
+  margin-inline: auto;
+  padding-inline: var(--note-column-padding);
+  border-inline: var(--note-border-width) solid transparent;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+
+  gap: var(--post-editor-vertical-section-gap);
+
+  overflow: visible;
+}
+
+
+/* =========================================================
+   Text Editor
+   ========================================================= */
+
+#postComposerText {
+  grid-row: 1;
+
+  display: block;
+  box-sizing: border-box;
+
+  width: 100%;
+  height: auto !important;
+
+  flex: 1 1 0 !important;
+
+  min-height: 0 !important;
+  max-height: none !important;
+
+
+
+  scroll-margin-top: 70px;
+
+  resize: none;
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: var(--jet-note-type-body-foreground-color);
+
+
+  /*
+   * Native WebView caret keeps its position aligned
+   * with the Android selection handle.
+   */
+  caret-color: var(
+    --post-compose-caret-color,
+    #14A89A
+  );
+
+}
+
+#postComposerText::placeholder {
+  color: #a5a8ad;
+}
+
+#postComposerText::selection {
+  background: var(
+    --cursor-drop-color,
+    #14A89A
+  );
+
+  color: #fff;
+}
+
+
+/* =========================================================
+   Shared Editor Controls
+   ========================================================= */
+
+.post-input-row .tool,
+.post-input-row .toolbox_tool,
+.post-input-row .toolbox-trigger {
+  color: var(
+    --jet-note-type-body-foreground-color,
+    #111111
+  );
+}
+
+.post-compose-screen .common_border {
+  border-color: var(
+    --jet-note-type-edit-post-border-color,
+    var(--common-border-color)
+  );
+}
+
+
+/* =========================================================
+   Attachment Stack
+   ========================================================= */
+
+.post-compose-attachment-stack {
+  position: absolute;
+  top: calc(100% + var(--post-editor-vertical-section-gap));
+  left: var(--note-column-padding);
+  right: var(--note-column-padding);
+
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+
+  height: auto;
+  min-height: 0;
+
+  gap: var(
+    --post-editor-vertical-section-gap,
+    12px
+  );
+
+  overflow: visible;
+}
+
+.post-compose-attachment-row {
+  position: relative;
+
+  display: flex;
+  flex: 0 0 var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  align-items: center;
+
+  height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  min-height: 0;
+  box-sizing: border-box;
+
+
+
+  overflow: hidden;
+}
+
+
+/* Collapse attachment rows that have no real content. */
+.post-compose-audio-row:not(
+  :has(#postAudioDraft > *)
+) {
+  display: none !important;
+}
+
+.post-compose-media-row:not(
+  :has(#postVisualMediaPreview > *)
+) {
+  display: none !important;
+}
+
+
+/* =========================================================
+   Audio Attachments
+   ========================================================= */
+
+.post-compose-audio-row #postAudioDraft {
+  width: 100%;
+  min-width: 0;
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.attachment-strip {
+  height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  min-height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  margin: 0;
+
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.attachment-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.audio-token {
+  position: relative;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  width: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+
+  overflow: visible;
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.audio-token-play {
+  margin: 0;
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.audio-token-play svg,
+.post-compose-audio-row
+#postAudioDraft
+.audio-token-play img {
+  /*
+   * Speaker glyph is optically right-heavy.
+   * Correct the glyph without moving its button.
+   */
+  transform: translateX(-4px);
+}
+
+.post-compose-audio-row
+#postAudioDraft
+.audio-token-remove {
+  top: 0;
+  right: 0;
+
+  margin: 0;
+  z-index: 6;
+}
+
+
+/* Keep editor audio controls tied to the editor page background. */
+.post-compose-screen .audio-token-play,
+.post-compose-screen .audio-token-remove {
+  background-color: var(
+    --audio-control-background
+  );
+}
+
+
+/* =========================================================
+   Unified Image / Video Attachment Rail
+   ========================================================= */
+
+.post-compose-media-row {
+  align-items: flex-end;
+
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-bottom: 0;
+
+  overflow: visible;
+}
+
+.post-compose-visual-media {
+  position: relative;
+
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: flex-end;
+
+  width: 100%;
+
+  /*
+   * The visual rail owns its current attachment-row height.
+   * No runtime configuration file is involved.
+   */
+  height: var(
+    --post-editor-attachment-row-height,
+    84px
+  );
+
+  gap: 4px;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.post-compose-visual-media::-webkit-scrollbar {
+  display: none;
+}
+
+
+/*
+ * Three visual attachments are visible at once.
+ * Two 4px gaps occupy 8px total.
+ */
+.post-compose-visual-media .compose-image-item,
+.post-compose-visual-media .video-attachment-shell {
+  position: relative;
+
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+
+  margin: 0;
+
+  box-sizing: border-box;
+
+  overflow: hidden;
+
+  scroll-snap-align: start;
+
+  border: 0 !important;
+  border-radius: 0;
+
+  background: transparent;
+}
+
+
+/* =========================================================
+   Image Attachment
+   ========================================================= */
+
+.post-compose-visual-media
+.compose-image-item img {
+  display: block;
+
+  width: 100%;
+  max-width: var(--note-column-max-width);
+  margin-inline: auto;
+  padding-inline: var(--note-column-padding);
+  border-inline: var(--note-border-width) solid transparent;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+
+/* =========================================================
+   Video Attachment
+   ========================================================= */
+
+/* =========================================================
+   Media Remove Control
+   ========================================================= */
+
+.post-compose-visual-media
+.compose-image-remove {
+  position: absolute;
+
+  top: 2px;
+  right: 2px;
+
+  width: 20px;
+  height: 20px;
+
+  padding: 0;
+  margin: 0;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: transparent;
+  color: #fff;
+
+  font-size: 18px;
+  line-height: 20px;
+
+  z-index: 20;
+}
+
+/*
+ * White under difference blending yields the RGB complement
+ * of the pixel underneath the X without video canvas sampling.
+ */
+.post-compose-visual-media
+.adaptive-complement-remove {
+  mix-blend-mode: difference;
+  isolation: auto;
+}
+
+
+/* =========================================================
+   More-Media Indicator
+   ========================================================= */
+
+.post-compose-visual-media
+.compose-media-more-indicator {
+  position: sticky;
+  right: 0;
+
+  align-self: center;
+
+  display: grid;
+  place-items: center;
+
+  flex: 0 0 12px;
+
+  width: 12px;
+  height: 28px;
+
+  z-index: 30;
+
+  pointer-events: none;
+}
+
+.post-compose-visual-media
+.compose-media-more-indicator img {
+  display: block;
+
+  width: 12px;
+  height: 28px;
+}
+
+
+/* =========================================================
+   Tools
+   ========================================================= */
+
+#postEditorTools {
+
+  flex: 0 0 auto;
+
+  min-height: var(
+    --post-editor-attachment-row-height,
+    48px
+  );
+}
+
+/*
+ * Musical-note glyph is optically right-heavy.
+ * Correct the glyph without moving the Tools button.
+ */
+#postEditorTools
+.tool[data-tool-action="sound"] svg,
+#postEditorTools
+.tool[data-tool-action="sound"] img {
+  transform: translateX(-2.5px);
+}
+
+
+/* =========================================================
+   Keyboard Open
+   ========================================================= */
+
+/*
+ * The visible viewport already ends at the IME top.
+ * Do not introduce a second keyboard gap.
+ */
+:root[data-jetnote-keyboard-open="true"]
+.post-compose-body {
+  padding-bottom: 11px;
+}
+
+:root[data-jetnote-keyboard-open="true"]
+#postEditorTools.tools {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  align-items: flex-end;
+}
+/* The keyboard covers the lower panel. Tools remain at the screenshot's
+   11px inset, independently of the number or type of attachments. */
+:root[data-jetnote-keyboard-open="true"] .post-compose-attachment-stack {
+  visibility: hidden;
+  pointer-events: none;
+}
+.post-compose-attachment-stack:not(:has(#postAudioDraft > *, #postVisualMediaPreview > *)) {
+  display: none;
+}
+
+/* Attachment rail sizing: the rail spans the full editor width; each of the
+   three visible visual attachments owns exactly one third of that rail. */
+.post-compose-media-row {
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+}
+
+.post-compose-media-row > .post-compose-visual-media {
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.post-compose-visual-media > .compose-image-item,
+.post-compose-visual-media > .video-attachment-shell {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+}
+
+
+/* 2026-10 editor layout: keyboard-open geometry is canonical. */
+.post-editor-tool-line {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: var(--post-editor-tools-row-height, 48px);
+  gap: 16px;
+}
+
+#postEditorTools.tools {
+  display: flex !important;
+  width: auto;
+  justify-content: center;
+  align-items: center;
+  gap: 16px !important;
+}
+
+.post-editor-audio-slot {
+  flex: 0 0 var(--post-editor-attachment-row-height, 48px);
+  width: var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+  min-width: 0;
+  overflow: visible;
+}
+.post-editor-audio-slot[hidden] { display: none !important; }
+.post-editor-audio-slot .attachment-strip {
+  display: contents;
+}
+.post-editor-audio-slot .audio-token {
+  position: relative;
+  width: var(--post-editor-attachment-row-height, 48px);
+  height: var(--post-editor-attachment-row-height, 48px);
+  margin: 0;
+}
+.post-editor-audio-slot .audio-token-play { margin: 0; }
+.post-editor-audio-slot .audio-token-remove { top: 0; right: 0; }
+#postEditorTools.tools > .tool,
+#postEditorTools.tools > .toolbox_tool,
+#postEditorTools.tools > .toolbox-trigger {
+  flex: 0 0 auto;
+}
+
+
+/* Editor single-audio control: it is the fourth item in the same tool row,
+   immediately after the image button. Never anchor it to the viewport edge. */
+.post-editor-tool-line > #postAudioDraft.post-editor-audio-slot {
+  position: static !important;
+  inset: auto !important;
+  flex: 0 0 var(--post-editor-tools-row-height, 48px) !important;
+  width: var(--post-editor-tools-row-height, 48px) !important;
+  height: var(--post-editor-tools-row-height, 48px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+.post-editor-tool-line > #postAudioDraft .attachment-strip {
+  display: contents !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.post-editor-tool-line > #postAudioDraft .audio-token {
+  position: relative !important;
+  display: grid !important;
+  place-items: center !important;
+  width: var(--post-editor-tools-row-height, 48px) !important;
+  height: var(--post-editor-tools-row-height, 48px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+.post-editor-tool-line > #postAudioDraft .audio-token-play {
+  position: relative !important;
+  width: var(--post-editor-tools-row-height, 48px) !important;
+  height: var(--post-editor-tools-row-height, 48px) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+.post-editor-tool-line > #postAudioDraft .audio-token-play svg,
+.post-editor-tool-line > #postAudioDraft .audio-token-play img {
+  width: 24px !important;
+  height: 24px !important;
+  transform: none !important;
+}
+.post-editor-tool-line > #postAudioDraft .audio-token-remove {
+  top: -5px !important;
+  right: -5px !important;
+}
+
+
+/* Explicit editor toolbar states.
+   No audio: [video] [music] [image] is centered.
+   Audio present: [video] [music] [image] [speaker] is centered as one group. */
+.post-editor-tool-line[data-has-audio="false"] {
+  justify-content: center !important;
+}
+.post-editor-tool-line[data-has-audio="false"] > #postAudioDraft {
+  display: none !important;
+}
+.post-editor-tool-line[data-has-audio="true"] {
+  justify-content: center !important;
+}
+.post-editor-tool-line[data-has-audio="true"] > #postAudioDraft {
+  display: block;
+}
+
+/* 2026-10-01 v5: keyboard-open toolbar Y is the persisted source of truth.
+   Once calibrated, keyboard hide/show and app restart do not recalculate Y. */
+:root[style*="--post-editor-persisted-toolbar-top"] .post-compose-screen.open .post-editor-tool-line {
+  position: fixed !important;
+  top: var(--post-editor-persisted-toolbar-top) !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: var(--post-editor-tools-row-height, 48px) !important;
+  margin: 0 !important;
+  z-index: 2;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  box-sizing: border-box !important;
+}
+
+/* Treat the three tools and optional audio as one centered row. */
+.post-compose-screen.open .post-editor-tool-line > #postEditorTools.tools {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 16px !important;
+}
+
+/* Audio is exactly the fourth 48px control; no inherited attachment-strip
+   width/margin/justify-content may push it to the right edge. */
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft.post-editor-audio-slot {
+  position: static !important;
+  display: none !important;
+  flex: 0 0 48px !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  height: 48px !important;
+  overflow: visible !important;
+}
+.post-compose-screen.open .post-editor-tool-line[data-has-audio="true"] > #postAudioDraft.post-editor-audio-slot {
+  display: block !important;
+}
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .attachment-strip {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .audio-token,
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .audio-token-play {
+  flex: 0 0 48px !important;
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  height: 48px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .audio-token-play {
+  display: grid !important;
+  place-items: center !important;
+}
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .audio-token-play svg,
+.post-compose-screen.open .post-editor-tool-line > #postAudioDraft .audio-token-play img {
+  width: 24px !important;
+  height: 24px !important;
+  transform: none !important;
+}
+
+/* 2026-10-01 fixed editor geometry.
+   The former keyboard-open text allocation was 396.7 CSS px. The 34px title row is now deducted from it, then another third of the title height is deducted: 362.7 - 34/3 - 10 = 341.3667px.
+   The tool row occupies the strip immediately after the text area instead of
+   using a separately persisted screen-space Y coordinate. */
+.post-compose-screen.open .post-input-row {
+  grid-template-rows: 341.3667px var(--post-editor-tools-row-height, 48px) !important;
+  height: auto !important;
+  flex: 0 0 auto !important;
+  align-content: start !important;
+}
+
+.post-compose-screen.open #postComposerText {
+  height: 341.3667px !important;
+  min-height: 341.3667px !important;
+  max-height: 341.3667px !important;
+  flex: 0 0 341.3667px !important;
+}
+
+/* Toolbar Y is derived from the fixed text row.  Do not let the old
+   keyboard calibration/localStorage coordinate pull it to another Y. */
+:root[style*="--post-editor-persisted-toolbar-top"] .post-compose-screen.open .post-editor-tool-line,
+.post-compose-screen.open .post-editor-tool-line {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+  grid-row: 2 !important;
+  align-self: stretch !important;
+}
+/* Dedicated title zone above the fixed text area. */
+.post-compose-body > .post-input-row{grid-template-rows:52px minmax(0,1fr) var(--post-editor-tools-row-height)}
+.post-composer-title-input{grid-row:1;width:100%;border:0;border-bottom:var(--note-border-width,1px) solid currentColor;outline:0;background:transparent;color:var(--jet-note-type-body-foreground-color);font-weight:600;padding:8px 0;font-size:1.08em}
+#postComposerText{grid-row:2}.post-editor-tool-line{grid-row:3}
+
+/* V10: the title consumes 34px of the former 396.7px text allocation; body text is further reduced by 34/3px and another 10px to 341.3667px. */
+.post-compose-screen.open .post-input-row{grid-template-rows:34px 341.3667px var(--post-editor-tools-row-height,48px)!important;}
+.post-composer-title-input{grid-row:1!important;height:34px!important;min-height:34px!important;padding:3px 0!important;font-size:var(--note-font-size)!important;line-height:var(--note-line-height)!important;font-weight:600!important;}
+.post-compose-screen.open #postComposerText{grid-row:2!important;height:341.3667px!important;min-height:341.3667px!important;max-height:341.3667px!important;}
+.post-compose-screen.open .post-editor-tool-line{grid-row:3!important;}
+
+/* 2026-10-01: keep visual attachments in the editor's actual layout flow.
+   Previously the attachment stack was absolutely positioned at top:100% of
+   .post-input-row. The fixed V10 editor geometry made that anchor fall outside
+   the visible/clipped editor body, so selected images existed in the draft but
+   were not visible. Give attachments their own grid row immediately below the
+   tool row instead of relying on an out-of-flow coordinate. */
+.post-compose-screen.open .post-input-row {
+  grid-template-rows: 34px 341.3667px var(--post-editor-tools-row-height, 48px) auto !important;
+}
+
+.post-compose-screen.open .post-compose-attachment-stack {
+  position: relative !important;
+  grid-row: 4 !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  width: 100% !important;
+  margin-top: var(--post-editor-vertical-section-gap, 12px) !important;
+  z-index: 2;
+}
+
+.post-compose-screen.open .post-compose-media-row {
+  min-height: var(--post-editor-attachment-row-height, 84px);
+  overflow: visible;
+}
+
+/* 2026-10-01: visual attachments are a real third editor row.
+   The old absolute top:100% rail could be laid out below .post-input-row and
+   then clipped by .post-compose-body, making newly picked images/videos exist
+   in the draft but remain invisible. */
+.post-compose-body {
+  padding-bottom: 26px;
+}
+.post-compose-body > .post-input-row {
+  grid-template-rows: minmax(0, 1fr) var(--post-editor-tools-row-height) auto;
+}
+.post-compose-attachment-stack {
+  position: relative;
+  grid-row: 3;
+  top: auto;
+  left: auto;
+  right: auto;
+  width: 100%;
+  margin-top: 0;
+  overflow: visible;
+}
+.post-compose-attachment-stack:has(#postVisualMediaPreview > *) {
+  min-height: var(--media-card-height);
+}
+.post-compose-media-row {
+  height: var(--media-card-height);
+  flex-basis: var(--media-card-height);
+}
+
+/* 2026-10-01: keep attachments available while the IME is open.
+   The old rule intentionally hid the entire attachment stack whenever the
+   keyboard was detected. That made an already-added image/video disappear as
+   soon as the text field received focus. The editor now keeps the media rail
+   rendered and lets the shortened IME viewport scroll when necessary. */
+:root[data-jetnote-keyboard-open="true"] .post-compose-attachment-stack {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+:root[data-jetnote-keyboard-open="true"] .post-compose-body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+:root[data-jetnote-keyboard-open="true"] .post-compose-screen.open .post-compose-attachment-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+
+/* 2026-10-01 V12: attachment preview only.
+   Keep all composer entry/opening logic untouched. */
+.post-compose-screen.open .post-compose-body {
+  --media-picture-height: 180px;
+}
+
+.post-compose-screen.open .post-compose-visual-media {
+  height: 180px !important;
+  min-height: 180px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: none !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media::-webkit-scrollbar {
+  display: none !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media > .compose-image-item,
+.post-compose-screen.open .post-compose-visual-media > .video-attachment-shell {
+  height: 180px !important;
+  min-height: 180px !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media .compose-image-item img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* =========================================================
+   2026-10-01 V13 — one-screen composer geometry
+
+   Contract:
+   - the composer body owns the whole viewport below the action bar;
+   - title, tools and visual preview are fixed rows;
+   - ONLY the textarea scrolls when text grows;
+   - visual attachments sit immediately below the tool line and never require
+     scrolling the composer body to become visible.
+   ========================================================= */
+.post-compose-screen.open .post-compose-body {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 22px 0 18px !important;
+  overflow: hidden !important;
+}
+
+.post-compose-screen.open .post-compose-body > .post-input-row {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  align-content: stretch !important;
+  grid-template-rows:
+    34px
+    minmax(0, 1fr)
+    var(--post-editor-tools-row-height, 48px)
+    minmax(0, 180px) !important;
+  gap: var(--post-editor-vertical-section-gap, 12px) !important;
+  overflow: hidden !important;
+}
+
+/* With no image/video selected, do not reserve an invisible preview row. */
+.post-compose-screen.open .post-input-row:not(:has(#postVisualMediaPreview > *)) {
+  grid-template-rows:
+    34px
+    minmax(0, 1fr)
+    var(--post-editor-tools-row-height, 48px)
+    0px !important;
+}
+
+.post-compose-screen.open #postComposerText {
+  grid-row: 2 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  flex: none !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  resize: none !important;
+}
+
+.post-compose-screen.open .post-editor-tool-line {
+  grid-row: 3 !important;
+  height: var(--post-editor-tools-row-height, 48px) !important;
+  min-height: 0 !important;
+  align-self: stretch !important;
+}
+
+.post-compose-screen.open .post-compose-attachment-stack {
+  grid-row: 4 !important;
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  align-self: stretch !important;
+}
+
+.post-compose-screen.open .post-compose-media-row {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+  align-items: stretch !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media > .compose-image-item,
+.post-compose-screen.open .post-compose-visual-media > .video-attachment-shell {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.post-compose-screen.open .post-compose-visual-media .compose-image-item img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* IME may reduce the visible viewport, but it must not turn the entire editor
+   into a document scroller. The textarea remains the sole text scroller. */
+:root[data-jetnote-keyboard-open="true"] .post-compose-screen.open .post-compose-body {
+  overflow: hidden !important;
+}
+
+/* =========================================================
+   2026-10-01 V14 — fixed-slot composer
+
+   Fixed geometry by design. No remaining-space / 1fr calculation is used for
+   title, text, tools or visual media. Text scrolls inside its own fixed box.
+   The editor shell does not scroll and the media row cannot be covered by text.
+   ========================================================= */
+.post-compose-screen.open .post-compose-body {
+  --jet-compose-title-height: 34px;
+  --jet-compose-text-height: 280px;
+  --jet-compose-tools-height: 48px;
+  --jet-compose-media-height: 180px;
+  --jet-compose-gap: 12px;
+
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 22px 0 12px !important;
+  overflow: hidden !important;
+}
+
+.post-compose-screen.open .post-compose-body > .post-input-row,
+.post-compose-screen.open .post-input-row:not(:has(#postVisualMediaPreview > *)) {
+  flex: 0 0 auto !important;
+  height: calc(
+    var(--jet-compose-title-height) +
+    var(--jet-compose-text-height) +
+    var(--jet-compose-tools-height) +
+    var(--jet-compose-media-height) +
+    (var(--jet-compose-gap) * 3)
+  ) !important;
+  min-height: 0 !important;
+  grid-template-rows:
+    var(--jet-compose-title-height)
+    var(--jet-compose-text-height)
+    var(--jet-compose-tools-height)
+    var(--jet-compose-media-height) !important;
+  gap: var(--jet-compose-gap) !important;
+  align-content: start !important;
+  overflow: hidden !important;
+}
+
+.post-compose-screen.open .post-composer-title-input {
+  height: var(--jet-compose-title-height) !important;
+  min-height: var(--jet-compose-title-height) !important;
+  max-height: var(--jet-compose-title-height) !important;
+}
+
+.post-compose-screen.open #postComposerText {
+  grid-row: 2 !important;
+  height: var(--jet-compose-text-height) !important;
+  min-height: var(--jet-compose-text-height) !important;
+  max-height: var(--jet-compose-text-height) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  resize: none !important;
+}
+
+.post-compose-screen.open .post-editor-tool-line {
+  grid-row: 3 !important;
+  height: var(--jet-compose-tools-height) !important;
+  min-height: var(--jet-compose-tools-height) !important;
+  max-height: var(--jet-compose-tools-height) !important;
+}
+
+.post-compose-screen.open .post-compose-attachment-stack,
+.post-compose-screen.open .post-compose-media-row,
+.post-compose-screen.open .post-compose-visual-media {
+  height: var(--jet-compose-media-height) !important;
+  min-height: var(--jet-compose-media-height) !important;
+  max-height: var(--jet-compose-media-height) !important;
+}
+
+.post-compose-screen.open .post-compose-attachment-stack {
+  grid-row: 4 !important;
+  position: relative !important;
+  inset: auto !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Keep the fixed media slot even before media is selected. This prevents the
+   toolbar/text geometry from jumping when the first image/video is added. */
+.post-compose-screen.open .post-compose-attachment-stack:not(:has(#postAudioDraft > *, #postVisualMediaPreview > *)) {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+.post-compose-screen.open .post-compose-media-row:not(:has(#postVisualMediaPreview > *)) {
+  display: flex !important;
+}
+
+/* Keyboard state must not rewrite the fixed editor geometry. */
+:root[data-jetnote-keyboard-open="true"] .post-compose-screen.open .post-compose-body {
+  padding: 22px 0 12px !important;
+  overflow: hidden !important;
+}
+
+/* Unified media cards: keep title/text/tools fixed, but let the media slot use
+   the same square-picture + seek + time geometry as published posts. */
+.post-compose-screen.open .post-compose-attachment-stack,
+.post-compose-screen.open .post-compose-media-row,
+.post-compose-screen.open .post-compose-visual-media {
+  height: 220px !important;
+  min-height: 220px !important;
+  max-height: 220px !important;
+}
+.post-compose-screen.open .post-compose-body > .post-input-row,
+.post-compose-screen.open .post-input-row:not(:has(#postVisualMediaPreview > *)) {
+  height: calc(
+    var(--jet-compose-title-height) +
+    var(--jet-compose-text-height) +
+    var(--jet-compose-tools-height) +
+    220px +
+    (var(--jet-compose-gap) * 3)
+  ) !important;
+  grid-template-rows:
+    var(--jet-compose-title-height)
+    var(--jet-compose-text-height)
+    var(--jet-compose-tools-height)
+    220px !important;
+}
+
+/* 2026-10-01 V15 — published-media cardinality in the composer.
+   Home/Post Viewer remain the canonical display.  The editor mirrors their
+   1 / 2 / 3-visible calculation and adds only the removable X overlay. */
+.post-compose-screen.open #postVisualMediaPreview {
+  display: grid !important;
+  grid-template-columns: repeat(var(--media-columns, 1), minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  align-items: start !important;
+}
+.post-compose-screen.open #postVisualMediaPreview.one {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.post-compose-screen.open #postVisualMediaPreview.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.post-compose-screen.open #postVisualMediaPreview.many {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+/* Two/three-media cells keep the existing grid; shared media_layout owns fit. */
+.post-compose-screen.open #postVisualMediaPreview.two > .compose-image-item,
+.post-compose-screen.open #postVisualMediaPreview.many > .compose-image-item,
+.post-compose-screen.open #postVisualMediaPreview.two > .video-attachment-shell > .native-video-card,
+.post-compose-screen.open #postVisualMediaPreview.many > .video-attachment-shell > .native-video-card {
+  aspect-ratio: 1 / 1 !important;
+}
+/* Delete is editor-only. It floats over the exact same media cell and never
+   participates in the published/viewer layout calculation. */
+.post-compose-screen.open #postVisualMediaPreview .compose-image-remove {
+  position: absolute !important;
+  top: 2px !important;
+  right: 2px !important;
+  z-index: 50 !important;
+}

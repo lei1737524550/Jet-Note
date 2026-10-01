@@ -1,0 +1,21 @@
+<section class="note-viewer-screen" id="noteViewerScreen" aria-hidden="true">
+  <div class="page-action-bar note-viewer-header">
+    <button class="page-action-bar-control page-action-bar-left common_border note-viewer-close" type="button" aria-label="" data-ui-aria-label="note_viewer.close_accessibility_label"><img src="src/shared/icons/close_x.svg" alt=""></button>
+    <div class="page-action-bar-title note-viewer-title" data-ui-string="note_viewer.page_title"></div>
+    <div class="note-viewer-header-spacer" aria-hidden="true"></div>
+  </div>
+
+  <!-- Read-only counterpart of post-compose-body.  Unlike the editor, this
+       body is one continuous scroll document: text is never constrained to a
+       textarea-sized viewport and can unfold downward without limit. -->
+  <div class="note-viewer-scroll" id="noteViewerScroll">
+    <article class="note-viewer-content">
+      <div class="note-viewer-title-row">
+        <h1 class="note-viewer-note-title note-typography" id="noteViewerNoteTitle" hidden></h1>
+      </div>
+      <div class="note-viewer-text note-typography note-text" id="noteViewerText"></div>
+      <div class="note-viewer-visual" id="noteViewerVisual"></div>
+      <div class="note-viewer-audio-row" id="noteViewerAudio"></div>
+    </article>
+  </div>
+</section>

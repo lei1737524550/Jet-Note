@@ -1,0 +1,41 @@
+.archive-screen{position:fixed;inset:0;z-index:9998;display:none;flex-direction:column;padding-top:var(--safe-top);background:var(--note-surface);color:var(--jet-note-type-body-foreground-color,#111)}
+.archive-screen.open{display:flex}
+.archive-header-spacer{width:var(--page-action-bar-icon-width)}
+.archive-close img{width:22px;height:22px}
+.archive-list{overflow-y:auto;flex:1;min-height:0;overscroll-behavior:contain}
+.archive-list > .post-surface{flex-shrink:0}
+.archive-header{border-bottom:var(--common-border-width) solid var(--note-divider-color)!important}
+
+/* Archive is a compact textual index: one title line + one body line only. */
+.archive-index-row{position:relative;box-sizing:border-box;padding:14px 52px 14px 20px;min-height:92px;border-left:0!important;border-right:0!important;border-top:0!important;border-radius:0!important;overflow:hidden}
+.archive-index-title,.archive-index-text{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
+.archive-index-title{font-size:18px;font-weight:600;margin-bottom:8px}
+.archive-index-text{font-size:17px;font-weight:400}
+.archive-index-actions{position:absolute;right:16px;top:13px;display:flex;align-items:center;gap:6px;height:28px}
+.archive-index-more{position:static!important;right:auto!important;top:auto!important;margin:0!important}
+/* Favorite badge is the same component emitted by renderPostStarButton().
+   Archive only supplies placement because it has a compact header instead of Home's post-head. */
+.archive-index-actions .post-head-star-status{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center;border:0;padding:0;background:transparent;color:inherit;cursor:pointer}
+.archive-index-actions .post-head-star-status img{display:block;width:22px;height:22px}
+
+/* Same explicit viewer control as Home; Archive owns placement only. */
+.archive-index-actions .post-view-button{width:28px;height:28px;flex:0 0 28px;display:grid;place-items:center;border:0;padding:0;background:transparent;color:inherit;cursor:pointer}
+.archive-index-actions .post-view-button img{display:block;width:20px;height:20px;opacity:.72}
+
+/* V21 audit hardening: Archive has an explicit action rail (favorite + view + more).
+   Reserve its full width so long title/body text can never render underneath controls. */
+.archive-index-row{padding-right:124px}
+
+/* Archive is intentionally non-expandable. Its renderer does not emit this control;
+   this guard also blocks stale/legacy markup from reintroducing it. */
+#archiveList .post-text-toggle,
+#archiveList [data-post-expand],
+#archiveList .post-expand-button{display:none!important}
+
+/* v42: Archive uses the same 24px (80% of Composer) visible action glyphs as Home. */
+#archiveList .published-post-surface .post-head-actions img,
+#archiveList .published-post-surface .post-head-actions svg,
+.archive-index-actions .post-head-star-status img {
+  width:24px!important;
+  height:24px!important;
+}

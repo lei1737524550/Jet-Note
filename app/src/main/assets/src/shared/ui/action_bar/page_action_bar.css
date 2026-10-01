@@ -1,0 +1,87 @@
+/* Reusable Jet Note top bar.
+   Geometry is defined once here: the title owns the true viewport center;
+   the left/right controls own mirrored side axes. Pages only provide content,
+   color and click behavior. */
+.page-action-bar {
+  position: relative;
+  width: 100%;
+  height: var(--page-action-bar-height);
+  flex: 0 0 var(--page-action-bar-height);
+  z-index: 5;
+  box-sizing: border-box;
+  padding: 0;
+  background: var(--jet-note-type-page-action-bar-background,var(--page-action-bar-background));
+  border-bottom: 1px solid var(--page-action-bar-divider-color);
+  box-shadow: 0 2px 4px rgba(0,0,0,.10);
+}
+.page-action-bar-title {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--page-action-bar-title-size);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--page-action-bar-title-color);
+}
+.page-action-bar-control {
+  position: absolute;
+  top: calc((var(--page-action-bar-height) - var(--page-action-bar-control-height)) / 2);
+  height: var(--page-action-bar-control-height);
+  min-height: var(--page-action-bar-control-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  min-width: var(--page-action-bar-text-min-width);
+  background: var(--jet-note-type-page-action-bar-background,var(--page-background));
+  border: 1px solid var(--jet-note-type-page-action-bar-border-color,var(--page-action-bar-border-color));
+  border-radius: var(--page-action-bar-control-radius);
+  font-size: var(--page-action-bar-control-size);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.page-action-bar-left {
+  left: calc(var(--safe-left) + var(--page-action-bar-left-axis));
+  transform: translateX(-50%);
+}
+.page-action-bar-right {
+  right: calc(var(--safe-right) + var(--page-action-bar-right-axis));
+  transform: translateX(50%);
+}
+.page-action-bar-icon {
+  width: var(--page-action-bar-icon-width);
+  min-width: var(--page-action-bar-icon-width);
+  padding: 0;
+}
+.page-action-bar-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.page-action-bar-asset-image {
+  width:24px;
+  height:24px;
+  display:block;
+  object-fit:contain;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+.page-action-bar-string {
+  width:auto;
+  min-width:var(--page-action-bar-text-min-width);
+  padding-inline:12px;
+}
+.buttom-string-buttom-bar [hidden] { display:none !important; }
+
+.buttom-string-buttom-bar .page-action-bar-control{border-color:var(--jet-note-type-page-action-bar-border-color,var(--page-action-bar-border-color));}
+

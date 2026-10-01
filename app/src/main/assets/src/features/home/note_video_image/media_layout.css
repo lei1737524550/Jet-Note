@@ -1,0 +1,316 @@
+/* Shared card contract: H = unchanged picture + seek row + time row.
+   The editor and published surfaces supply only their existing picture size. */
+:root {
+  --media-seek-height: 7px;
+  --media-time-height: 30px;
+}
+.published-post-surface {
+  --post-menu-control-size: 32px;
+  --media-content-inset: calc(var(--post-menu-control-size) / 2);
+  --media-picture-height: var(--published-post-media-max-height, 234px);
+  --media-card-height: calc(var(--media-picture-height) + var(--media-seek-height) + var(--media-time-height));
+}
+.published-post-surface > .post-published-media-strip,
+.published-post-surface > .post-video-grid.one,
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  width: calc(100% - 2 * var(--media-content-inset));
+  margin-left: var(--media-content-inset);
+  margin-right: var(--media-content-inset);
+}
+/* Mixed published cards previously used square pictures. Container units keep
+   that picture height while adding control space to every card. */
+.post-published-media-strip {
+  container-type: inline-size;
+  height: auto;
+  align-items: stretch;
+}
+.post-published-media-strip > .video-attachment-shell,
+.post-published-media-strip > .post-published-media-photo-frame {
+  --media-picture-height: calc((100cqw - (var(--media-columns, 3) - 1) * 5px) / var(--media-columns, 3));
+  --media-card-height: calc(var(--media-picture-height) + var(--media-seek-height) + var(--media-time-height));
+  flex-basis: calc((100% - (var(--media-columns, 3) - 1) * 5px) / var(--media-columns, 3));
+  width: calc((100% - (var(--media-columns, 3) - 1) * 5px) / var(--media-columns, 3));
+}
+.post-compose-visual-media .compose-image-item,
+.post-compose-visual-media .video-attachment-shell {
+  width: 100%;
+  min-width: 0;
+}
+.post-compose-media-row,
+.post-compose-visual-media {
+  height: var(--media-card-height);
+  flex-basis: var(--media-card-height);
+}
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-attachment-shell,
+.post-compose-visual-media .compose-image-item,
+.published-post-surface .post-published-media-photo-frame,
+.published-post-surface > .post-media-grid.one.post-published-single-photo {
+  height: var(--media-card-height);
+  max-height: none !important;
+  aspect-ratio: auto;
+  box-sizing: border-box;
+}
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-attachment-shell {
+  display: grid;
+  grid-template-rows: var(--media-picture-height) var(--media-seek-height) var(--media-time-height);
+}
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .native-video-card {
+  height: var(--media-picture-height);
+  min-height: 0;
+  aspect-ratio: auto !important;
+  padding: 0;
+}
+.post-compose-visual-media .compose-image-item img,
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-poster,
+.published-post-surface .post-published-media-photo,
+.published-post-surface > .post-media-grid.one.post-published-single-photo > img {
+  width: 100%;
+  height: 100% !important;
+  max-height: none !important;
+  padding: 0;
+  border: 0;
+}
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-progress-track {
+  position: relative;
+  inset: auto;
+  display: block;
+  height: var(--media-seek-height);
+  margin: 0 !important;
+  padding: 0;
+}
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-inline-time.video-playback-time-button {
+  display: block;
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  width: max-content;
+  max-width: 100%;
+  height: 26px;
+  min-height: 0;
+  margin: 0;
+  padding: 3px 6px;
+  box-sizing: border-box;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+#postEditorTools.tools {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  gap: 28px;
+}
+
+/* Single images use intrinsic size, capped by the available square.
+   Shared by Home and the read-only Post Viewer; never force width:100%. */
+:is(.published-post-surface, .note-viewer-visual) > .post-media-grid.one.post-published-single-photo {
+  height:auto !important;
+  max-height:none !important;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  container-type:inline-size;
+}
+:is(.published-post-surface, .note-viewer-visual) > .post-media-grid.one.post-published-single-photo > img {
+  width:auto !important;
+  height:auto !important;
+  max-width:100% !important;
+  max-height:100cqw !important;
+  margin:0;
+}
+
+/* The only fit owner for all three surfaces. Per-image crop selection is
+   updated after load/resize by bindMediaFitRule; fallback never enlarges. */
+.post-compose-visual-media .compose-image-item img,
+:is(.post-compose-visual-media, .published-post-surface, .note-viewer-visual) .video-poster,
+.post-published-media-photo,
+.post-published-single-photo > img {
+  object-fit:var(--media-object-fit, scale-down);
+  object-position:center;
+}
+
+/* 2026-10 unified media geometry ------------------------------------------------
+   New/Edit Post uses the same card grid and video control stack as published
+   Post and read-only Post Viewer surfaces.  The editor owns only the remove X. */
+.post-compose-visual-media {
+  container-type: inline-size;
+  display: grid !important;
+  grid-template-columns: repeat(var(--media-columns, 1), minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  align-items: start !important;
+}
+.post-compose-visual-media > .compose-image-item,
+.post-compose-visual-media > .video-attachment-shell {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+}
+.post-compose-visual-media > .compose-image-item {
+  aspect-ratio: 1 / 1;
+}
+.post-compose-visual-media > .compose-image-item img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+.post-compose-visual-media > .video-attachment-shell {
+  --media-picture-height: auto;
+  display: grid !important;
+  grid-template-rows: auto var(--media-seek-height) var(--media-time-height) !important;
+}
+.post-compose-visual-media > .video-attachment-shell > .native-video-card {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+}
+.post-compose-visual-media > .video-attachment-shell .video-poster {
+  width: 100% !important;
+  height: 100% !important;
+}
+.post-compose-visual-media .video-compact-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--media-time-height);
+}
+.post-compose-visual-media .video-playback-time-button {
+  width: auto !important;
+  height: 26px !important;
+  margin: 0 !important;
+  padding: 3px 6px !important;
+}
+
+
+/* 2026-10 media interaction/geometry integrity fix.
+   Read-only Post Viewer uses the exact published media geometry. */
+.note-viewer-visual {
+  --post-menu-control-size: 32px;
+  --media-content-inset: calc(var(--post-menu-control-size) / 2);
+  --media-picture-height: var(--published-post-media-max-height, 234px);
+  --media-card-height: calc(var(--media-picture-height) + var(--media-seek-height) + var(--media-time-height));
+}
+.note-viewer-visual > .post-published-media-strip,
+.note-viewer-visual > .post-video-grid.one,
+.note-viewer-visual > .post-media-grid.one.post-published-single-photo {
+  width: calc(100% - 2 * var(--media-content-inset)) !important;
+  margin-left: var(--media-content-inset) !important;
+  margin-right: var(--media-content-inset) !important;
+}
+.note-viewer-visual > .post-video-grid.one > .video-attachment-shell {
+  width: 100%;
+}
+.note-viewer-visual .post-published-media-photo-frame,
+.note-viewer-visual .post-published-media-photo,
+.published-post-surface .post-published-media-photo-frame,
+.published-post-surface .post-published-media-photo,
+.post-compose-visual-media .compose-image-item,
+.post-compose-visual-media .compose-image-item img {
+  background: transparent !important;
+}
+/* A media rectangle is an owned interaction zone, never a click-through gap. */
+.video-attachment-shell, .native-video-card, .video-progress-track,
+.video-inline-time, .post-published-media-photo-frame, .published-inline-zoom-media {
+  pointer-events: auto;
+}
+
+/* V16 editor allocation fix --------------------------------------------------
+   The editor gives visual media a fixed 220px row.  A video must fit its
+   picture + seek + time inside that allocation; controls may never overlay the
+   picture or disappear below the row. */
+.post-compose-screen.open #postVisualMediaPreview{
+  height:220px!important;
+  min-height:220px!important;
+  max-height:220px!important;
+  overflow:hidden!important;
+  align-items:stretch!important;
+}
+.post-compose-screen.open #postVisualMediaPreview > .video-attachment-shell{
+  height:220px!important;
+  min-height:0!important;
+  max-height:220px!important;
+  display:grid!important;
+  grid-template-rows:minmax(0,183px) 7px 30px!important;
+  overflow:hidden!important;
+}
+.post-compose-screen.open #postVisualMediaPreview > .video-attachment-shell > .native-video-card{
+  width:100%!important;
+  height:183px!important;
+  min-height:0!important;
+  max-height:183px!important;
+  aspect-ratio:auto!important;
+  overflow:hidden!important;
+}
+.post-compose-screen.open #postVisualMediaPreview > .video-attachment-shell .video-poster{
+  width:100%!important;
+  height:100%!important;
+  max-height:none!important;
+  object-position:center!important;
+}
+.post-compose-screen.open #postVisualMediaPreview .video-progress-track{
+  display:block!important;
+  height:7px!important;
+  min-height:7px!important;
+  margin:0!important;
+}
+.post-compose-screen.open #postVisualMediaPreview .video-compact-controls{
+  display:flex!important;
+  height:30px!important;
+  min-height:30px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+  overflow:visible!important;
+}
+.post-compose-screen.open #postVisualMediaPreview .video-inline-time{
+  position:static!important;
+  display:block!important;
+  width:auto!important;
+  height:26px!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:3px 6px!important;
+  line-height:18px!important;
+  z-index:2!important;
+}
+
+/* V17: editor video footer is one real flex row.  Reset the shared published
+   absolute positioning for BOTH children, so time and play state share the
+   same baseline and remain inside the fixed 220px allocation. */
+.post-compose-screen.open #postVisualMediaPreview .video-compact-controls > .video-inline-time,
+.post-compose-screen.open #postVisualMediaPreview .video-compact-controls > .video-playback-state{
+  position:static!important;
+  left:auto!important;
+  top:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  flex:0 0 auto!important;
+  align-self:center!important;
+  margin:0!important;
+  vertical-align:middle!important;
+}
+.post-compose-screen.open #postVisualMediaPreview .video-compact-controls > .video-inline-time{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:30px!important;
+  padding:0!important;
+  line-height:30px!important;
+}
+.post-compose-screen.open #postVisualMediaPreview .video-compact-controls > .video-playback-state{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:18px!important;
+  height:30px!important;
+  line-height:30px!important;
+}

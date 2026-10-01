@@ -1,0 +1,72 @@
+<!-- Settings page fragment -->
+<section class="settings-screen" id="settingsScreen">
+  <div class="page-action-bar settings-header buttom-string-buttom-bar" data-buttom-string-buttom-bar-page="settings_page">
+    <button class="page-action-bar-control page-action-bar-left common_border" type="button" data-buttom-string-buttom-bar-side="left"></button>
+    <div class="page-action-bar-title settings-title" data-buttom-string-buttom-bar-title></div>
+    <button class="page-action-bar-control page-action-bar-right common_border" type="button" data-buttom-string-buttom-bar-side="right"></button>
+  </div>
+  <div class="settings-body">
+    <section class="settings-item" data-setting-id="setting_1" data-setting-name="Language" aria-labelledby="languageSettingLabel">
+      <h2 class="settings-item-name" id="languageSettingLabel" data-ui-string="settings.language_title"></h2>
+      <div class="settings-item-control">
+        <button class="language-switch-button" id="switchLanguageButton" type="button">
+          <span class="settings-choice-main" data-ui-string="settings.switch_language_target"></span>
+        </button>
+      </div>
+    </section>
+    <section class="settings-item" data-setting-id="setting_backup" data-setting-name="Backup">
+      <h2 class="settings-item-name" data-ui-string="settings.import_export_title"></h2>
+      <div class="settings-item-control backup-actions">
+        <button type="button" onclick="JetNoteBackup.export()" data-ui-string="settings.export_jnote"></button>
+        <button type="button" onclick="JetNoteBackup.choose()" data-ui-string="settings.import_jnote"></button>
+      </div>
+      <p class="backup-format-note" data-ui-string="settings.jnote_zip_note"></p>
+    </section>
+    <section class="settings-item" data-setting-id="setting_color" data-setting-name="Color Viewer"><h2 class="settings-item-name" data-ui-string="settings.color_view_title"></h2><div class="settings-item-control color-view-full"><div class="color-view-tool">
+          <div class="color-view-preview-column">
+            <div class="color-view-showcase settings-background-exempt" data-settings-background-exempt="true">
+              <div class="color-view-svg-preview" aria-hidden="true">
+                <svg viewBox="0 0 1024 1024" focusable="false">
+                  <path id="colorViewFunnyPath" d="M511.6 69.5c-243.1 0-440.9 197.8-440.9 440.9 0 243.1 197.8 440.9 440.9 440.9 243.1 0 440.9-197.8 440.9-440.9 0-243.1-197.8-440.9-440.9-440.9z m0 829.9c-214.5 0-389.1-174.5-389.1-389s174.5-389 389.1-389c214.5 0 389.1 174.5 389.1 389-0.1 214.5-174.6 389-389.1 389z m191.2-266.8H320.4c-21.9 0-33.6 25.1-20.1 42.4 49 62.9 125.4 103.5 211.3 103.5 86 0 162.3-40.5 211.3-103.5 13.4-17.3 1.7-42.4-20.1-42.4zM446.4 407.1c0-9.8-5.6-18.8-14.3-23.2l-138.3-69.2c-12.8-6.4-28.4-1.2-34.8 11.6-6.4 12.8-1.2 28.4 11.6 34.8l91.9 46-91.9 46c-12.8 6.4-18 22-11.6 34.8 4.5 9.1 13.7 14.3 23.2 14.3 3.9 0 7.9-0.9 11.6-2.8l138.3-69.2c8.8-4.3 14.3-13.3 14.3-23.1z m317.7-80.7c-6.4-12.8-22-18-34.8-11.6L591 383.9c-8.8 4.4-14.3 13.4-14.3 23.2 0 9.8 5.6 18.8 14.3 23.2l138.3 69.2c3.7 1.9 7.7 2.8 11.6 2.8 9.5 0 18.7-5.3 23.2-14.3 6.4-12.8 1.2-28.4-11.6-34.8l-91.9-46 91.9-46c12.9-6.5 18.1-22 11.6-34.8z"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="color-view-rgb-grid" aria-label="" data-ui-aria-label="color_view.rgb_values_accessibility_label">
+              <div class="color-view-rgb-label color-view-rgb-label-r">R</div>
+              <div class="color-view-rgb-label color-view-rgb-label-g">G</div>
+              <div class="color-view-rgb-label color-view-rgb-label-b">B</div>
+              <input class="color-view-rgb-value common_border" id="colorViewR" type="number" inputmode="numeric" min="0" max="255" value="255" aria-label="" data-ui-aria-label="color_view.red_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewG" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="" data-ui-aria-label="color_view.green_accessibility_label">
+              <input class="color-view-rgb-value common_border" id="colorViewB" type="number" inputmode="numeric" min="0" max="255" value="0" aria-label="" data-ui-aria-label="color_view.blue_accessibility_label">
+            </div>
+          </div>
+
+          <div class="color-view-picker-column">
+            <div class="color-view-field" id="colorViewField" role="application" aria-label="" data-ui-aria-label="color_view.sv_field_accessibility_label" tabindex="0">
+              <div class="color-view-field-handle" id="colorViewFieldHandle" aria-hidden="true"></div>
+            </div>
+            <div class="color-view-hue-control">
+              <div class="color-view-hue" id="colorViewHue" role="slider" aria-label="" data-ui-aria-label="color_view.hue_accessibility_label" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0" tabindex="0">
+                <div class="color-view-hue-handle" id="colorViewHueHandle" aria-hidden="true"></div>
+              </div>
+              <div class="color-view-hue-caret" id="colorViewHueCaret" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="color-view-format-copy-layout">
+            <div class="jet-note-vertical-pill color-view-format-pill common_border" id="colorViewRadixSwitch" role="group" aria-label="" data-ui-aria-label="color_view.format_selector_accessibility_label">
+              <button class="jet-note-pill-part color-view-radix-option" id="colorViewHexButton" type="button" data-color-view-radix="hex" aria-pressed="true" data-ui-string="color_view.format_hex"></button>
+              <button class="jet-note-pill-part color-view-radix-option" id="colorViewDecimalButton" type="button" data-color-view-radix="decimal" aria-pressed="false" data-ui-string="color_view.format_decimal"></button>
+            </div>
+            <div class="color-view-copy-column">
+              <input class="color-view-export-value common_border" id="colorViewExportValue" type="text" inputmode="text" autocomplete="off" spellcheck="false" aria-live="polite" aria-label="" data-ui-aria-label="color_view.current_color_value_accessibility_label">
+              <div class="color-view-copy-slot">
+                <button class="color-view-copy-button common_border" id="colorViewCopyButton" type="button" data-ui-string="color_view.copy"></button>
+              </div>
+            </div>
+          </div>
+          <p class="color-view-status" id="colorViewStatus" role="status" aria-live="polite"></p>
+        </div></div></section>
+  </div>
+</section>

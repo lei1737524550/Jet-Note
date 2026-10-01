@@ -1,0 +1,92 @@
+<!-- New Post page fragment -->
+<section
+  class="post-compose-screen"
+  id="postComposeScreen"
+>
+  <div
+    class="page-action-bar post-compose-header buttom-string-buttom-bar"
+    data-buttom-string-buttom-bar-page="new_post_page"
+  >
+    <button
+      class="page-action-bar-control page-action-bar-left common_border post-compose-cancel"
+      type="button"
+      data-buttom-string-buttom-bar-side="left"
+    ></button>
+
+    <div
+      class="page-action-bar-title post-compose-title"
+      data-buttom-string-buttom-bar-title
+    ></div>
+
+    <button
+      class="page-action-bar-control page-action-bar-right common_border post-compose-publish"
+      type="button"
+      data-buttom-string-buttom-bar-side="right"
+    ></button>
+  </div>
+
+  <div class="post-compose-body">
+    <div class="post-input-row">
+      <input id="postComposerTitle" class="post-composer-title-input note-typography" type="text" placeholder="" data-ui-string-placeholder="post_composer.title_placeholder" maxlength="160">
+      <textarea
+        id="postComposerText"
+        class="note-typography note-text"
+        placeholder=""
+        data-language-placeholder="editorTextPlaceholder"
+      ></textarea>
+<!--
+        Tool slots are rendered from tools/tools.json.
+        Toolbox children replace primary slots and unfold leftward.
+      -->
+      <div class="post-editor-tool-line">
+        <div
+          class="tools"
+          id="postEditorTools"
+          aria-label=""
+          data-language-aria-label="postTools"
+        ></div>
+
+        <!-- The single audio attachment lives immediately to the right of
+             the image tool, so it remains visible in the editor itself. -->
+        <div id="postAudioDraft" class="post-editor-audio-slot" hidden></div>
+      </div>
+
+      <!--
+        Optional attachment rows.
+        Empty rows collapse automatically and do not reserve editor space.
+      -->
+      <div
+        class="post-compose-attachment-stack"
+        aria-label=""
+        data-language-aria-label="postAttachmentsAccessibilityLabel"
+      >
+        <div
+          class="post-compose-attachment-row post-compose-media-row"
+        >
+          <div
+            class="compose-media-preview post-compose-visual-media"
+            id="postVisualMediaPreview"
+          ></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<input
+  id="postAudioPicker"
+  type="file"
+  accept="audio/*,.mp3"
+  hidden
+  onchange="handleAudioFiles(event, 'post')"
+>
+
+<input
+  id="postVideoPicker"
+  type="file"
+  accept="video/*"
+  multiple
+  hidden
+  onchange="handlePostVideos(event)"
+>

@@ -1,0 +1,133 @@
+(function (global) {
+  'use strict';
+
+  // Partition two finite identity sequences into maximal contiguous blocks
+  // that preserve their internal order in BOTH sequences.
+  //
+  // This is the topology layer between Jet Note sorting and geometric
+  // FLIP movement.
+  function find(beforeSequence, afterSequence) {
+    const before = Array.from(beforeSequence || [], String);
+    const after = Array.from(afterSequence || [], String);
+
+    const m = before.length;
+    const n = after.length;
+
+    const dp = Array.from(
+      { length: m + 1 },
+      () => new Uint16Array(n + 1)
+    );
+
+    for (let i = 1; i <= m; i += 1) {
+      for (let j = 1; j <= n; j += 1) {
+        dp[i][j] = before[i - 1] === after[j - 1]
+          ? dp[i - 1][j - 1] + 1
+          : Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+
+    const pairs = [];
+
+    let i = m;
+    let j = n;
+
+    while (i > 0 && j > 0) {
+      if (before[i - 1] === after[j - 1]) {
+        pairs.push([i - 1, j - 1]);
+        i -= 1;
+        j -= 1;
+      } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+        i -= 1;
+      } else {
+        j -= 1;
+      }
+    }
+
+    pairs.reverse();
+
+    const blocks = [];
+
+    for (const pair of pairs) {
+      const [beforeIndex, afterIndex] = pair;
+      const last = blocks[blocks.length - 1];
+
+      const continuesLastBlock =
+        last &&
+        beforeIndex === last.endBefore + 1 &&
+        afterIndex === last.endAfter + 1;
+
+      if (continuesLastBlock) {
+        last.endBefore = beforeIndex;
+        last.endAfter = afterIndex;
+        last.items.push(before[beforeIndex]);
+        continue;
+      }
+
+      blocks.push({
+        startBefore: beforeIndex,
+        endBefore: beforeIndex,
+        startAfter: afterIndex,
+        endAfter: afterIndex,
+        items: [before[beforeIndex]]
+      });
+    }
+
+    for (const block of blocks) {
+      block.length = block.items.length;
+    }
+
+    return blocks;
+  }
+
+  function membership(beforeSequence, afterSequence) {
+    const map = new Map();
+
+    find(beforeSequence, afterSequence).forEach((block, blockIndex) => {
+      block.items.forEach(id => {
+        map.set(String(id), blockIndex);
+      });
+    });
+
+    return map;
+  }
+
+  // Jet Note bottom-up fixed-suffix algorithm.
+  //
+  // Starting at the last visible identity, compare before/after IDs one by one.
+  // The first mismatch ends the fixed suffix.
+  //
+  // Every matched ID below that boundary is layout-invariant and must never
+  // become a Post Movement participant.
+  function fixedBottomUpSuffix(beforeSequence, afterSequence) {
+    const before = Array.from(beforeSequence || [], String);
+    const after = Array.from(afterSequence || [], String);
+
+    const ids = new Set();
+
+    let beforeIndex = before.length - 1;
+    let afterIndex = after.length - 1;
+
+    while (
+      beforeIndex >= 0 &&
+      afterIndex >= 0 &&
+      before[beforeIndex] === after[afterIndex]
+    ) {
+      ids.add(after[afterIndex]);
+
+      beforeIndex -= 1;
+      afterIndex -= 1;
+    }
+
+    return {
+      ids,
+      startBefore: beforeIndex + 1,
+      startAfter: afterIndex + 1
+    };
+  }
+
+  global.JetNoteOrderPreservedBlocks = {
+    find,
+    membership,
+    fixedBottomUpSuffix
+  };
+})(window);

@@ -1,0 +1,20 @@
+/* During reverse navigation the route shell must not cover Home.
+   Header/body keep their own surfaces and slide away, revealing the mounted Home below. */
+.post-compose-screen.shared-transition-reveal-home,
+.settings-screen.shared-transition-reveal-home {
+  background: transparent !important;
+}
+.post-compose-screen.shared-transition-reveal-home::before,
+.settings-screen.shared-transition-reveal-home::before {
+  background: transparent !important;
+}
+.settings-screen.shared-transition-reveal-home .settings-body {
+  background: var(--jet-note-type-settings-set-background, var(--page-background));
+}
+
+.archive-screen.shared-transition-reveal-home,
+.note-viewer-screen.shared-transition-reveal-home { background:transparent!important; }
+.archive-screen.shared-transition-reveal-home .archive-list { background:var(--note-surface); }
+.note-viewer-screen.shared-transition-reveal-home .note-viewer-scroll {
+  background:var(--jet-note-type-edit-post-background,var(--page-background));
+}

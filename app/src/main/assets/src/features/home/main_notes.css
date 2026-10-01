@@ -1,0 +1,598 @@
+* {
+  box-sizing: border-box;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+  opacity: 0.68;
+}
+
+
+
+/* Zoom --------------------------------------------------------------------- */
+
+.zoom-row {
+  position: absolute;
+  top: 910px;
+  left: 65px;
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  width: 561px;
+  color: #fff;
+}
+
+.zoom-row svg {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+
+#zoomRange {
+  width: 100%;
+  accent-color: #20a9ff;
+}
+
+
+/* Home and notes share one surface source. */
+
+.three-posts-one-body {
+  --three-post-internal-surface-background:
+    var(
+      --jet-note-type-three-post-internal-control-background,
+      var(--note-surface)
+    );
+
+  --content-horizontal-padding: 0px;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-left: 0;
+  gap: 0 !important;
+
+  background-color: var(--note-surface);
+}
+
+.three-posts-one-body > .three-posts-one-body__layout {
+  background-color: transparent !important;
+}
+
+
+/* Body-surface inheritance --------------------------------------------------
+   Only descendants of a real Post box inherit the Body surface. This keeps
+   geometry wrappers from accidentally covering Set Background.
+---------------------------------------------------------------------------- */
+
+.three-posts-one-body .three-posts-one-body__box :where(
+  button,
+  input,
+  output,
+  [role="group"],
+  .attachment-strip,
+  .audio-token,
+  .audio-token-play,
+  .video-attachment-shell,
+  .video-progress-track,
+  .video-playback-time-button
+) {
+  background-color:
+    var(--three-post-internal-surface-background) !important;
+}
+
+
+/* Explicit background exemptions ----------------------------------------- */
+
+.three-posts-one-body [data-three-post-background-exempt="true"],
+.three-posts-one-body .three-post-background-exempt {
+  background-color: revert !important;
+}
+
+
+/* Composer border integrity -------------------------------------------------
+   Clip inherited child paints to the composer's rounded padding box so they
+   cannot cover anti-aliased common_border pixels.
+---------------------------------------------------------------------------- */
+
+.three-posts-one-body .post-composer.common_border {
+  overflow: hidden;
+  isolation: isolate;
+  border: 0;
+  box-shadow: none;
+}
+
+
+/* Playback time is control chrome, not a Body paint owner. */
+
+.three-posts-one-body
+.three-posts-one-body__box
+.video-playback-time-button {
+  background: transparent !important;
+}
+
+
+/* FLIP layout world ---------------------------------------------------------
+   Geometry-only wrapper. It must never own Set Body paint.
+---------------------------------------------------------------------------- */
+
+#postMainLayoutWorld.post-main-layout-world {
+  background: transparent !important;
+  transform-origin: 0 0;
+}
+
+
+/* Home vertical rhythm ------------------------------------------------------
+   Surface components never own external margins.
+
+   Current edge-to-edge mode intentionally overrides all vertical gaps to 0.
+---------------------------------------------------------------------------- */
+
+.post-main-layout-world {
+  display: flex;
+  flex-direction: column;
+  gap: 0 !important;
+}
+
+.three-posts-one-body .main-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 0 !important;
+}
+
+.three-posts-one-body .home-actions,
+.three-posts-one-body .post-composer-wrap,
+.three-posts-one-body .post-surface {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+
+/* Unified Post architecture -------------------------------------------------
+   Top/Main/Composer are roles of the same Post surface.
+   .post-surface owns their common surface identity.
+---------------------------------------------------------------------------- */
+
+.three-posts-one-body .post-surface {
+  box-sizing: border-box;
+  background-color: var(--note-surface);
+}
+
+.three-posts-one-body
+.post-surface:is(
+  [data-post-role="top"],
+  [data-post-role="main"],
+  [data-post-role="composer"]
+) {
+  background-clip: padding-box;
+}
+
+.three-posts-one-body
+.post-surface[data-post-role="composer"] {
+  width: 100%;
+  max-width: var(--note-column-max-width);
+  margin: 0 auto;
+  padding: 0;
+}
+
+
+/* Published Post geometry ---------------------------------------------------
+   Top/Main published Posts use identical geometry.
+   data-post-role may change state/paint, never content/media geometry.
+---------------------------------------------------------------------------- */
+
+.published-post-surface:is(
+  [data-post-role="main"],
+  [data-post-role="top"]
+) {
+  max-width: var(--note-column-max-width);
+  margin-inline: auto;
+}
+
+.published-post-surface > .post-text-drawer {
+  min-height: 0;
+  overflow: visible;
+  will-change: height;
+}
+
+
+/* Published action group: one geometry owner for all controls. */
+.published-post-surface {
+  --home-post-head-action-size: 32px;
+  --home-post-head-action-gap: 2px;
+  --home-post-head-icon-size: 24px;
+}
+.published-post-surface .post-head-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:var(--home-post-head-action-gap);
+}
+.published-post-surface .post-head-actions > :is(button, .post-head-audio) {
+  box-sizing:border-box;
+  width:var(--home-post-head-action-size);
+  height:var(--home-post-head-action-size);
+  min-width:var(--home-post-head-action-size);
+  min-height:var(--home-post-head-action-size);
+  flex:0 0 var(--home-post-head-action-size);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:inherit;
+}
+.published-post-surface .post-head-actions > [hidden] { display:none; }
+.published-post-surface .post-head-actions > button :is(img, svg) {
+  display:block;
+  width:var(--home-post-head-icon-size);
+  height:var(--home-post-head-icon-size);
+}
+
+.post-text-fade-character {
+  transition: color 0.12s linear;
+}
+
+
+/* Shared geometry variables ------------------------------------------------ */
+
+:root {
+  --home-composer-border-width: 3px;
+}
+
+
+/* Edge-to-edge home surfaces ---------------------------------------------- */
+
+.three-posts-one-body .post-surface,
+.three-posts-one-body #topPostCard {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.three-posts-one-body
+.published-post-surface.common_border {
+  border-width:
+    var(--note-border-width);
+  border-color: var(--note-divider-color);
+}
+
+.home-settings-button {
+  flex-shrink: 0;
+}
+/* Home surfaces share the same opaque separator color. */
+.three-posts-one-body .published-post-surface.common_border,
+.three-posts-one-body .post-composer.common_border {
+  border-style: solid;
+  border-width: var(--note-border-width, 1px);
+  border-color: var(--note-divider-color) !important;
+}
+
+/* Expansion is height-only: inline geometry stays invariant during animation. */
+.published-post-surface > .post-text-drawer,
+.published-post-surface > .post-text-drawer > .text-content {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+.post-title{font-weight:700;font-size:var(--note-font-size);line-height:var(--note-line-height);padding:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}.post-title-empty{min-height:1em}.published-post-surface .post-head-actions{flex:0 0 auto}
+#postArchiveAction.active img{filter:none}
+
+
+/* Audio's wrappers must not add a grid row, padding or a second border.
+   Multiple legacy audio attachments stay on the same horizontal centerline. */
+.published-post-surface .post-head-actions > .post-head-audio {
+  width:auto;
+  flex:0 0 auto;
+}
+.published-post-surface .post-head-audio .attachment-strip {
+  display:flex;align-items:center;justify-content:center;flex-wrap:nowrap;
+  margin:0;padding:0;min-height:0;gap:var(--home-post-head-action-gap);
+}
+.published-post-surface .post-head-audio .audio-token {
+  display:flex;align-items:center;justify-content:center;
+  box-sizing:border-box;width:var(--home-post-head-action-size);
+  height:var(--home-post-head-action-size);padding:0;border:0;
+}
+.published-post-surface .post-head-audio .audio-token-play {
+  display:flex;align-items:center;justify-content:center;
+  box-sizing:border-box;width:var(--home-post-head-action-size);
+  height:var(--home-post-head-action-size);margin:0;padding:0;
+  background:transparent;border:1px solid currentColor;border-radius:8px;box-shadow:none;
+}
+.published-post-surface .post-head-audio .audio-token-play :is(svg, img) {
+  display:block;width:var(--home-post-head-icon-size);height:var(--home-post-head-icon-size);
+}
+
+/* Both composer tool rows share the same right edge. */
+.post-composer-tool-row-bottom{padding-right:0!important;}
+
+/* Home composer label editor. */
+.composer-label-editor{position:fixed;inset:0;z-index:100500;background:rgba(0,0,0,.22);display:grid;place-items:center;padding:24px}
+.composer-label-editor-card{width:min(100%,420px);background:var(--jet-note-type-three-post-set-body,#fff);border:1px solid var(--jet-note-type-body-foreground-color,#111);border-radius:14px;padding:14px}
+.composer-label-editor-input{box-sizing:border-box;width:100%;min-height:132px;max-height:min(52vh,420px);resize:none;background:transparent;color:var(--jet-note-type-body-foreground-color,#111);border:0;border-bottom:1px solid currentColor;outline:0;font:inherit;line-height:1.45;padding:8px 2px;overflow-y:auto;white-space:pre-wrap}
+.composer-label-editor-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.composer-label-editor-actions button{border:0;background:transparent;color:inherit;padding:8px 12px;font:inherit}
+/* V12 geometry acceptance fixes. */
+.published-post-surface > .post-head { padding-left:0!important; margin-left:0!important; }
+.published-post-surface .post-title { margin-left:0!important; padding-left:0!important; }
+/* Timestamp is not part of the published Post UI. Keep this as a hard guard
+   against stale/legacy render paths. */
+.published-post-surface .time,
+.published-post-surface [data-post-time],
+.published-post-surface .post-time { display:none!important; }
+
+/* Compact short untitled notes only when their measured content fits. */
+.published-post-surface.post-single-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  column-gap:12px;
+  align-items:center;
+}
+.published-post-surface.post-single-row > .post-head {
+  grid-column:2;grid-row:1;margin:0!important;padding:0!important;
+}
+.published-post-surface.post-single-row .post-title-empty { display:none; }
+.published-post-surface.post-single-row > .post-text-drawer {
+  grid-column:1;grid-row:1;margin:0!important;min-width:0;
+}
+.published-post-surface.post-single-row > .post-text-drawer > .text-content { margin:0!important; }
+.published-post-surface.post-single-row > :not(.post-head):not(.post-text-drawer) { grid-column:1 / -1; }
+.published-post-surface button.post-head-star-status {
+  border:0;padding:0;background:transparent;color:inherit;cursor:pointer;
+}
+
+/* One explicit dark separator color for every outer and internal note edge. */
+#threePostsOneBody .published-post-surface.common_border,
+#threePostsOneBody .post-composer.common_border,
+#threePostsOneBody #topPostCard.common_border,
+#archiveList .published-post-surface.common_border {
+  border-color:var(--note-divider-color)!important;
+}
+
+/* Archive rows keep a single shared separator. */
+#archiveList .published-post-surface.common_border {
+  border-top-width: 0;
+  border-bottom-width: var(--common-border-width);
+}
+
+/* Home: composer and the entire non-super-star list are two rounded groups.
+   Keep overflow visible so favorite FLIP animations can cross group boundaries. */
+#threePostsOneBody {
+  --home-group-radius: 14px;
+  --home-group-inset: 6px;
+  --home-group-gap: 8px;
+}
+#postMainLayoutWorld.post-main-layout-world {
+  padding: 0 var(--home-group-inset);
+  gap: var(--home-group-gap) !important;
+}
+#threePostsOneBody #postComposerMount {
+  padding: 0;
+}
+#threePostsOneBody #postComposerMount:empty {
+  display: none;
+}
+#threePostsOneBody #postComposerMount .post-composer.common_border {
+  border: var(--common-border-width) solid var(--note-divider-color);
+  border-radius: var(--home-group-radius) !important;
+}
+#threePostsOneBody #mainPosts {
+  padding: 0;
+  border: var(--common-border-width) solid var(--note-divider-color);
+  border-radius: var(--home-group-radius);
+  overflow: visible;
+}
+#threePostsOneBody #mainPosts:empty {
+  display: none;
+}
+#threePostsOneBody #mainPosts > .published-post-surface.common_border {
+  border: 0;
+}
+#threePostsOneBody #mainPosts > .published-post-surface:first-child {
+  border-top-left-radius: calc(var(--home-group-radius) - var(--common-border-width)) !important;
+  border-top-right-radius: calc(var(--home-group-radius) - var(--common-border-width)) !important;
+}
+#threePostsOneBody #mainPosts > .published-post-surface:last-child {
+  border-bottom-left-radius: calc(var(--home-group-radius) - var(--common-border-width)) !important;
+  border-bottom-right-radius: calc(var(--home-group-radius) - var(--common-border-width)) !important;
+}
+#threePostsOneBody #mainPosts > .published-post-surface + .published-post-surface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--common-border-width);
+  background: var(--note-divider-color);
+  pointer-events: none;
+}
+/* Super favorite is a rounded group, matching the Composer entry frame. */
+#threePostsOneBody #topPostCard.common_border {
+  border: var(--common-border-width) solid var(--note-divider-color);
+  border-radius: var(--home-group-radius) !important;
+  overflow: visible;
+}
+#threePostsOneBody #topPostCard .published-post-surface.common_border {
+  border: 0;
+  border-radius: calc(var(--home-group-radius) - var(--common-border-width)) !important;
+}
+
+
+/* Top Post is its own rounded Home group. Match Composer/Main horizontal inset
+   and use the same group-to-group vertical rhythm. */
+#threePostsOneBody > .home-actions {
+  padding: 0 var(--home-group-inset);
+  margin: 0 0 var(--home-group-gap) 0 !important;
+}
+#threePostsOneBody > .home-actions[hidden] {
+  display: none !important;
+  margin-bottom: 0 !important;
+}
+#threePostsOneBody #topPostCard.common_border {
+  width: 100%;
+  max-width: var(--note-column-max-width);
+  margin-inline: auto;
+}
+
+/* 200 ms archive acknowledgement on the Composer book control. */
+#threePostsOneBody .home-book-button.archive-feedback-active {
+  opacity: 1 !important;
+}
+
+
+/* Archive is a compact index, never a second full post viewer.
+   Every archived row shows only its title and the first visual line of text,
+   regardless of text length or attached media. */
+#archiveList .published-post-surface .post-head-audio,
+#archiveList .published-post-surface .post-text-toggle,
+#archiveList .published-post-surface .post-content-clear,
+#archiveList .published-post-surface .published-media,
+#archiveList .published-post-surface .published-post-media,
+#archiveList .published-post-surface .post-media,
+#archiveList .published-post-surface .attachments,
+#archiveList .published-post-surface [data-attachment-type],
+#archiveList .published-post-surface .image-attachment,
+#archiveList .published-post-surface .video-attachment {
+  display:none!important;
+}
+#archiveList .published-post-surface .post-text-drawer {
+  height:auto!important;
+  overflow:hidden!important;
+}
+#archiveList .published-post-surface .text-content {
+  display:-webkit-box!important;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:1;
+  line-clamp:1;
+  overflow:hidden!important;
+  white-space:pre-wrap;
+}
+
+/* v20 Explicit Post viewer control -----------------------------------------
+   Viewing is a first-class header action immediately left of More.  It shares
+   the 28px control rhythm with favorite/expand controls; the eye itself is a
+   restrained 20px outline so it does not visually outweigh the ellipsis. */
+.post-view-button {
+  -webkit-appearance:none;appearance:none;
+  width:28px;height:28px;min-width:28px;min-height:28px;flex:0 0 28px;
+  display:grid;place-items:center;
+  margin:0;border:0!important;border-radius:0!important;outline:0;
+  padding:0!important;background:transparent!important;box-shadow:none!important;
+  color:inherit;cursor:pointer;
+}
+.post-view-button img {
+  display:block;width:20px;height:20px;opacity:.72;pointer-events:none;
+}
+
+
+/* v25: the eye is an icon action, never a framed/focus-ring control.
+   The global button:focus-visible selector is more specific than .post-view-button,
+   which is why the Home eye could still show a rectangular ring after tapping. */
+.published-post-surface .post-head-actions .post-view-button,
+.published-post-surface .post-head-actions .post-view-button:focus,
+.published-post-surface .post-head-actions .post-view-button:focus-visible,
+.published-post-surface .post-head-actions .post-view-button:active {
+  -webkit-appearance:none !important;
+  appearance:none !important;
+  border:0 !important;
+  border-radius:0 !important;
+  outline:0 !important;
+  outline-offset:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;
+}
+
+/* Home composer -------------------------------------------------------------
+   Single maintained geometry source. Keep this section authoritative instead
+   of stacking version-specific overrides. */
+#threePostsOneBody {
+  --home-content-axis: var(--note-column-padding);
+  --home-composer-height: 54px;
+  --home-composer-inner-height: 52px;
+  --home-composer-control-size: 48px;
+  --home-composer-icon-size: 30px;
+  --home-composer-control-gap: 0px;
+}
+
+#threePostsOneBody .post-composer {
+  box-sizing: border-box;
+  height: var(--home-composer-height);
+  min-height: var(--home-composer-height);
+  max-height: var(--home-composer-height);
+  align-items: center;
+}
+#threePostsOneBody .post-composer-main {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: center;
+  height: var(--home-composer-inner-height);
+  min-height: var(--home-composer-inner-height);
+  max-height: var(--home-composer-inner-height);
+  padding: 0 var(--home-content-axis);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  white-space: pre-wrap;
+  text-align: left;
+  line-height: 1.45;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+#threePostsOneBody .post-composer-tools {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--home-composer-inner-height);
+  padding: 2px 0;
+}
+#threePostsOneBody .post-composer-tool-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--home-composer-control-gap);
+  height: var(--home-composer-control-size);
+  min-height: var(--home-composer-control-size);
+}
+#threePostsOneBody .post-composer-media-button {
+  box-sizing: border-box;
+  flex: 0 0 var(--home-composer-control-size);
+  width: var(--home-composer-control-size);
+  height: var(--home-composer-control-size);
+  padding: 9px;
+  display: grid;
+  place-items: center;
+}
+#threePostsOneBody .post-composer-media-button img,
+#threePostsOneBody .post-composer-media-button svg {
+  display: block;
+  width: var(--home-composer-icon-size);
+  height: var(--home-composer-icon-size);
+  object-fit: contain;
+}
+/* Optical normalization changes artwork only; all hit targets remain 48px. */
+#threePostsOneBody .home-settings-button img { transform: scale(.82); }
+#threePostsOneBody .home-book-button img { transform: translateY(5px) scale(1.04); }
+
+/* One horizontal text axis for Home published notes and the Composer label. */
+#threePostsOneBody .published-post-surface {
+  --published-post-horizontal-padding: var(--home-content-axis);
+}
+

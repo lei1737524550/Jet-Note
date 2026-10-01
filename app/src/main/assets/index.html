@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+
+  <meta
+    name="color-scheme"
+    content="light"
+  >
+
+  <meta
+    name="theme-color"
+    content="#ffffff"
+  >
+
+  <base href="/assets/">
+
+
+
+  <!-- First-frame appearance ---------------------------------------------- -->
+  <script>
+    /*
+     * Apply the cached note surface before the first body
+     * paint. The appearance module later reloads the authoritative configuration.
+     */
+    (() => {
+      try {
+        const value = JSON.parse(
+          localStorage.getItem(
+            'jet_note_appearance_body_cache'
+          ) || 'null'
+        );
+
+        const rgb = value?.rgb;
+
+        const channels = rgb && [
+          rgb.r,
+          rgb.g,
+          rgb.b
+        ];
+
+        if (
+          !channels ||
+          !channels.every(
+            channel =>
+              Number.isInteger(channel) &&
+              channel >= 0 &&
+              channel <= 255
+          )
+        ) {
+          return;
+        }
+
+        const color =
+          `rgb(${channels[0]},${channels[1]},${channels[2]})`;
+
+        document.documentElement.style.setProperty(
+          '--jet-note-type-three-post-set-body',
+          color
+        );
+
+        const theme = document.querySelector(
+          'meta[name="theme-color"]'
+        );
+
+        if (theme) {
+          theme.content = color;
+        }
+      } catch (_) {
+        // Ignore invalid or unavailable appearance cache.
+      }
+    })();
+  </script>
+
+
+  <title data-language-text="fileTaskFeedbackAppTitle"></title>
+
+
+  <!-- MAINTENANCE: Android asset paths are case-sensitive; keep App/Shared/Language capitalization exactly as stored. -->
+  <!-- Styles --------------------------------------------------------------- -->
+  <link
+    rel="stylesheet"
+    href="base.css?v=20260913-feature-layout"
+  >
+
+  <link rel="stylesheet" href="src/shared/ui/typography.css">
+
+  <link
+    rel="stylesheet"
+    href="src/shared/ui/components.css?v=20260913-feature-layout"
+  >
+
+  <link
+    rel="stylesheet"
+    href="layout.css?v=20260913-feature-layout"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/shared/ui/action_bar/page_action_bar.css?v=20260913-feature-layout"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/home/main_notes.css?v=20260913-feature-layout"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/editor/editor_page.css?v=20261001-published-layout-v3"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/editor/tool_area/tool_area.css?v=20260914-horizontal-tools-v1"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/settings/setting_page.css?v=20260913-feature-layout"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/home/note_video_image/note_video_image.css?v=20260914-horizontal-tools-v1"
+  >
+
+  <link
+    rel="stylesheet"
+    href="src/features/home/note_video_image/video.css?v=20260913-video-layer-font-wrap-v1"
+  >
+<link rel="stylesheet" href="src/features/home/note_video_image/media_layout.css">
+<link rel="stylesheet" href="src/features/home/note_viewer.css?v=20261001-editor-mirror-v2">
+<link rel="stylesheet" href="src/features/home/archive_page.css?v=20261001">
+<!-- Early core ----------------------------------------------------------- -->
+  <script src="src/bridge/android/webview_compatibility.js?v=20260914-webview-compat-v1"></script>
+  <script src="src/bridge/android/keyboard_and_viewport.js"></script>
+<link rel="stylesheet" href="src/shared/transition/shared_transition.css">
+</head>
+
+<body>
+  <!--
+    Startup splash is rendered natively by MainActivity so the background,
+    icon, and app name appear in the same first frame while WebView initializes.
+  -->
+
+  <div id="stage">
+    <div
+      id="phone"
+      class="phone"
+    >
+      <section class="header">
+        <div class="wave3"></div>
+      </section>
+
+
+      <!-- Home ------------------------------------------------------------- -->
+      <div
+        id="threePostsOneBody"
+        class="three-posts-one-body"
+      >
+        <div
+          class="home-actions three-posts-one-body__layout"
+          data-language-aria-label="homeTopPostAccessibilityLabel"
+        >
+          <section
+            id="topPostCard"
+            class="top-post-card three-posts-one-body__box common_border"
+            aria-live="polite"
+          ></section>
+        </div>
+
+
+        <!--
+          Main Layout World:
+          Composer + Main Posts share one global FLIP coordinate frame.
+        -->
+        <div
+          id="postMainLayoutWorld"
+          class="post-main-layout-world three-posts-one-body__layout"
+        >
+          <div
+            id="postComposerMount"
+            class="post-composer-wrap three-posts-one-body__layout"
+          ></div>
+
+          <main
+            id="mainPosts"
+            class="main-posts three-posts-one-body__layout"
+          ></main>
+        </div>
+      </div>
+
+
+      <!-- Runtime fragment mounts ----------------------------------------- -->
+      <!--
+        HTML pages remain separate in source, but are mounted into this
+        WebView/document before application scripts start.
+      -->
+      <div id="pageMount"></div>
+      <div id="overlayMount"></div>
+
+
+      <!-- Scrollbar -------------------------------------------------------- -->
+      <div
+        id="jetScrollbar"
+        class="jet-scrollbar"
+        aria-hidden="true"
+      >
+        <div class="jet-scrollbar-track">
+          <div class="jet-scrollbar-thumb"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Bootstrap dependencies ---------------------------------------------- -->
+  <script src="src/shared/theme/jet_note_type.js?v=20260913-feature-layout"></script>
+  <script src="src/app/bootstrap/page_loader.js?v=20260913-feature-layout"></script>
+
+
+  <!-- Frontend startup ----------------------------------------------------- -->
+  <script>
+    (async function startJetNoteFrontend() {
+      try {
+        await window.JetNoteViewLoader.mountAll({
+          pageMount: 'pageMount',
+          overlayMount: 'overlayMount',
+
+          pages: [
+            'src/features/settings/setting_page.html',
+            'src/features/editor/editor_page.html',
+            'src/features/home/note_viewer.html',
+            'src/features/home/archive_page.html'
+          ],
+
+          components: [
+            'src/features/home/note_video_image/image_viewer.html',
+            'src/features/home/delete_confirmation/delete_confirm_dialog.html',
+            'src/features/home/horizontal_ellipsis_menu/horizontal_ellipsis_menu.html',
+          ]
+        });
+
+
+        await window.JetNoteViewLoader.loadScripts([
+          /* Language / shared UI */
+          'src/core/i18n/language_catalog.js',
+          'src/core/i18n/ui_language.js',
+          'src/features/home/notice/notice.js',
+          'src/shared/ui/action_bar/page_action_bar.js',
+          'src/shared/ui/scrollbar/jet_scrollbar.js',
+
+          /* Media checksum dependency */
+          'src/vendor/sha256.js',
+
+          /* Storage / media foundation */
+          'src/data/notes/favorite_order_rules.js',
+          'src/features/home/note_filtering.js',
+          'src/data/notes/note_store.js',
+          'src/data/notes/note_identity.js',
+          'src/data/notes/note_service_core.js',
+          'src/data/notes/note_attachment_rules.js',
+          'src/shared/media/media_resource_cleanup.js',
+          'src/data/notes/editor_media_state.js',
+          'src/core/text/binary_codec.js',
+          'src/shared/media/audio_player.js',
+          'src/features/editor/audio_area/audio_draft.js',
+          'src/shared/media/video_player.js',
+          'src/bridge/android/media_file_connection.js',
+
+          /* Shared application core */
+          'src/data/notes/database.js',
+          'src/core/text/escape_html.js',
+          'src/features/home/note_format.js',
+          'src/features/home/components/post_menu_icon.js',
+          'src/core/i18n/language.js',
+
+          /* Shared entrance used by Settings, Editor and future pages */
+          'src/shared/transition/shared_transition.js',
+
+          /* Settings */
+          'src/features/settings/setting_page.js',
+          'src/features/settings/backup_and_color.js',
+          'src/features/settings/language_setting_page.js',
+
+          /*
+           * Post editor is deliberately split into small modules.
+           * Keep this order.
+           */
+          'src/features/editor/editor_config.js',
+          'src/data/notes/editor_draft.js',
+          'src/features/editor/text_area/caret.js',
+          'src/features/editor/editor_controller.js',
+
+          /*
+           * Tool system:
+           * config loader -> action registry -> UI renderer.
+           */
+          'src/features/editor/tool_area/tools/tool_loader.js',
+          'src/features/editor/tool_area/tools/tool_actions.js',
+          'src/features/editor/tool_area/tool_area.js',
+
+          /* Media */
+          'src/features/home/note_video_image/note_video_image.js',
+          'src/features/home/note_video_image/image_viewer/configuration.js',
+          'src/features/home/note_video_image/image_viewer/background_control.js',
+          'src/features/home/note_video_image/image_viewer/close_control.js',
+          'src/features/home/note_video_image/image_viewer.js',
+
+          /* Shared dialogs */
+          'src/features/home/delete_confirmation/delete_confirm_dialog.js',
+
+          /* Post movement */
+          'src/features/home/post_movement/order_preserved_blocks.js',
+          'src/features/home/post_movement/flip_topology.js',
+          'src/features/home/post_movement/normal_star_flip.js',
+          'src/features/home/post_movement/super_star_two_body_flip.js',
+
+          /* Home */
+          'src/features/home/main_notes_storage.js',
+          'src/data/notes/note_state.js',
+          'src/features/home/main_notes_state.js',
+          'src/data/notes/note_service.js',
+          'src/features/home/main_notes_layout.js',
+          'src/features/home/note_timestamp_spacing.js',
+          'src/features/home/compact_post_rows.js',
+          'src/features/home/main_notes_renderer.js',
+          'src/features/editor/editor_session.js',
+          'src/features/editor/video_image_area/video_image_area.js',
+          'src/features/editor/video_image_area/native_media_input.js',
+          'src/features/home/horizontal_ellipsis_menu/horizontal_ellipsis_menu.js',
+          'src/features/home/main_notes_sounds.js',
+          'src/features/home/post_movement/movement_controller.js',
+          'src/features/home/favorite_actions.js',
+          'src/features/home/note_time_display.js',
+          'src/features/editor/publish_note.js',
+          'src/features/home/main_notes_interactions.js',
+          'src/features/home/note_viewer.js',
+          'src/features/home/archive_page.js',
+          'src/features/home/main_notes_startup.js',
+
+          /* Navigation / appearance / final bootstrap */
+          'src/app/navigation/page_navigation.js',
+          'src/features/settings/appearance.js',
+          'src/app/bootstrap/start_app.js'
+        ]);
+      } catch (error) {
+        console.error(
+          'Jet Note frontend startup failed:',
+          error
+        );
+
+        const panel =
+          document.createElement('main');
+
+        panel.style.cssText =
+          'padding:24px;' +
+          'font-family:sans-serif;' +
+          'line-height:1.6;' +
+          'background:#fff;' +
+          'min-height:100vh;';
+
+        const section =
+          document.createElement('section');
+
+        section.style.cssText =
+          'max-width:560px;' +
+          'margin:48px auto;' +
+          'padding:20px;' +
+          'border:1px solid #c8cdd2;' +
+          'border-radius:16px;' +
+          'background:#fff;';
+
+        const title =
+          document.createElement('strong');
+
+        title.style.color = '#b3261e';
+
+        title.textContent =
+          'Interface initialization failed';
+
+        const message =
+          document.createElement('div');
+
+        message.style.cssText =
+          'margin-top:10px;' +
+          'overflow-wrap:anywhere;';
+
+        message.textContent =
+          error?.message ||
+          String(error);
+
+        section.append(
+          title,
+          message
+        );
+
+        panel.appendChild(section);
+        document.body.appendChild(panel);
+      }
+    })();
+  </script>
+</body>
+</html>

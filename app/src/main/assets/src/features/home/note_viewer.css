@@ -1,0 +1,93 @@
+/* Read-only Post page.
+   It deliberately shares the editor's page geometry and typography, but owns
+   no editable control, publish action, attachment picker, or keyboard target. */
+.note-viewer-screen {
+  --audio-control-background: var(--jet-note-type-edit-post-background,var(--page-background));
+  position: fixed;
+  left: var(--viewport-offset-left,0px);
+  top: 0;
+  width: var(--viewport-width,100vw);
+  height: 100dvh;
+  z-index: 10000;
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--content-bottom);
+  padding-left: var(--safe-left);
+  background: var(--jet-note-type-edit-post-background,var(--page-background));
+  color: var(--jet-note-type-body-foreground-color,var(--ink));
+}
+.note-viewer-screen.open { display:flex; }
+.note-viewer-header { flex:0 0 var(--page-action-bar-height); }
+.note-viewer-close { width:var(--page-action-bar-icon-width);min-width:var(--page-action-bar-icon-width);padding:0;display:grid;place-items:center; }
+.note-viewer-close img { width:24px;height:24px; }
+.note-viewer-header-spacer { width:var(--page-action-bar-icon-width);min-width:var(--page-action-bar-icon-width); }
+
+/* This is the essential viewer/editor difference: the editor absorbs height
+   into a textarea; the viewer is a normal document that grows downward. */
+.note-viewer-scroll {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.note-viewer-scroll::-webkit-scrollbar { display:none; }
+.note-viewer-content {
+  width:100%;
+  max-width:var(--note-column-max-width);
+  min-height:100%;
+  margin-inline:auto;
+  padding:22px var(--note-column-padding) 32px;
+  border-inline:var(--note-border-width) solid transparent;
+  box-sizing:border-box;
+}
+.note-viewer-title-row { width:100%; }
+.note-viewer-note-title {
+  margin:0 0 16px;
+  padding:0 0 10px;
+  border:0;
+  border-bottom:1px solid var(--jet-note-type-edit-post-border-color,var(--common-border-color));
+  font:inherit;
+  font-size:1.22em;
+  font-weight:400;
+  color:inherit;
+  overflow-wrap:anywhere;
+}
+.note-viewer-note-title[hidden] { display:none; }
+.note-viewer-text {
+  width:100%;
+  min-height:1.55em;
+  box-sizing:border-box;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+  color:var(--jet-note-type-body-foreground-color);
+  user-select:text;
+}
+
+/* Media follows the expanded text instead of floating in a separate viewer
+   layout.  This preserves the editor's single-column reading flow. */
+.note-viewer-visual { width:100%; margin-top:18px; overflow:visible; }
+.note-viewer-visual:empty { display:none; }
+.note-viewer-audio-row {
+  min-height:48px;
+  margin-top:12px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  box-sizing:border-box;
+}
+.note-viewer-audio-row:empty { display:none; }
+.note-viewer-audio-row .attachment-strip { margin:0;min-height:48px;justify-content:flex-end; }
+.note-viewer-audio-row .audio-token-play { width:48px;height:48px;padding:12px;background:transparent; }
+
+/* Viewer is read-only by construction. */
+.note-viewer-screen input,
+.note-viewer-screen textarea,
+.note-viewer-screen [contenteditable="true"] { pointer-events:none; }

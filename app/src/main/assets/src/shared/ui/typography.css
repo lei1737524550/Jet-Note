@@ -1,0 +1,35 @@
+/* Single source for entry, editor and published note typography/geometry. */
+:root {
+  --note-font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  --note-font-size: 16px;
+  --note-font-weight: 400;
+  --note-line-height: 1.55;
+  --note-letter-spacing: normal;
+  --note-text-padding: 0px;
+  --note-column-max-width: 700px;
+  --note-column-padding: 12px;
+  --note-divider-color: #000000;
+  --note-border-width: calc(var(--common-border-width) / 2);
+  --note-surface: var(--jet-note-type-three-post-set-body);
+}
+.note-typography {
+  font-family: var(--note-font-family);
+  font-size: var(--note-font-size);
+  font-weight: var(--note-font-weight);
+  line-height: var(--note-line-height);
+  letter-spacing: var(--note-letter-spacing);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  tab-size: 8;
+  text-indent: 0;
+  text-transform: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+.note-text {
+  padding: var(--note-text-padding);
+  min-width: 0;
+  scrollbar-width: none;
+}
+.note-text::-webkit-scrollbar { display: none; }
