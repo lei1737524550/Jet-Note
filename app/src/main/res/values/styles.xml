@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.JetNote" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <!-- First Android frame: same surface as config load_animation_background. -->
+        <item name="android:windowBackground">@drawable/jetnote_startup_window</item>
+        <item name="android:windowDisablePreview">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#AED194</item>
+        <item name="android:statusBarColor">#AED194</item>
+        <!-- Native/WebView selection handle accent: turquoise. -->
+        <item name="android:colorControlActivated">#14A89A</item>
+        <item name="android:colorAccent">#14A89A</item>
+    </style>
+</resources>

@@ -1,7 +1,0 @@
-com.leixj.jetnote.app-pngs-0 /storage/emulated/0/Jet_Note_dev/app/build/generated/res/pngs/debug
-com.leixj.jetnote.app-resValues-1 /storage/emulated/0/Jet_Note_dev/app/build/generated/res/resValues/debug
-com.leixj.jetnote.app-packageDebugResources-2 /storage/emulated/0/Jet_Note_dev/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
-com.leixj.jetnote.app-packageDebugResources-3 /storage/emulated/0/Jet_Note_dev/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
-com.leixj.jetnote.app-debug-4 /storage/emulated/0/Jet_Note_dev/app/build/intermediates/merged_res/debug/mergeDebugResources
-com.leixj.jetnote.app-debug-5 /storage/emulated/0/Jet_Note_dev/app/src/debug/res
-com.leixj.jetnote.app-main-6 /storage/emulated/0/Jet_Note_dev/app/src/main/res
